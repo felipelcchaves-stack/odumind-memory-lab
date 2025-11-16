@@ -221,7 +221,7 @@ export default function Dashboard() {
       <main className="container px-4 py-8">
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-2">
-            Bem-vindo de volta{profile?.nome ? `, ${profile.nome}` : ''}! 🌟
+            Bem-vindo de volta{profile?.nome ? ` ${profile.nome}` : ''}! 🌟
           </h2>
           <p className="text-muted-foreground">Continue sua jornada de memorização dos Odu Ifá</p>
           
