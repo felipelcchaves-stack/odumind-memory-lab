@@ -490,6 +490,8 @@ export type Database = {
         }[]
       }
       has_admin_role: { Args: { _user_id: string }; Returns: boolean }
+      has_aluno_role: { Args: { _user_id: string }; Returns: boolean }
+      has_colaborador_role: { Args: { _user_id: string }; Returns: boolean }
       update_user_streak: { Args: { _user_id: string }; Returns: undefined }
     }
     Enums: {

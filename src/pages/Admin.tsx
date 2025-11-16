@@ -17,7 +17,7 @@ import DashboardHeader from '@/components/DashboardHeader';
 export default function Admin() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { isAdmin, loading: adminLoading } = useAdmin();
+  const { isAdmin, isColaborador, loading: adminLoading } = useAdmin();
   const [stats, setStats] = useState({ totalOdus: 0, totalUsers: 0 });
   const [selectedOdu, setSelectedOdu] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -28,17 +28,17 @@ export default function Admin() {
       return;
     }
 
-    if (!adminLoading && !isAdmin) {
-      toast.error('Acesso negado. Apenas administradores podem acessar esta área.');
+    if (!adminLoading && !isColaborador) {
+      toast.error('Acesso negado. Apenas administradores e colaboradores podem acessar esta área.');
       navigate('/dashboard');
     }
-  }, [user, isAdmin, adminLoading, navigate]);
+  }, [user, isColaborador, adminLoading, navigate]);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (isColaborador) {
       loadStats();
     }
-  }, [isAdmin]);
+  }, [isColaborador]);
 
   async function loadStats() {
     try {
@@ -129,14 +129,16 @@ export default function Admin() {
 
         {/* Tabs */}
         <Tabs defaultValue="list" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-4' : 'grid-cols-3'}`}>
             <TabsTrigger value="list">Lista de Odu</TabsTrigger>
             <TabsTrigger value="editor">Editor</TabsTrigger>
             <TabsTrigger value="upload">Upload em Massa</TabsTrigger>
-            <TabsTrigger value="users">
-              <Users className="h-4 w-4 mr-2" />
-              Usuários
-            </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="users">
+                <Users className="h-4 w-4 mr-2" />
+                Usuários
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="list" className="space-y-4">
@@ -208,7 +210,17 @@ export default function Admin() {
           </TabsContent>
 
           <TabsContent value="users">
-            <UserManagement />
+            {isAdmin ? (
+              <UserManagement />
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-muted-foreground">
+                    Apenas administradores podem gerenciar usuários
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </main>

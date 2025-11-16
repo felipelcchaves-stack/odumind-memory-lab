@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Upload, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -31,6 +32,7 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
   const [metaDiaria, setMetaDiaria] = useState(30);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [password, setPassword] = useState('');
+  const [selectedRole, setSelectedRole] = useState<'admin' | 'colaborador' | 'aluno'>('aluno');
 
   useEffect(() => {
     if (open && userId && !isCreate) {
@@ -42,6 +44,7 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
       setMetaDiaria(30);
       setAvatarUrl(null);
       setPassword('');
+      setSelectedRole('aluno');
     }
   }, [open, userId, isCreate]);
 
@@ -160,6 +163,7 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
             nome: nome.trim() || undefined,
             meta_diaria: metaDiaria,
             avatar_url: avatarUrl || undefined,
+            role: selectedRole,
           },
         });
 
@@ -281,17 +285,33 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
 
             {/* Password Field (only for create) */}
             {isCreate && (
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Mínimo 6 caracteres"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  minLength={6}
-                />
-              </div>
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Senha</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Mínimo 6 caracteres"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    minLength={6}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="role">Perfil de Acesso</Label>
+                  <Select value={selectedRole} onValueChange={(value: any) => setSelectedRole(value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="aluno">Aluno</SelectItem>
+                      <SelectItem value="colaborador">Colaborador</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
             )}
 
             {/* Daily Goal Field */}

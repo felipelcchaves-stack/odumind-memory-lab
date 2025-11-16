@@ -5,38 +5,53 @@ import { supabase } from '@/integrations/supabase/client';
 export function useAdmin() {
   const { user } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isColaborador, setIsColaborador] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    checkAdminStatus();
+    checkRoles();
   }, [user]);
 
-  async function checkAdminStatus() {
+  async function checkRoles() {
     if (!user) {
       setIsAdmin(false);
+      setIsColaborador(false);
       setLoading(false);
       return;
     }
 
     try {
-      // Use the database function instead of direct query to avoid RLS issues
-      const { data, error } = await supabase
+      // Check admin role
+      const { data: adminData, error: adminError } = await supabase
         .rpc('has_admin_role', { _user_id: user.id });
 
-      if (error) {
-        console.error('Error checking admin status:', error);
+      if (adminError) {
+        console.error('Error checking admin status:', adminError);
         setIsAdmin(false);
       } else {
-        setIsAdmin(!!data);
-        console.log('Admin status for user:', user.email, '- Is Admin:', !!data);
+        setIsAdmin(!!adminData);
       }
+
+      // Check colaborador role (admin or colaborador)
+      const { data: colaboradorData, error: colaboradorError } = await supabase
+        .rpc('has_colaborador_role', { _user_id: user.id });
+
+      if (colaboradorError) {
+        console.error('Error checking colaborador status:', colaboradorError);
+        setIsColaborador(false);
+      } else {
+        setIsColaborador(!!colaboradorData);
+      }
+
+      console.log('User roles:', user.email, '- Admin:', !!adminData, '- Colaborador:', !!colaboradorData);
     } catch (error) {
-      console.error('Exception checking admin status:', error);
+      console.error('Exception checking roles:', error);
       setIsAdmin(false);
+      setIsColaborador(false);
     } finally {
       setLoading(false);
     }
   }
 
-  return { isAdmin, loading };
+  return { isAdmin, isColaborador, loading };
 }
