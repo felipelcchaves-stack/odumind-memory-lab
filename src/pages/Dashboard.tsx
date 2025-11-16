@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, Target, Zap, BookOpen, Brain, Calendar, TrendingUp, Award } from 'lucide-react';
+import { Trophy, Target, Zap, BookOpen, Brain, Calendar, TrendingUp, Award, Home } from 'lucide-react';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import BadgesDisplay from '@/components/BadgesDisplay';
@@ -328,8 +328,8 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Action Button */}
-        <div className="text-center mb-8">
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-8 justify-center">
           <Button 
             size="lg" 
             variant="hero" 
@@ -340,6 +340,15 @@ export default function Dashboard() {
             {stats?.reviewTodayCount && stats.reviewTodayCount > 0
               ? `Revisar ${stats.reviewTodayCount} Odu`
               : 'Estudar Agora'}
+          </Button>
+          <Button 
+            size="lg" 
+            variant="outline" 
+            className="text-lg px-8 py-6"
+            onClick={() => navigate('/memory-palace')}
+          >
+            <Home className="mr-2 h-5 w-5" />
+            Palácio da Memória
           </Button>
         </div>
 
