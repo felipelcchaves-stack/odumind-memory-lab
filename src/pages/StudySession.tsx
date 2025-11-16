@@ -177,6 +177,9 @@ export default function StudySession() {
         // Update streak
         await supabase.rpc("update_user_streak", { _user_id: user.id });
 
+        // Check and award achievements
+        await supabase.rpc("check_and_award_achievements", { _user_id: user.id });
+
         // Log XP gain
         await supabase.from("gamification_logs").insert({
           user_id: user.id,

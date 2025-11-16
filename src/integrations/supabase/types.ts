@@ -47,6 +47,39 @@ export type Database = {
         }
         Relationships: []
       }
+      conquistas: {
+        Row: {
+          conquistado_em: string
+          descricao: string
+          icone: string
+          id: string
+          tipo: string
+          titulo: string
+          user_id: string
+          valor_conquista: number
+        }
+        Insert: {
+          conquistado_em?: string
+          descricao: string
+          icone: string
+          id?: string
+          tipo: string
+          titulo: string
+          user_id: string
+          valor_conquista: number
+        }
+        Update: {
+          conquistado_em?: string
+          descricao?: string
+          icone?: string
+          id?: string
+          tipo?: string
+          titulo?: string
+          user_id?: string
+          valor_conquista?: number
+        }
+        Relationships: []
+      }
       elaborative_notes: {
         Row: {
           created_at: string
@@ -443,6 +476,10 @@ export type Database = {
           novo_intervalo: number
           proxima_data: string
         }[]
+      }
+      check_and_award_achievements: {
+        Args: { _user_id: string }
+        Returns: undefined
       }
       check_and_award_badges: { Args: { _user_id: string }; Returns: undefined }
       has_admin_role: { Args: { _user_id: string }; Returns: boolean }
