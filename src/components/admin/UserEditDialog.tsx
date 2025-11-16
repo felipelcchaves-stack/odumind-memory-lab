@@ -11,9 +11,23 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 
 const userSchema = z.object({
-  nome: z.string().trim().max(100, 'Nome deve ter no máximo 100 caracteres'),
-  email: z.string().trim().email('Email inválido').max(255),
-  meta_diaria: z.number().min(1, 'Meta deve ser no mínimo 1').max(1000, 'Meta deve ser no máximo 1000'),
+  nome: z.string()
+    .trim()
+    .min(2, { message: "Nome deve ter pelo menos 2 caracteres" })
+    .max(100, { message: "Nome deve ter no máximo 100 caracteres" }),
+  email: z.string()
+    .trim()
+    .email({ message: "Email inválido" })
+    .max(255, { message: "Email deve ter no máximo 255 caracteres" }),
+  meta_diaria: z.number()
+    .int({ message: "Meta diária deve ser um número inteiro" })
+    .min(1, { message: "Meta diária deve ser pelo menos 1" })
+    .max(100, { message: "Meta diária deve ser no máximo 100" }),
+  password: z.string()
+    .min(6, { message: "Senha deve ter pelo menos 6 caracteres" })
+    .max(72, { message: "Senha deve ter no máximo 72 caracteres" })
+    .optional()
+    .or(z.literal("")),
 });
 
 interface UserEditDialogProps {
@@ -154,9 +168,10 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
 
       // Validate inputs
       const validation = userSchema.safeParse({
-        nome: nome.trim(),
-        email: email.trim(),
+        nome,
+        email,
         meta_diaria: metaDiaria,
+        password: isCreate ? password : undefined,
       });
 
       if (!validation.success) {
@@ -167,19 +182,19 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
 
       if (isCreate) {
         // Create new user
-        if (!password || password.length < 6) {
-          toast.error('Senha deve ter no mínimo 6 caracteres');
+        if (!validation.data.password || validation.data.password === "") {
+          toast.error('Senha é obrigatória para criar usuário');
           return;
         }
 
         // Call edge function to create user
         const { data, error } = await supabase.functions.invoke('admin-create-user', {
           body: {
-            email: email.trim(),
-            password: password,
-            nome: nome.trim() || undefined,
-            meta_diaria: metaDiaria,
-            avatar_url: avatarUrl || undefined,
+            email: validation.data.email,
+            password: validation.data.password,
+            nome: validation.data.nome,
+            meta_diaria: validation.data.meta_diaria,
+            avatar_url: avatarUrl,
             role: selectedRole,
           },
         });
@@ -195,8 +210,8 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
         const { error: profileError } = await supabase
           .from('profiles')
           .update({
-            nome: nome.trim() || null,
-            meta_diaria: metaDiaria,
+            nome: validation.data.nome,
+            meta_diaria: validation.data.meta_diaria,
             avatar_url: avatarUrl,
           })
           .eq('user_id', userId);

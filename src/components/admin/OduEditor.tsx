@@ -10,6 +10,42 @@ import { toast } from 'sonner';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import './quill-custom.css';
+import { z } from 'zod';
+
+const oduSchema = z.object({
+  numero: z.number()
+    .int({ message: "Número deve ser um inteiro" })
+    .min(1, { message: "Número deve ser no mínimo 1" })
+    .max(256, { message: "Número deve ser no máximo 256" }),
+  nome: z.string()
+    .trim()
+    .min(1, { message: "Nome é obrigatório" })
+    .max(100, { message: "Nome deve ter no máximo 100 caracteres" }),
+  texto_principal: z.string()
+    .trim()
+    .min(10, { message: "Texto principal deve ter pelo menos 10 caracteres" })
+    .max(10000, { message: "Texto principal deve ter no máximo 10.000 caracteres" }),
+  verso: z.string()
+    .max(5000, { message: "Verso deve ter no máximo 5.000 caracteres" })
+    .nullable()
+    .optional()
+    .transform(val => val === "" ? null : val),
+  significado: z.string()
+    .max(5000, { message: "Significado deve ter no máximo 5.000 caracteres" })
+    .nullable()
+    .optional()
+    .transform(val => val === "" ? null : val),
+  exemplos_praticos: z.string()
+    .max(5000, { message: "Exemplos práticos devem ter no máximo 5.000 caracteres" })
+    .nullable()
+    .optional()
+    .transform(val => val === "" ? null : val),
+  tags: z.array(z.string().trim().max(50, { message: "Tag deve ter no máximo 50 caracteres" }))
+    .max(20, { message: "Máximo de 20 tags permitidas" })
+    .nullable()
+    .optional()
+    .transform(val => val && val.length > 0 ? val : null),
+});
 
 interface OduEditorProps {
   oduId?: string;
@@ -94,7 +130,8 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
     setLoading(true);
 
     try {
-      const oduData = {
+      // Validate input
+      const validation = oduSchema.safeParse({
         numero: parseInt(formData.numero),
         nome: formData.nome,
         texto_principal: formData.texto_principal,
@@ -102,6 +139,23 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
         significado: formData.significado || null,
         exemplos_praticos: formData.exemplos_praticos || null,
         tags: formData.tags.length > 0 ? formData.tags : null,
+      });
+
+      if (!validation.success) {
+        const firstError = validation.error.errors[0];
+        toast.error(firstError.message);
+        setLoading(false);
+        return;
+      }
+
+      const oduData = {
+        numero: validation.data.numero,
+        nome: validation.data.nome,
+        texto_principal: validation.data.texto_principal,
+        verso: validation.data.verso ?? null,
+        significado: validation.data.significado ?? null,
+        exemplos_praticos: validation.data.exemplos_praticos ?? null,
+        tags: validation.data.tags ?? null,
       };
 
       if (oduId && oduId !== 'new') {
@@ -115,7 +169,7 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
         toast.success('Odu atualizado com sucesso');
       } else {
         // Create new
-        const { error } = await supabase.from('odu').insert(oduData);
+        const { error } = await supabase.from('odu').insert([oduData]);
 
         if (error) throw error;
         toast.success('Odu criado com sucesso');
