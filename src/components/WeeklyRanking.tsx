@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Trophy, TrendingUp } from "lucide-react";
 
 interface RankingUser {
   user_id: string;
-  email: string;
+  nome: string | null;
+  avatar_url: string | null;
   xp: number;
   rank: number;
   isCurrentUser: boolean;
@@ -27,10 +29,10 @@ export default function WeeklyRanking({ currentUserId }: WeeklyRankingProps) {
 
   async function loadRanking() {
     try {
-      // Get top 10 users by XP with their emails
+      // Get top 10 users by XP with their names and avatars
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("user_id, xp")
+        .select("user_id, xp, nome, avatar_url")
         .order("xp", { ascending: false })
         .limit(10);
 
@@ -38,14 +40,12 @@ export default function WeeklyRanking({ currentUserId }: WeeklyRankingProps) {
         setLoading(false);
         return;
       }
-
-      // Get emails for these users
-      const userIds = profiles.map((p) => p.user_id);
       
       // Create ranking with positions
       const rankingData: RankingUser[] = profiles.map((profile, index) => ({
         user_id: profile.user_id,
-        email: "Usuário Anônimo", // For privacy, we don't expose emails
+        nome: profile.nome,
+        avatar_url: profile.avatar_url,
         xp: profile.xp,
         rank: index + 1,
         isCurrentUser: profile.user_id === currentUserId,
@@ -109,7 +109,7 @@ export default function WeeklyRanking({ currentUserId }: WeeklyRankingProps) {
             >
               <div className="flex items-center gap-3">
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                  className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
                     user.rank === 1
                       ? "bg-yellow-500 text-white"
                       : user.rank === 2
@@ -121,9 +121,15 @@ export default function WeeklyRanking({ currentUserId }: WeeklyRankingProps) {
                 >
                   {user.rank}
                 </div>
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={user.avatar_url || ''} alt={user.nome || 'Avatar'} />
+                  <AvatarFallback>
+                    {user.nome?.substring(0, 2).toUpperCase() || '??'}
+                  </AvatarFallback>
+                </Avatar>
                 <div>
                   <p className="text-sm font-medium">
-                    {user.isCurrentUser ? "Você" : `Usuário #${user.rank}`}
+                    {user.isCurrentUser ? "Você" : (user.nome || "Anônimo")}
                   </p>
                   <p className="text-xs text-muted-foreground flex items-center gap-1">
                     <TrendingUp className="h-3 w-3" />

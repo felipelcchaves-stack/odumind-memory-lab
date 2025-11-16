@@ -13,6 +13,7 @@ import OduStudy from "./pages/OduStudy";
 import StudySession from "./pages/StudySession";
 import Admin from "./pages/Admin";
 import Settings from "./pages/Settings";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
               <Route path="/study" element={<StudySession />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/profile" element={<Profile />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
