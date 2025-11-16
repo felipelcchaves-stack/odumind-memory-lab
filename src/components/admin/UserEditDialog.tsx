@@ -69,6 +69,17 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
 
       if (emailError) throw emailError;
 
+      // Get user role
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .single();
+
+      if (roleError && roleError.code !== 'PGRST116') {
+        console.error('Error loading role:', roleError);
+      }
+
       if (profile) {
         setNome(profile.nome || '');
         setMetaDiaria(profile.meta_diaria);
@@ -77,6 +88,12 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
 
       if (emailData && emailData.length > 0) {
         setEmail(emailData[0].email);
+      }
+
+      if (roleData) {
+        setSelectedRole(roleData.role as 'admin' | 'colaborador' | 'aluno');
+      } else {
+        setSelectedRole('aluno');
       }
     } catch (error) {
       console.error('Error loading user:', error);
@@ -186,6 +203,31 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
 
         if (profileError) throw profileError;
 
+        // Update user role
+        // First, delete existing role
+        const { error: deleteRoleError } = await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', userId);
+
+        if (deleteRoleError) {
+          console.error('Error deleting old role:', deleteRoleError);
+          throw deleteRoleError;
+        }
+
+        // Then, insert new role
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: userId,
+            role: selectedRole,
+          });
+
+        if (roleError) {
+          console.error('Error updating role:', roleError);
+          throw roleError;
+        }
+
         toast.success('Perfil atualizado com sucesso');
       }
 
@@ -285,34 +327,33 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
 
             {/* Password Field (only for create) */}
             {isCreate && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Mínimo 6 caracteres"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    minLength={6}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="role">Perfil de Acesso</Label>
-                  <Select value={selectedRole} onValueChange={(value: any) => setSelectedRole(value)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="aluno">Aluno</SelectItem>
-                      <SelectItem value="colaborador">Colaborador</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </>
+              <div className="space-y-2">
+                <Label htmlFor="password">Senha</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Mínimo 6 caracteres"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  minLength={6}
+                />
+              </div>
             )}
+            
+            {/* Role Field (for both create and edit) */}
+            <div className="space-y-2">
+              <Label htmlFor="role">Perfil de Acesso</Label>
+              <Select value={selectedRole} onValueChange={(value: any) => setSelectedRole(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="aluno">Aluno</SelectItem>
+                  <SelectItem value="colaborador">Colaborador</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Daily Goal Field */}
             <div className="space-y-2">
