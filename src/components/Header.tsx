@@ -1,9 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { BookOpen, Menu } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
@@ -35,10 +37,10 @@ const Header = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/auth')}>
               Entrar
             </Button>
-            <Button variant="hero" size="sm">
+            <Button variant="hero" size="sm" onClick={() => navigate('/auth')}>
               Começar Grátis
             </Button>
           </div>
@@ -69,10 +71,10 @@ const Header = () => {
                 Comunidade
               </a>
               <div className="flex flex-col gap-2 pt-4">
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" onClick={() => navigate('/auth')}>
                   Entrar
                 </Button>
-                <Button variant="hero" size="sm">
+                <Button variant="hero" size="sm" onClick={() => navigate('/auth')}>
                   Começar Grátis
                 </Button>
               </div>
