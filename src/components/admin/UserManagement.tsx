@@ -7,10 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shield, ShieldOff, Eye, Search, X, Edit, UserPlus } from 'lucide-react';
+import { Shield, ShieldOff, Eye, Search, X, Edit, UserPlus, Settings } from 'lucide-react';
 import { toast } from 'sonner';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import UserEditDialog from './UserEditDialog';
+import UserRoleDialog from './UserRoleDialog';
 
 interface UserProfile {
   user_id: string;
@@ -26,13 +26,16 @@ export default function UserManagement() {
   const navigate = useNavigate();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [processingUsers, setProcessingUsers] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'user'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'colaborador' | 'aluno'>('all');
   const [activityFilter, setActivityFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | undefined>(undefined);
   const [isCreating, setIsCreating] = useState(false);
+  const [roleDialogOpen, setRoleDialogOpen] = useState(false);
+  const [roleChangeUserId, setRoleChangeUserId] = useState<string>('');
+  const [roleChangeUserName, setRoleChangeUserName] = useState<string>('');
+  const [roleChangeCurrentRole, setRoleChangeCurrentRole] = useState<string>('');
 
   useEffect(() => {
     loadUsers();
@@ -91,41 +94,25 @@ export default function UserManagement() {
   }
 
   async function toggleAdminRole(userId: string, isCurrentlyAdmin: boolean) {
-    setProcessingUsers(prev => new Set(prev).add(userId));
-    try {
-      if (isCurrentlyAdmin) {
-        const { error } = await supabase
-          .from('user_roles')
-          .delete()
-          .eq('user_id', userId)
-          .eq('role', 'admin');
-
-        if (error) throw error;
-        toast.success('Privilégios de admin removidos');
-      } else {
-        const { error } = await supabase
-          .from('user_roles')
-          .insert({ user_id: userId, role: 'admin' });
-
-        if (error) throw error;
-        toast.success('Usuário promovido a admin');
-      }
-      
-      await loadUsers();
-    } catch (error) {
-      console.error('Error toggling admin role:', error);
-      toast.error('Erro ao alterar função do usuário');
-    } finally {
-      setProcessingUsers(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(userId);
-        return newSet;
-      });
-    }
+    // This function is no longer used but kept for backwards compatibility
+    console.log('toggleAdminRole is deprecated, use UserRoleDialog instead');
   }
 
   const isAdmin = (user: UserProfile) => 
     user.user_roles?.some(r => r.role === 'admin') || false;
+
+  const isColaborador = (user: UserProfile) => 
+    user.user_roles?.some(r => r.role === 'colaborador') || false;
+
+  const isAluno = (user: UserProfile) => 
+    user.user_roles?.some(r => r.role === 'aluno') || false;
+
+  const getUserRole = (user: UserProfile): string => {
+    if (isAdmin(user)) return 'admin';
+    if (isColaborador(user)) return 'colaborador';
+    if (isAluno(user)) return 'aluno';
+    return 'sem role';
+  };
 
   const filteredUsers = users.filter(user => {
     // Search filter - busca por nome, email ou user_id
@@ -142,9 +129,8 @@ export default function UserManagement() {
 
     // Role filter
     if (roleFilter !== 'all') {
-      const userIsAdmin = isAdmin(user);
-      if (roleFilter === 'admin' && !userIsAdmin) return false;
-      if (roleFilter === 'user' && userIsAdmin) return false;
+      const userRole = getUserRole(user);
+      if (userRole !== roleFilter) return false;
     }
 
     // Activity filter - considera ativo se XP > 0 ou streak > 0
@@ -189,6 +175,17 @@ export default function UserManagement() {
     loadUsers();
   };
 
+  const handleChangeRole = (userId: string, userName: string, currentRole: string) => {
+    setRoleChangeUserId(userId);
+    setRoleChangeUserName(userName);
+    setRoleChangeCurrentRole(currentRole);
+    setRoleDialogOpen(true);
+  };
+
+  const handleRoleDialogSave = () => {
+    loadUsers();
+  };
+
   return (
     <>
       <Card>
@@ -223,9 +220,10 @@ export default function UserManagement() {
                 <SelectValue placeholder="Filtrar por role" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos os roles</SelectItem>
+                <SelectItem value="all">Todos os perfis</SelectItem>
                 <SelectItem value="admin">Admins</SelectItem>
-                <SelectItem value="user">Usuários</SelectItem>
+                <SelectItem value="colaborador">Colaboradores</SelectItem>
+                <SelectItem value="aluno">Alunos</SelectItem>
               </SelectContent>
             </Select>
             <Select value={activityFilter} onValueChange={(value: any) => setActivityFilter(value)}>
@@ -276,8 +274,7 @@ export default function UserManagement() {
               </TableRow>
             ) : (
               filteredUsers.map((user) => {
-              const userIsAdmin = isAdmin(user);
-              const isProcessing = processingUsers.has(user.user_id);
+              const userRole = getUserRole(user);
               
               return (
                 <TableRow key={user.user_id}>
@@ -294,13 +291,20 @@ export default function UserManagement() {
                   <TableCell>{user.xp}</TableCell>
                   <TableCell>{user.streak} dias</TableCell>
                   <TableCell>
-                    {userIsAdmin ? (
+                    {userRole === 'admin' ? (
                       <Badge variant="default" className="gap-1">
                         <Shield className="h-3 w-3" />
                         Admin
                       </Badge>
+                    ) : userRole === 'colaborador' ? (
+                      <Badge variant="default" className="gap-1 bg-blue-600">
+                        <Shield className="h-3 w-3" />
+                        Colaborador
+                      </Badge>
+                    ) : userRole === 'aluno' ? (
+                      <Badge variant="secondary">Aluno</Badge>
                     ) : (
-                      <Badge variant="secondary">Usuário</Badge>
+                      <Badge variant="outline">Sem Role</Badge>
                     )}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
@@ -324,47 +328,18 @@ export default function UserManagement() {
                         <Eye className="h-4 w-4 mr-1" />
                         Ver Perfil
                       </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant={userIsAdmin ? "destructive" : "default"}
-                            size="sm"
-                            disabled={isProcessing}
-                          >
-                            {userIsAdmin ? (
-                              <>
-                                <ShieldOff className="h-4 w-4 mr-1" />
-                                Remover Admin
-                              </>
-                            ) : (
-                              <>
-                                <Shield className="h-4 w-4 mr-1" />
-                                Promover
-                              </>
-                            )}
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              {userIsAdmin ? 'Remover privilégios de admin?' : 'Promover a admin?'}
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              {userIsAdmin
-                                ? 'Este usuário perderá acesso ao painel administrativo e todas as funções de admin.'
-                                : 'Este usuário terá acesso total ao painel administrativo e poderá gerenciar outros usuários e conteúdo.'}
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => toggleAdminRole(user.user_id, userIsAdmin)}
-                            >
-                              Confirmar
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleChangeRole(
+                          user.user_id, 
+                          user.nome || user.email || 'Usuário',
+                          userRole
+                        )}
+                      >
+                        <Settings className="h-4 w-4 mr-1" />
+                        Alterar Perfil
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -381,6 +356,15 @@ export default function UserManagement() {
       userId={editingUserId}
       onSave={handleDialogSave}
       isCreate={isCreating}
+    />
+    
+    <UserRoleDialog
+      open={roleDialogOpen}
+      onOpenChange={setRoleDialogOpen}
+      userId={roleChangeUserId}
+      userName={roleChangeUserName}
+      currentRole={roleChangeCurrentRole}
+      onSave={handleRoleDialogSave}
     />
     </>
   );

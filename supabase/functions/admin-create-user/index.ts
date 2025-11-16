@@ -12,6 +12,7 @@ interface CreateUserRequest {
   nome?: string;
   meta_diaria?: number;
   avatar_url?: string;
+  role?: 'admin' | 'colaborador' | 'aluno';
 }
 
 serve(async (req) => {
@@ -46,14 +47,14 @@ serve(async (req) => {
     }
 
     // Check if user has admin role
-    const { data: roles, error: roleError } = await supabaseClient
+    const { data: roles, error: rolesError } = await supabaseClient
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .eq('role', 'admin')
       .single();
 
-    if (roleError || !roles) {
+    if (rolesError || !roles) {
       throw new Error('User is not an admin');
     }
 
@@ -104,7 +105,18 @@ serve(async (req) => {
 
     if (profileError) {
       console.error('Error updating profile:', profileError);
-      // Don't throw here - user was created successfully
+    }
+
+    // Set user role
+    const { error: userRoleError } = await supabaseAdmin
+      .from('user_roles')
+      .insert({
+        user_id: newUser.user.id,
+        role: body.role || 'aluno',
+      });
+
+    if (userRoleError) {
+      console.error('Error setting role:', userRoleError);
     }
 
     return new Response(
