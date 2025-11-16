@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, BookOpen } from "lucide-react";
 import { toast } from "sonner";
+import DashboardHeader from "@/components/DashboardHeader";
 
 interface Odu {
   id: string;
@@ -75,6 +76,7 @@ export default function OduLibrary() {
 
   return (
     <div className="min-h-screen bg-background">
+      <DashboardHeader />
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">

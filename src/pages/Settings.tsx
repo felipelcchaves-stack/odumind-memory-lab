@@ -2,12 +2,14 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import NotificationSettings from '@/components/NotificationSettings';
+import DashboardHeader from '@/components/DashboardHeader';
 
 export default function Settings() {
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20">
+      <DashboardHeader />
       <div className="container max-w-4xl mx-auto px-4 py-8">
         <div className="mb-8">
           <Button
