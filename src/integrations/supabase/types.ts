@@ -14,6 +14,59 @@ export type Database = {
   }
   public: {
     Tables: {
+      memorizacao: {
+        Row: {
+          created_at: string
+          facilidade: number
+          forca_memoria: number
+          id: string
+          intervalo: number
+          odu_id: string
+          proxima_revisao: string | null
+          revisoes: number
+          status: Database["public"]["Enums"]["status_memorizacao"]
+          ultima_revisao: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          facilidade?: number
+          forca_memoria?: number
+          id?: string
+          intervalo?: number
+          odu_id: string
+          proxima_revisao?: string | null
+          revisoes?: number
+          status?: Database["public"]["Enums"]["status_memorizacao"]
+          ultima_revisao?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          facilidade?: number
+          forca_memoria?: number
+          id?: string
+          intervalo?: number
+          odu_id?: string
+          proxima_revisao?: string | null
+          revisoes?: number
+          status?: Database["public"]["Enums"]["status_memorizacao"]
+          ultima_revisao?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memorizacao_odu_id_fkey"
+            columns: ["odu_id"]
+            isOneToOne: false
+            referencedRelation: "odu"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       odu: {
         Row: {
           created_at: string
@@ -88,10 +141,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      calcular_proxima_revisao: {
+        Args: { _facilidade: number; _intervalo: number; _qualidade: number }
+        Returns: {
+          nova_facilidade: number
+          novo_intervalo: number
+          proxima_data: string
+        }[]
+      }
     }
     Enums: {
-      [_ in never]: never
+      status_memorizacao: "nao_estudado" | "estudando" | "memorizado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -218,6 +278,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      status_memorizacao: ["nao_estudado", "estudando", "memorizado"],
+    },
   },
 } as const
