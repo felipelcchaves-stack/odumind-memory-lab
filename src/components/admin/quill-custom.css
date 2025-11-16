@@ -1,0 +1,47 @@
+/* Custom styles for ReactQuill editor */
+.ql-container {
+  font-size: 14px;
+  min-height: 150px;
+}
+
+.ql-editor {
+  min-height: 150px;
+}
+
+.ql-toolbar {
+  border-top-left-radius: 0.375rem;
+  border-top-right-radius: 0.375rem;
+}
+
+.ql-container {
+  border-bottom-left-radius: 0.375rem;
+  border-bottom-right-radius: 0.375rem;
+}
+
+/* Dark mode support */
+.dark .ql-toolbar {
+  background: hsl(var(--muted));
+  border-color: hsl(var(--border));
+}
+
+.dark .ql-container {
+  background: hsl(var(--background));
+  border-color: hsl(var(--border));
+  color: hsl(var(--foreground));
+}
+
+.dark .ql-editor.ql-blank::before {
+  color: hsl(var(--muted-foreground));
+}
+
+.dark .ql-stroke {
+  stroke: hsl(var(--foreground));
+}
+
+.dark .ql-fill {
+  fill: hsl(var(--foreground));
+}
+
+.dark .ql-picker-label {
+  color: hsl(var(--foreground));
+}
