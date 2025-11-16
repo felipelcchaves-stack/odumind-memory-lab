@@ -13,6 +13,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 interface UserProfile {
   user_id: string;
+  nome?: string;
+  email?: string;
   xp: number;
   streak: number;
   created_at: string;
@@ -39,6 +41,7 @@ export default function UserManagement() {
         .from('profiles')
         .select(`
           user_id,
+          nome,
           xp,
           streak,
           created_at
@@ -47,16 +50,30 @@ export default function UserManagement() {
 
       if (error) throw error;
 
-      // Get roles for all users
+      // Get user emails using the new function
       const userIds = profiles?.map(p => p.user_id) || [];
+      const { data: emailsData, error: emailsError } = await supabase
+        .rpc('get_user_emails', { user_ids: userIds });
+
+      if (emailsError) {
+        console.error('Error fetching emails:', emailsError);
+      }
+
+      // Create a map of user emails
+      const emailMap = new Map(
+        emailsData?.map(e => [e.user_id, e.email]) || []
+      );
+
+      // Get roles for all users
       const { data: roles } = await supabase
         .from('user_roles')
         .select('user_id, role')
         .in('user_id', userIds);
 
-      // Combine profiles with roles
+      // Combine profiles with emails and roles
       const usersWithRoles = profiles?.map(profile => ({
         ...profile,
+        email: emailMap.get(profile.user_id),
         user_roles: roles?.filter(r => r.user_id === profile.user_id).map(r => ({ role: r.role })) || []
       })) || [];
 
@@ -107,11 +124,16 @@ export default function UserManagement() {
     user.user_roles?.some(r => r.role === 'admin') || false;
 
   const filteredUsers = users.filter(user => {
-    // Search filter - busca por user_id
+    // Search filter - busca por nome, email ou user_id
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
-      const matchesSearch = user.user_id.toLowerCase().includes(searchLower);
-      if (!matchesSearch) return false;
+      const matchesName = user.nome?.toLowerCase().includes(searchLower);
+      const matchesEmail = user.email?.toLowerCase().includes(searchLower);
+      const matchesId = user.user_id.toLowerCase().includes(searchLower);
+      
+      if (!matchesName && !matchesEmail && !matchesId) {
+        return false;
+      }
     }
 
     // Role filter
@@ -161,7 +183,7 @@ export default function UserManagement() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por ID do usuário..."
+                placeholder="Buscar por nome, email ou ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -230,8 +252,15 @@ export default function UserManagement() {
               
               return (
                 <TableRow key={user.user_id}>
-                  <TableCell className="font-mono text-xs">
-                    {user.user_id.substring(0, 8)}...
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="font-medium">
+                        {user.nome || user.email || `${user.user_id.substring(0, 8)}...`}
+                      </span>
+                      {user.nome && user.email && (
+                        <span className="text-xs text-muted-foreground">{user.email}</span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>{user.xp}</TableCell>
                   <TableCell>{user.streak} dias</TableCell>
