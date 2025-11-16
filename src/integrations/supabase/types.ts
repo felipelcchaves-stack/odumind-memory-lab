@@ -482,6 +482,13 @@ export type Database = {
         Returns: undefined
       }
       check_and_award_badges: { Args: { _user_id: string }; Returns: undefined }
+      get_user_emails: {
+        Args: { user_ids: string[] }
+        Returns: {
+          email: string
+          user_id: string
+        }[]
+      }
       has_admin_role: { Args: { _user_id: string }; Returns: boolean }
       update_user_streak: { Args: { _user_id: string }; Returns: undefined }
     }
