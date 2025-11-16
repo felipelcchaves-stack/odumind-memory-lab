@@ -1,8 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { BookOpen, Brain, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import heroPattern from "@/assets/hero-pattern.jpg";
 
 const Hero = () => {
+  const navigate = useNavigate();
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background Pattern */}
@@ -59,10 +62,10 @@ const Hero = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
-            <Button size="lg" variant="hero" className="text-lg">
+            <Button size="lg" variant="hero" className="text-lg" onClick={() => navigate('/auth')}>
               Começar Gratuitamente
             </Button>
-            <Button size="lg" variant="outline" className="text-lg">
+            <Button size="lg" variant="outline" className="text-lg" onClick={() => navigate('#pricing')}>
               Ver Planos Premium
             </Button>
           </div>
