@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Shield, ShieldOff, UserX, UserCheck } from 'lucide-react';
+import { Shield, ShieldOff, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
@@ -17,6 +18,7 @@ interface UserProfile {
 }
 
 export default function UserManagement() {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingUsers, setProcessingUsers] = useState<Set<string>>(new Set());
@@ -154,6 +156,14 @@ export default function UserManagement() {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/admin/user/${user.user_id}`)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Ver Perfil
+                      </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
