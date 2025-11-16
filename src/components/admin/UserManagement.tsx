@@ -7,9 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shield, ShieldOff, Eye, Search, X } from 'lucide-react';
+import { Shield, ShieldOff, Eye, Search, X, Edit, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import UserEditDialog from './UserEditDialog';
 
 interface UserProfile {
   user_id: string;
@@ -29,6 +30,9 @@ export default function UserManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'user'>('all');
   const [activityFilter, setActivityFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<string | undefined>(undefined);
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     loadUsers();
@@ -169,14 +173,39 @@ export default function UserManagement() {
     );
   }
 
+  const handleEdit = (userId: string) => {
+    setEditingUserId(userId);
+    setIsCreating(false);
+    setEditDialogOpen(true);
+  };
+
+  const handleCreate = () => {
+    setEditingUserId(undefined);
+    setIsCreating(true);
+    setEditDialogOpen(true);
+  };
+
+  const handleDialogSave = () => {
+    loadUsers();
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Gerenciamento de Usuários</CardTitle>
-        <CardDescription>
-          Gerencie privilégios e acesso dos usuários da plataforma
-        </CardDescription>
-      </CardHeader>
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Gerenciamento de Usuários</CardTitle>
+              <CardDescription>
+                Gerencie privilégios e acesso dos usuários da plataforma
+              </CardDescription>
+            </div>
+            <Button onClick={handleCreate}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Criar Usuário
+            </Button>
+          </div>
+        </CardHeader>
       <CardContent>
         <div className="space-y-4 mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
@@ -280,6 +309,14 @@ export default function UserManagement() {
                   <TableCell>
                     <div className="flex gap-2">
                       <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(user.user_id)}
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                        Editar
+                      </Button>
+                      <Button
                         variant="outline"
                         size="sm"
                         onClick={() => navigate(`/admin/user/${user.user_id}`)}
@@ -337,5 +374,14 @@ export default function UserManagement() {
         </Table>
       </CardContent>
     </Card>
+    
+    <UserEditDialog
+      open={editDialogOpen}
+      onOpenChange={setEditDialogOpen}
+      userId={editingUserId}
+      onSave={handleDialogSave}
+      isCreate={isCreating}
+    />
+    </>
   );
 }
