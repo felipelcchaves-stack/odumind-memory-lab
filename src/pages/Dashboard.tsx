@@ -78,6 +78,13 @@ export default function Dashboard() {
     }
   }, [profile, stats, permission.granted]);
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return "Bom dia";
+    if (hour >= 12 && hour < 18) return "Boa tarde";
+    return "Boa noite";
+  };
+
   const loadDashboardData = async () => {
     if (!user) return;
 
@@ -221,7 +228,7 @@ export default function Dashboard() {
       <main className="container px-4 py-8">
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-2">
-            Bem-vindo de volta{profile?.nome ? ` ${profile.nome}` : ''}! 🌟
+            {getGreeting()}{profile?.nome ? `, ${profile.nome}` : ''}! 🌟
           </h2>
           <p className="text-muted-foreground">Continue sua jornada de memorização dos Odu Ifá</p>
           
