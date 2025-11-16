@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, BookOpen } from "lucide-react";
 import { toast } from "sonner";
+import OduDetailDialog from "@/components/OduDetailDialog";
 
 interface Odu {
   id: string;
@@ -23,6 +24,8 @@ export default function OduLibrary() {
   const [filteredOdus, setFilteredOdus] = useState<Odu[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const [selectedOdu, setSelectedOdu] = useState<Odu | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchOdus();
@@ -58,6 +61,11 @@ export default function OduLibrary() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleViewDetails(odu: Odu) {
+    setSelectedOdu(odu);
+    setDialogOpen(true);
   }
 
   if (loading) {
@@ -129,7 +137,11 @@ export default function OduLibrary() {
                     {odu.verso}
                   </blockquote>
                 )}
-                <Button variant="outline" className="w-full">
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => handleViewDetails(odu)}
+                >
                   Ver Detalhes
                 </Button>
               </CardContent>
@@ -145,6 +157,13 @@ export default function OduLibrary() {
           </div>
         )}
       </div>
+
+      {/* Dialog de Detalhes com Proteção Anti-Cópia */}
+      <OduDetailDialog 
+        odu={selectedOdu} 
+        open={dialogOpen} 
+        onOpenChange={setDialogOpen} 
+      />
     </div>
   );
 }
