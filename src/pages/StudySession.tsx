@@ -10,6 +10,8 @@ import { ArrowLeft, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import Flashcard from "@/components/Flashcard";
 import Quiz from "@/components/Quiz";
+import XPNotification from "@/components/XPNotification";
+import BadgesDisplay from "@/components/BadgesDisplay";
 
 interface Odu {
   id: string;
@@ -49,6 +51,8 @@ export default function StudySession() {
   const [loading, setLoading] = useState(true);
   const [sessionComplete, setSessionComplete] = useState(false);
   const [xpGained, setXpGained] = useState(0);
+  const [showXPNotification, setShowXPNotification] = useState(false);
+  const [lastXPGain, setLastXPGain] = useState(0);
 
   useEffect(() => {
     if (!user) {
@@ -120,6 +124,8 @@ export default function StudySession() {
       const revisoes = (currentRecord?.revisoes || 0) + 1;
       const facilidade = currentRecord?.facilidade || 2.5;
       const intervalo = currentRecord?.intervalo || 0;
+      const newMemoryStrength = Math.min(100, (currentRecord?.forca_memoria || 0) + qualidade * 5);
+      const newStatus = revisoes >= 3 && newMemoryStrength >= 80 ? "memorizado" : "estudando";
 
       // Calculate next review using SM-2 algorithm
       const { data: nextReview } = await supabase.rpc("calcular_proxima_revisao", {
@@ -142,18 +148,65 @@ export default function StudySession() {
             proxima_revisao: proxima_data,
             facilidade: nova_facilidade,
             intervalo: novo_intervalo,
-            forca_memoria: Math.min(100, (currentRecord?.forca_memoria || 0) + qualidade * 5),
-            status: revisoes >= 3 ? "memorizado" : "estudando",
+            forca_memoria: newMemoryStrength,
+            status: newStatus,
           });
 
-        // Award XP
+        // Calculate XP based on difficulty and performance
         const xp = qualidade * 10;
         setXpGained((prev) => prev + xp);
+        setLastXPGain(xp);
+        setShowXPNotification(true);
 
+        // Get current profile
+        const { data: currentProfile } = await supabase
+          .from("profiles")
+          .select("xp")
+          .eq("user_id", user.id)
+          .single();
+
+        const newXp = (currentProfile?.xp || 0) + xp;
+
+        // Update profile with new XP
         await supabase
           .from("profiles")
-          .update({ xp: (user as any).xp + xp })
+          .update({ xp: newXp })
           .eq("user_id", user.id);
+
+        // Update streak
+        await supabase.rpc("update_user_streak", { _user_id: user.id });
+
+        // Log XP gain
+        await supabase.from("gamification_logs").insert({
+          user_id: user.id,
+          tipo_evento: "xp_ganho",
+          valor: xp,
+          detalhes: { odu_id: currentOdu.id, qualidade, odu_nome: currentOdu.nome },
+        });
+
+        // Check and award badges
+        const { data: newBadges, error: badgeError } = await supabase.rpc("check_and_award_badges", { 
+          _user_id: user.id 
+        });
+
+        // Check if new badges were awarded
+        const { data: recentBadges } = await supabase
+          .from("user_badges")
+          .select(`
+            badge_id,
+            badges (nome, icon)
+          `)
+          .eq("user_id", user.id)
+          .gte("conquistado_em", new Date(Date.now() - 5000).toISOString());
+
+        if (recentBadges && recentBadges.length > 0) {
+          recentBadges.forEach((badge: any) => {
+            toast.success(
+              `🎉 Novo badge conquistado: ${badge.badges.icon} ${badge.badges.nome}!`,
+              { duration: 5000 }
+            );
+          });
+        }
       }
 
       moveToNext();
@@ -239,25 +292,35 @@ export default function StudySession() {
   if (sessionComplete) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="max-w-md">
+        <Card className="max-w-md w-full">
           <CardHeader>
             <div className="flex justify-center mb-4">
-              <Trophy className="h-16 w-16 text-primary" />
+              <div className="w-20 h-20 rounded-full bg-gradient-primary flex items-center justify-center">
+                <Trophy className="h-12 w-12 text-primary-foreground" />
+              </div>
             </div>
-            <CardTitle className="text-center text-2xl">Sessão Completa!</CardTitle>
+            <CardTitle className="text-center text-3xl">Sessão Completa!</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="text-center space-y-2">
+          <CardContent className="space-y-6">
+            <div className="text-center space-y-3">
               <p className="text-muted-foreground">
                 Você revisou {odus.length} Odu{odus.length > 1 ? "s" : ""}
               </p>
-              <div className="text-3xl font-bold text-primary">+{xpGained} XP</div>
+              <div className="py-6">
+                <div className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-gradient-primary">
+                  <span className="text-5xl font-bold text-primary-foreground">+{xpGained}</span>
+                  <span className="text-xl text-primary-foreground">XP</span>
+                </div>
+              </div>
+              
+              {/* Show badges earned during session */}
+              {user && <BadgesDisplay userId={user.id} compact />}
             </div>
             <div className="space-y-2">
-              <Button onClick={() => navigate("/dashboard")} className="w-full" variant="hero">
+              <Button onClick={() => navigate("/dashboard")} className="w-full" variant="hero" size="lg">
                 Voltar ao Dashboard
               </Button>
-              <Button onClick={() => window.location.reload()} className="w-full" variant="outline">
+              <Button onClick={() => window.location.reload()} className="w-full" variant="outline" size="lg">
                 Nova Sessão
               </Button>
             </div>
@@ -272,6 +335,12 @@ export default function StudySession() {
 
   return (
     <div className="min-h-screen bg-background">
+      <XPNotification 
+        xp={lastXPGain} 
+        show={showXPNotification} 
+        onComplete={() => setShowXPNotification(false)} 
+      />
+      
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">

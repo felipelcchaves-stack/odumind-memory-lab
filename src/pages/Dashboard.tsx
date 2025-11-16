@@ -6,10 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, Target, Zap, BookOpen, Sun, Moon, Brain, Calendar, TrendingUp } from 'lucide-react';
+import { Trophy, Target, Zap, BookOpen, Sun, Moon, Brain, Calendar, TrendingUp, Award } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import BadgesDisplay from '@/components/BadgesDisplay';
+import WeeklyRanking from '@/components/WeeklyRanking';
 
 interface ProfileData {
   xp: number;
@@ -213,6 +215,13 @@ export default function Dashboard() {
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-2">Bem-vindo de volta! 🌟</h2>
           <p className="text-muted-foreground">Continue sua jornada de memorização dos Odu Ifá</p>
+          
+          {/* Quick Badges Display */}
+          {user && (
+            <div className="mt-4">
+              <BadgesDisplay userId={user.id} compact />
+            </div>
+          )}
         </div>
 
         {/* Primary Stats Grid */}
@@ -328,9 +337,10 @@ export default function Dashboard() {
           </Button>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 mb-8">
+        {/* Gamification Section */}
+        <div className="grid gap-6 lg:grid-cols-3 mb-8">
           {/* Weekly Progress Chart */}
-          <Card>
+          <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
@@ -360,6 +370,14 @@ export default function Dashboard() {
               )}
             </CardContent>
           </Card>
+
+          {/* Weekly Ranking */}
+          <WeeklyRanking currentUserId={user?.id || ''} />
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2 mb-8">
+          {/* Badges */}
+          {user && <BadgesDisplay userId={user.id} />}
 
           {/* Upcoming Reviews */}
           <Card>

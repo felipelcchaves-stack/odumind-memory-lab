@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      badges: {
+        Row: {
+          code: string
+          created_at: string
+          descricao: string
+          icon: string
+          id: string
+          nome: string
+          requisito_tipo: string
+          requisito_valor: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          descricao: string
+          icon: string
+          id?: string
+          nome: string
+          requisito_tipo: string
+          requisito_valor: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          descricao?: string
+          icon?: string
+          id?: string
+          nome?: string
+          requisito_tipo?: string
+          requisito_valor?: number
+        }
+        Relationships: []
+      }
+      gamification_logs: {
+        Row: {
+          created_at: string
+          detalhes: Json | null
+          id: string
+          tipo_evento: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          detalhes?: Json | null
+          id?: string
+          tipo_evento: string
+          user_id: string
+          valor?: number
+        }
+        Update: {
+          created_at?: string
+          detalhes?: Json | null
+          id?: string
+          tipo_evento?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: []
+      }
       memorizacao: {
         Row: {
           created_at: string
@@ -110,6 +170,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          last_study_date: string | null
           meta_diaria: number
           streak: number
           updated_at: string
@@ -119,6 +180,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          last_study_date?: string | null
           meta_diaria?: number
           streak?: number
           updated_at?: string
@@ -128,6 +190,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          last_study_date?: string | null
           meta_diaria?: number
           streak?: number
           updated_at?: string
@@ -135,6 +198,35 @@ export type Database = {
           xp?: number
         }
         Relationships: []
+      }
+      user_badges: {
+        Row: {
+          badge_id: string
+          conquistado_em: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          conquistado_em?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          conquistado_em?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -149,6 +241,8 @@ export type Database = {
           proxima_data: string
         }[]
       }
+      check_and_award_badges: { Args: { _user_id: string }; Returns: undefined }
+      update_user_streak: { Args: { _user_id: string }; Returns: undefined }
     }
     Enums: {
       status_memorizacao: "nao_estudado" | "estudando" | "memorizado"
