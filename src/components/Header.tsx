@@ -27,11 +27,11 @@ const Header = () => {
             <a href="#learning" className="text-sm font-medium hover:text-primary transition-smooth">
               Aprendizado
             </a>
+            <a href="/odu" className="text-sm font-medium hover:text-primary transition-smooth">
+              Biblioteca
+            </a>
             <a href="#pricing" className="text-sm font-medium hover:text-primary transition-smooth">
               Planos
-            </a>
-            <a href="#community" className="text-sm font-medium hover:text-primary transition-smooth">
-              Comunidade
             </a>
           </nav>
 
@@ -64,11 +64,11 @@ const Header = () => {
               <a href="#learning" className="text-sm font-medium hover:text-primary transition-smooth">
                 Aprendizado
               </a>
+              <a href="/odu" className="text-sm font-medium hover:text-primary transition-smooth">
+                Biblioteca
+              </a>
               <a href="#pricing" className="text-sm font-medium hover:text-primary transition-smooth">
                 Planos
-              </a>
-              <a href="#community" className="text-sm font-medium hover:text-primary transition-smooth">
-                Comunidade
               </a>
               <div className="flex flex-col gap-2 pt-4">
                 <Button variant="ghost" size="sm" onClick={() => navigate('/auth')}>

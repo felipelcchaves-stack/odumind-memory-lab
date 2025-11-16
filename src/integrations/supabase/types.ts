@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      odu: {
+        Row: {
+          created_at: string
+          exemplos_praticos: string | null
+          id: string
+          nome: string
+          numero: number
+          significado: string | null
+          tags: string[] | null
+          texto_principal: string
+          updated_at: string
+          verso: string | null
+        }
+        Insert: {
+          created_at?: string
+          exemplos_praticos?: string | null
+          id?: string
+          nome: string
+          numero: number
+          significado?: string | null
+          tags?: string[] | null
+          texto_principal: string
+          updated_at?: string
+          verso?: string | null
+        }
+        Update: {
+          created_at?: string
+          exemplos_praticos?: string | null
+          id?: string
+          nome?: string
+          numero?: number
+          significado?: string | null
+          tags?: string[] | null
+          texto_principal?: string
+          updated_at?: string
+          verso?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
