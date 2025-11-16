@@ -19,16 +19,19 @@ export function useAdmin() {
     }
 
     try {
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .maybeSingle();
+      // Use the database function instead of direct query to avoid RLS issues
+      const { data, error } = await supabase
+        .rpc('has_admin_role', { _user_id: user.id });
 
-      setIsAdmin(!!data);
+      if (error) {
+        console.error('Error checking admin status:', error);
+        setIsAdmin(false);
+      } else {
+        setIsAdmin(!!data);
+        console.log('Admin status for user:', user.email, '- Is Admin:', !!data);
+      }
     } catch (error) {
-      console.error('Error checking admin status:', error);
+      console.error('Exception checking admin status:', error);
       setIsAdmin(false);
     } finally {
       setLoading(false);
