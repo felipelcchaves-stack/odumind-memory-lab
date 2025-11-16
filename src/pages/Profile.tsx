@@ -10,6 +10,28 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Upload, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import DashboardHeader from '@/components/DashboardHeader';
+import { z } from 'zod';
+
+const profileSchema = z.object({
+  nome: z.string()
+    .trim()
+    .min(2, { message: "Nome deve ter pelo menos 2 caracteres" })
+    .max(100, { message: "Nome deve ter no máximo 100 caracteres" }),
+  password: z.string()
+    .min(6, { message: "Senha deve ter pelo menos 6 caracteres" })
+    .max(72, { message: "Senha deve ter no máximo 72 caracteres" })
+    .optional()
+    .or(z.literal("")),
+  confirmPassword: z.string().optional().or(z.literal("")),
+}).refine((data) => {
+  if (data.password && data.password !== "") {
+    return data.password === data.confirmPassword;
+  }
+  return true;
+}, {
+  message: "As senhas não correspondem",
+  path: ["confirmPassword"],
+});
 
 export default function Profile() {
   const { user } = useAuth();
@@ -99,28 +121,32 @@ export default function Profile() {
     try {
       setLoading(true);
 
+      // Validate input
+      const validation = profileSchema.safeParse({
+        nome,
+        password: newPassword,
+        confirmPassword,
+      });
+
+      if (!validation.success) {
+        const firstError = validation.error.errors[0];
+        toast.error(firstError.message);
+        setLoading(false);
+        return;
+      }
+
       // Update nome
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ nome })
+        .update({ nome: validation.data.nome })
         .eq('user_id', user.id);
 
       if (profileError) throw profileError;
 
       // Update password if provided
-      if (newPassword) {
-        if (newPassword !== confirmPassword) {
-          toast.error('As senhas não coincidem');
-          return;
-        }
-
-        if (newPassword.length < 6) {
-          toast.error('A senha deve ter pelo menos 6 caracteres');
-          return;
-        }
-
+      if (validation.data.password && validation.data.password !== "") {
         const { error: passwordError } = await supabase.auth.updateUser({
-          password: newPassword
+          password: validation.data.password
         });
 
         if (passwordError) throw passwordError;
