@@ -6,12 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, Target, Zap, BookOpen, Sun, Moon, Brain, Calendar, TrendingUp, Award } from 'lucide-react';
+import { Trophy, Target, Zap, BookOpen, Sun, Moon, Brain, Calendar, TrendingUp, Award, Shield } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import BadgesDisplay from '@/components/BadgesDisplay';
 import WeeklyRanking from '@/components/WeeklyRanking';
+import { useAdmin } from '@/hooks/useAdmin';
 
 interface ProfileData {
   xp: number;
@@ -43,6 +44,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState<MemorizationStats | null>(null);
   const [loading, setLoading] = useState(true);
   const { theme, setTheme } = useTheme();
+  const { isAdmin } = useAdmin();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -203,6 +205,12 @@ export default function Dashboard() {
             <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
               {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
+            {isAdmin && (
+              <Button variant="outline" onClick={() => navigate('/admin')}>
+                <Shield className="h-4 w-4 mr-2" />
+                Admin
+              </Button>
+            )}
             <Button variant="outline" onClick={handleSignOut}>
               Sair
             </Button>
