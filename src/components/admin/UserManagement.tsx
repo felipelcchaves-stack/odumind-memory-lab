@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Shield, ShieldOff, Eye } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Shield, ShieldOff, Eye, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
@@ -22,6 +24,9 @@ export default function UserManagement() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingUsers, setProcessingUsers] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'user'>('all');
+  const [activityFilter, setActivityFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
   useEffect(() => {
     loadUsers();
@@ -101,6 +106,39 @@ export default function UserManagement() {
   const isAdmin = (user: UserProfile) => 
     user.user_roles?.some(r => r.role === 'admin') || false;
 
+  const filteredUsers = users.filter(user => {
+    // Search filter - busca por user_id
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = user.user_id.toLowerCase().includes(searchLower);
+      if (!matchesSearch) return false;
+    }
+
+    // Role filter
+    if (roleFilter !== 'all') {
+      const userIsAdmin = isAdmin(user);
+      if (roleFilter === 'admin' && !userIsAdmin) return false;
+      if (roleFilter === 'user' && userIsAdmin) return false;
+    }
+
+    // Activity filter - considera ativo se XP > 0 ou streak > 0
+    if (activityFilter !== 'all') {
+      const isActive = user.xp > 0 || user.streak > 0;
+      if (activityFilter === 'active' && !isActive) return false;
+      if (activityFilter === 'inactive' && isActive) return false;
+    }
+
+    return true;
+  });
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setRoleFilter('all');
+    setActivityFilter('all');
+  };
+
+  const hasActiveFilters = searchTerm || roleFilter !== 'all' || activityFilter !== 'all';
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -118,6 +156,55 @@ export default function UserManagement() {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        <div className="space-y-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por ID do usuário..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={roleFilter} onValueChange={(value: any) => setRoleFilter(value)}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Filtrar por role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os roles</SelectItem>
+                <SelectItem value="admin">Admins</SelectItem>
+                <SelectItem value="user">Usuários</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={activityFilter} onValueChange={(value: any) => setActivityFilter(value)}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Filtrar por atividade" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas atividades</SelectItem>
+                <SelectItem value="active">Ativos</SelectItem>
+                <SelectItem value="inactive">Inativos</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {hasActiveFilters && (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Mostrando {filteredUsers.length} de {users.length} usuários
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                className="h-8"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Limpar filtros
+              </Button>
+            </div>
+          )}
+        </div>
         <Table>
           <TableHeader>
             <TableRow>
@@ -130,7 +217,14 @@ export default function UserManagement() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users.map((user) => {
+            {filteredUsers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  {users.length === 0 ? 'Nenhum usuário encontrado' : 'Nenhum usuário corresponde aos filtros'}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredUsers.map((user) => {
               const userIsAdmin = isAdmin(user);
               const isProcessing = processingUsers.has(user.user_id);
               
@@ -209,15 +303,9 @@ export default function UserManagement() {
                   </TableCell>
                 </TableRow>
               );
-            })}
+            }))}
           </TableBody>
         </Table>
-        
-        {users.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">
-            Nenhum usuário encontrado
-          </div>
-        )}
       </CardContent>
     </Card>
   );
