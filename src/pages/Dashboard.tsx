@@ -19,6 +19,7 @@ interface ProfileData {
   xp: number;
   streak: number;
   meta_diaria: number;
+  nome: string | null;
 }
 
 interface MemorizationStats {
@@ -84,7 +85,7 @@ export default function Dashboard() {
       // Load profile
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('xp, streak, meta_diaria')
+        .select('xp, streak, meta_diaria, nome')
         .eq('user_id', user.id)
         .single();
 
@@ -219,7 +220,9 @@ export default function Dashboard() {
       {/* Main Content */}
       <main className="container px-4 py-8">
         <div className="mb-8">
-          <h2 className="text-3xl font-bold mb-2">Bem-vindo de volta! 🌟</h2>
+          <h2 className="text-3xl font-bold mb-2">
+            Bem-vindo de volta{profile?.nome ? `, ${profile.nome}` : ''}! 🌟
+          </h2>
           <p className="text-muted-foreground">Continue sua jornada de memorização dos Odu Ifá</p>
           
           {/* Quick Badges Display */}
