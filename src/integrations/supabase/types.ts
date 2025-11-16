@@ -127,6 +127,91 @@ export type Database = {
           },
         ]
       }
+      memory_palace: {
+        Row: {
+          created_at: string
+          id: string
+          nota_visual: string | null
+          odu_id: string
+          posicao: number
+          sala: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nota_visual?: string | null
+          odu_id: string
+          posicao: number
+          sala: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nota_visual?: string | null
+          odu_id?: string
+          posicao?: number
+          sala?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memory_palace_odu_id_fkey"
+            columns: ["odu_id"]
+            isOneToOne: false
+            referencedRelation: "odu"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mnemonics: {
+        Row: {
+          conteudo: string
+          created_at: string
+          id: string
+          is_ai_generated: boolean
+          is_favorite: boolean
+          odu_id: string
+          tipo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          conteudo: string
+          created_at?: string
+          id?: string
+          is_ai_generated?: boolean
+          is_favorite?: boolean
+          odu_id: string
+          tipo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          conteudo?: string
+          created_at?: string
+          id?: string
+          is_ai_generated?: boolean
+          is_favorite?: boolean
+          odu_id?: string
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mnemonics_odu_id_fkey"
+            columns: ["odu_id"]
+            isOneToOne: false
+            referencedRelation: "odu"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       odu: {
         Row: {
           created_at: string

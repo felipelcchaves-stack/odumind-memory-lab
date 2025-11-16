@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, BookOpen, Sparkles, Lightbulb, Tag } from "lucide-react";
 import { toast } from "sonner";
+import { MnemonicsSection } from "@/components/MnemonicsSection";
 
 interface Odu {
   id: string;
@@ -247,6 +248,9 @@ export default function OduStudy() {
             )}
           </CardContent>
         </Card>
+
+        {/* Mnemonics Section */}
+        <MnemonicsSection odu={odu} />
 
         {/* Action Buttons */}
         <div className="flex gap-4">
