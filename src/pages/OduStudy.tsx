@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, BookOpen, Sparkles, Lightbulb, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { MnemonicsSection } from "@/components/MnemonicsSection";
+import { ElaborativeEncoding } from "@/components/ElaborativeEncoding";
 
 interface Odu {
   id: string;
@@ -251,6 +252,9 @@ export default function OduStudy() {
 
         {/* Mnemonics Section */}
         <MnemonicsSection odu={odu} />
+
+        {/* Elaborative Encoding Section */}
+        <ElaborativeEncoding odu={odu} />
 
         {/* Action Buttons */}
         <div className="flex gap-4">
