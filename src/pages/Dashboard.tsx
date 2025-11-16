@@ -6,13 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, Target, Zap, BookOpen, Sun, Moon, Brain, Calendar, TrendingUp, Award, Shield } from 'lucide-react';
+import { Trophy, Target, Zap, BookOpen, Sun, Moon, Brain, Calendar, TrendingUp, Award, Shield, Settings as SettingsIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import BadgesDisplay from '@/components/BadgesDisplay';
 import WeeklyRanking from '@/components/WeeklyRanking';
+import NotificationPrompt from '@/components/NotificationPrompt';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface ProfileData {
   xp: number;
@@ -45,6 +47,11 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const { theme, setTheme } = useTheme();
   const { isAdmin } = useAdmin();
+  const { 
+    permission, 
+    scheduleStreakReminder, 
+    scheduleReviewReminder 
+  } = useNotifications();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -57,6 +64,21 @@ export default function Dashboard() {
       loadDashboardData();
     }
   }, [user]);
+
+  // Schedule notifications when data is loaded
+  useEffect(() => {
+    if (profile && stats && permission.granted) {
+      // Schedule streak reminder if user has a streak
+      if (profile.streak > 0) {
+        scheduleStreakReminder(profile.streak);
+      }
+
+      // Schedule review reminder if there are pending reviews
+      if (stats.reviewTodayCount > 0) {
+        scheduleReviewReminder(stats.reviewTodayCount);
+      }
+    }
+  }, [profile, stats, permission.granted]);
 
   const loadDashboardData = async () => {
     if (!user) return;
@@ -204,6 +226,9 @@ export default function Dashboard() {
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
               {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => navigate('/settings')}>
+              <SettingsIcon className="h-5 w-5" />
             </Button>
             {isAdmin && (
               <Button variant="outline" onClick={() => navigate('/admin')}>
@@ -479,6 +504,9 @@ export default function Dashboard() {
           </Card>
         </div>
       </main>
+
+      {/* Notification Prompt */}
+      <NotificationPrompt />
     </div>
   );
 }

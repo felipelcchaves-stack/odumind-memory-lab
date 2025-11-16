@@ -39,7 +39,28 @@ export default defineConfig(({ mode }) => ({
             type: 'image/png',
             purpose: 'any maskable'
           }
+        ],
+        categories: ['education', 'productivity'],
+        shortcuts: [
+          {
+            name: 'Estudar',
+            short_name: 'Estudar',
+            description: 'Iniciar uma sessão de estudo',
+            url: '/study',
+            icons: [{ src: '/icon-192.png', sizes: '192x192' }]
+          },
+          {
+            name: 'Dashboard',
+            short_name: 'Dashboard',
+            description: 'Ver seu progresso',
+            url: '/dashboard',
+            icons: [{ src: '/icon-192.png', sizes: '192x192' }]
+          }
         ]
+      },
+      devOptions: {
+        enabled: true,
+        type: 'module',
       },
       workbox: {
         cleanupOutdatedCaches: true,
