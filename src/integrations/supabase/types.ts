@@ -221,30 +221,36 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string
           id: string
           last_study_date: string | null
           meta_diaria: number
+          nome: string | null
           streak: number
           updated_at: string
           user_id: string
           xp: number
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
           id?: string
           last_study_date?: string | null
           meta_diaria?: number
+          nome?: string | null
           streak?: number
           updated_at?: string
           user_id: string
           xp?: number
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
           id?: string
           last_study_date?: string | null
           meta_diaria?: number
+          nome?: string | null
           streak?: number
           updated_at?: string
           user_id?: string
