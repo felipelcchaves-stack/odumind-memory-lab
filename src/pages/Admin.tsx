@@ -6,11 +6,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Plus, Upload, Shield } from 'lucide-react';
+import { ArrowLeft, Plus, Upload, Shield, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import OduEditor from '@/components/admin/OduEditor';
 import OduList from '@/components/admin/OduList';
 import BulkUpload from '@/components/admin/BulkUpload';
+import UserManagement from '@/components/admin/UserManagement';
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -140,10 +141,14 @@ export default function Admin() {
 
         {/* Tabs */}
         <Tabs defaultValue="list" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="list">Lista de Odu</TabsTrigger>
             <TabsTrigger value="editor">Editor</TabsTrigger>
             <TabsTrigger value="upload">Upload em Massa</TabsTrigger>
+            <TabsTrigger value="users">
+              <Users className="h-4 w-4 mr-2" />
+              Usuários
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="list" className="space-y-4">
@@ -212,6 +217,10 @@ export default function Admin() {
                 }} />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="users">
+            <UserManagement />
           </TabsContent>
         </Tabs>
       </main>
