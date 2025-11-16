@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -11,7 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Trash2, Search } from 'lucide-react';
+import { Edit, Trash2, Search, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -38,6 +39,7 @@ interface Odu {
 }
 
 export default function OduList({ onEdit, refreshTrigger }: OduListProps) {
+  const navigate = useNavigate();
   const [odus, setOdus] = useState<Odu[]>([]);
   const [filteredOdus, setFilteredOdus] = useState<Odu[]>([]);
   const [loading, setLoading] = useState(true);
@@ -157,6 +159,14 @@ export default function OduList({ onEdit, refreshTrigger }: OduListProps) {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex gap-2 justify-end">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate(`/odu/${odu.id}`)}
+                      title="Visualizar Odu"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="sm"
