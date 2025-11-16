@@ -11,6 +11,7 @@ import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import BadgesDisplay from '@/components/BadgesDisplay';
 import WeeklyRanking from '@/components/WeeklyRanking';
+import AchievementsHistory from '@/components/AchievementsHistory';
 import NotificationPrompt from '@/components/NotificationPrompt';
 import { useNotifications } from '@/hooks/useNotifications';
 import DashboardHeader from '@/components/DashboardHeader';
@@ -172,6 +173,9 @@ export default function Dashboard() {
 
       // Load memorization stats
       await loadMemorizationStats();
+
+      // Check and award new achievements
+      await supabase.rpc("check_and_award_achievements", { _user_id: user.id });
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -474,6 +478,11 @@ export default function Dashboard() {
           {/* Badges */}
           {user && <BadgesDisplay userId={user.id} />}
 
+          {/* Achievements History */}
+          {user && <AchievementsHistory />}
+        </div>
+
+        <div id="achievements-section" className="grid gap-6 md:grid-cols-2 mb-8">
           {/* Upcoming Reviews */}
           <Card>
             <CardHeader>
@@ -551,7 +560,10 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => {
+            const element = document.getElementById('achievements-section');
+            element?.scrollIntoView({ behavior: 'smooth' });
+          }}>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -559,7 +571,7 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <p className="font-semibold">Conquistas</p>
-                  <p className="text-sm text-muted-foreground">Em breve</p>
+                  <p className="text-sm text-muted-foreground">Ver histórico completo</p>
                 </div>
               </div>
             </CardContent>
