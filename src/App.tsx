@@ -13,6 +13,7 @@ import OduStudy from "./pages/OduStudy";
 import StudySession from "./pages/StudySession";
 import MemoryPalace from "./pages/MemoryPalace";
 import Admin from "./pages/Admin";
+import UserDetail from "./pages/UserDetail";
 import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/study" element={<StudySession />} />
               <Route path="/memory-palace" element={<MemoryPalace />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/admin/user/:userId" element={<UserDetail />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/profile" element={<Profile />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
