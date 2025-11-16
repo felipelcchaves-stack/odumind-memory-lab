@@ -9,6 +9,8 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import OduLibrary from "./pages/OduLibrary";
+import OduStudy from "./pages/OduStudy";
+import StudySession from "./pages/StudySession";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +28,8 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/odu" element={<OduLibrary />} />
+              <Route path="/odu/:id" element={<OduStudy />} />
+              <Route path="/study" element={<StudySession />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, BookOpen } from "lucide-react";
 import { toast } from "sonner";
-import OduDetailDialog from "@/components/OduDetailDialog";
 
 interface Odu {
   id: string;
@@ -20,12 +20,11 @@ interface Odu {
 }
 
 export default function OduLibrary() {
+  const navigate = useNavigate();
   const [odus, setOdus] = useState<Odu[]>([]);
   const [filteredOdus, setFilteredOdus] = useState<Odu[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
-  const [selectedOdu, setSelectedOdu] = useState<Odu | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchOdus();
@@ -61,11 +60,6 @@ export default function OduLibrary() {
     } finally {
       setLoading(false);
     }
-  }
-
-  function handleViewDetails(odu: Odu) {
-    setSelectedOdu(odu);
-    setDialogOpen(true);
   }
 
   if (loading) {
@@ -140,7 +134,7 @@ export default function OduLibrary() {
                 <Button 
                   variant="outline" 
                   className="w-full"
-                  onClick={() => handleViewDetails(odu)}
+                  onClick={() => navigate(`/odu/${odu.id}`)}
                 >
                   Ver Detalhes
                 </Button>
@@ -157,13 +151,6 @@ export default function OduLibrary() {
           </div>
         )}
       </div>
-
-      {/* Dialog de Detalhes com Proteção Anti-Cópia */}
-      <OduDetailDialog 
-        odu={selectedOdu} 
-        open={dialogOpen} 
-        onOpenChange={setDialogOpen} 
-      />
     </div>
   );
 }
