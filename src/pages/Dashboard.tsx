@@ -171,6 +171,11 @@ export default function Dashboard() {
         setProfile(profileData);
       }
 
+      // Check and award achievements whenever dashboard loads
+      await supabase.rpc("check_and_award_achievements", { 
+        _user_id: user.id 
+      });
+
       // Load memorization stats
       await loadMemorizationStats();
 
