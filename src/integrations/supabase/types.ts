@@ -47,6 +47,44 @@ export type Database = {
         }
         Relationships: []
       }
+      elaborative_notes: {
+        Row: {
+          created_at: string
+          id: string
+          odu_id: string
+          pergunta_tipo: string
+          resposta: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          odu_id: string
+          pergunta_tipo: string
+          resposta: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          odu_id?: string
+          pergunta_tipo?: string
+          resposta?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "elaborative_notes_odu_id_fkey"
+            columns: ["odu_id"]
+            isOneToOne: false
+            referencedRelation: "odu"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gamification_logs: {
         Row: {
           created_at: string
