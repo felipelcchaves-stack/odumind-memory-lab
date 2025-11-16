@@ -193,6 +193,11 @@ export default function StudySession() {
           _user_id: user.id 
         });
 
+        // Check and award achievements
+        await supabase.rpc("check_and_award_achievements", { 
+          _user_id: user.id 
+        });
+
         // Check if new badges were awarded
         const { data: recentBadges } = await supabase
           .from("user_badges")
@@ -207,6 +212,22 @@ export default function StudySession() {
           recentBadges.forEach((badge: any) => {
             toast.success(
               `🎉 Novo badge conquistado: ${badge.badges.icon} ${badge.badges.nome}!`,
+              { duration: 5000 }
+            );
+          });
+        }
+
+        // Check if new achievements were unlocked
+        const { data: recentAchievements } = await supabase
+          .from("conquistas")
+          .select("*")
+          .eq("user_id", user.id)
+          .gte("conquistado_em", new Date(Date.now() - 5000).toISOString());
+
+        if (recentAchievements && recentAchievements.length > 0) {
+          recentAchievements.forEach((conquista: any) => {
+            toast.success(
+              `${conquista.icone} Conquista desbloqueada: ${conquista.titulo}!`,
               { duration: 5000 }
             );
           });
