@@ -6,12 +6,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Plus, Upload, Shield, Users } from 'lucide-react';
+import { Plus, Upload, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import OduEditor from '@/components/admin/OduEditor';
 import OduList from '@/components/admin/OduList';
 import BulkUpload from '@/components/admin/BulkUpload';
 import UserManagement from '@/components/admin/UserManagement';
+import DashboardHeader from '@/components/DashboardHeader';
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -85,20 +86,7 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur">
-        <div className="container flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="flex items-center gap-2">
-              <Shield className="h-6 w-6 text-primary" />
-              <h1 className="text-2xl font-bold">Painel Administrativo</h1>
-            </div>
-          </div>
-        </div>
-      </header>
+      <DashboardHeader />
 
       {/* Main Content */}
       <main className="container px-4 py-8">

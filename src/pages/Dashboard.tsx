@@ -6,15 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, Target, Zap, BookOpen, Sun, Moon, Brain, Calendar, TrendingUp, Award, Shield, Settings as SettingsIcon } from 'lucide-react';
-import { useTheme } from 'next-themes';
+import { Trophy, Target, Zap, BookOpen, Brain, Calendar, TrendingUp, Award } from 'lucide-react';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import BadgesDisplay from '@/components/BadgesDisplay';
 import WeeklyRanking from '@/components/WeeklyRanking';
 import NotificationPrompt from '@/components/NotificationPrompt';
-import { useAdmin } from '@/hooks/useAdmin';
 import { useNotifications } from '@/hooks/useNotifications';
+import DashboardHeader from '@/components/DashboardHeader';
 
 interface ProfileData {
   xp: number;
@@ -45,8 +44,6 @@ export default function Dashboard() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [stats, setStats] = useState<MemorizationStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const { theme, setTheme } = useTheme();
-  const { isAdmin } = useAdmin();
   const { 
     permission, 
     scheduleStreakReminder, 
@@ -217,31 +214,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
-      {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between px-4">
-          <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            Odùmind
-          </h1>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-              {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => navigate('/settings')}>
-              <SettingsIcon className="h-5 w-5" />
-            </Button>
-            {isAdmin && (
-              <Button variant="outline" onClick={() => navigate('/admin')}>
-                <Shield className="h-4 w-4 mr-2" />
-                Admin
-              </Button>
-            )}
-            <Button variant="outline" onClick={handleSignOut}>
-              Sair
-            </Button>
-          </div>
-        </div>
-      </header>
+      <DashboardHeader />
 
       {/* Main Content */}
       <main className="container px-4 py-8">

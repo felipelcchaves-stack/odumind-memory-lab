@@ -12,6 +12,7 @@ import Flashcard from "@/components/Flashcard";
 import Quiz from "@/components/Quiz";
 import XPNotification from "@/components/XPNotification";
 import BadgesDisplay from "@/components/BadgesDisplay";
+import DashboardHeader from "@/components/DashboardHeader";
 
 interface Odu {
   id: string;
@@ -335,6 +336,7 @@ export default function StudySession() {
 
   return (
     <div className="min-h-screen bg-background">
+      <DashboardHeader />
       <XPNotification 
         xp={lastXPGain} 
         show={showXPNotification} 
