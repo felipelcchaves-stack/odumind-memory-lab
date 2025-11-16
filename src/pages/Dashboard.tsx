@@ -85,6 +85,76 @@ export default function Dashboard() {
     return "Boa noite";
   };
 
+  const getMotivationalMessage = () => {
+    if (!profile || !stats) return "Continue sua jornada de memorização dos Odu Ifá";
+
+    const hour = new Date().getHours();
+    const memorizedPercentage = Math.round((stats.memorizedCount / stats.totalOdus) * 100);
+    const streak = profile.streak;
+    const reviewsToday = stats.reviewTodayCount;
+
+    // Mensagens baseadas em streak
+    if (streak >= 30) {
+      return `🔥 ${streak} dias de sequência! Você é imparável na memorização dos Odu!`;
+    }
+    if (streak >= 14) {
+      return `⚡ Incrível! ${streak} dias consecutivos estudando. Continue assim!`;
+    }
+    if (streak >= 7) {
+      return `💪 ${streak} dias de dedicação! Sua disciplina está valendo a pena!`;
+    }
+    if (streak >= 3) {
+      return `🌟 ${streak} dias seguidos! Você está construindo um hábito poderoso!`;
+    }
+
+    // Mensagens baseadas em progresso
+    if (memorizedPercentage >= 90) {
+      return `🎉 ${memorizedPercentage}% memorizado! Você está quase dominando todos os 256 Odu!`;
+    }
+    if (memorizedPercentage >= 75) {
+      return `🚀 ${memorizedPercentage}% concluído! A reta final está chegando!`;
+    }
+    if (memorizedPercentage >= 50) {
+      return `💎 Metade do caminho percorrido! ${memorizedPercentage}% dos Odu já são seus!`;
+    }
+    if (memorizedPercentage >= 25) {
+      return `📚 ${memorizedPercentage}% memorizado! Continue nesse ritmo excepcional!`;
+    }
+    if (memorizedPercentage >= 10) {
+      return `🌱 ${memorizedPercentage}% dos Odu já estão na sua memória! Ótimo começo!`;
+    }
+
+    // Mensagens baseadas em revisões pendentes
+    if (reviewsToday > 10) {
+      return `📖 ${reviewsToday} Odu aguardando revisão hoje. Vamos fortalecer sua memória!`;
+    }
+    if (reviewsToday > 5) {
+      return `🎯 ${reviewsToday} revisões programadas para hoje. Sua memória agradece!`;
+    }
+    if (reviewsToday > 0) {
+      return `✨ ${reviewsToday} Odu prontos para revisão. Mantenha o conhecimento fresco!`;
+    }
+
+    // Mensagens baseadas em horário (sem revisões ou streak)
+    if (hour >= 5 && hour < 9) {
+      return "☀️ Manhã perfeita para começar o dia com sabedoria dos Odu!";
+    }
+    if (hour >= 9 && hour < 12) {
+      return "💡 Momento ideal para absorver novos conhecimentos dos Odu!";
+    }
+    if (hour >= 12 && hour < 15) {
+      return "🌤️ Tarde tranquila para mergulhar nos ensinamentos de Ifá!";
+    }
+    if (hour >= 15 && hour < 18) {
+      return "🎓 Fim de tarde perfeito para consolidar seu aprendizado!";
+    }
+    if (hour >= 18 && hour < 22) {
+      return "🌙 Noite ideal para revisar e fortalecer sua memória!";
+    }
+    
+    return "🌟 Comece sua jornada de memorização dos 256 Odu de Ifá!";
+  };
+
   const loadDashboardData = async () => {
     if (!user) return;
 
@@ -230,7 +300,7 @@ export default function Dashboard() {
           <h2 className="text-3xl font-bold mb-2">
             {getGreeting()}{profile?.nome ? `, ${profile.nome}` : ''}! 🌟
           </h2>
-          <p className="text-muted-foreground">Continue sua jornada de memorização dos Odu Ifá</p>
+          <p className="text-muted-foreground">{getMotivationalMessage()}</p>
           
           {/* Quick Badges Display */}
           {user && (
