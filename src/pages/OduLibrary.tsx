@@ -5,9 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, BookOpen } from "lucide-react";
+import { Search, BookOpen, Lock, Crown } from "lucide-react";
 import { toast } from "sonner";
 import DashboardHeader from "@/components/DashboardHeader";
+import { useSubscription } from "@/hooks/useSubscription";
+import UpgradeBanner from "@/components/UpgradeBanner";
 
 interface Odu {
   id: string;
@@ -26,6 +28,9 @@ export default function OduLibrary() {
   const [filteredOdus, setFilteredOdus] = useState<Odu[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const { subscription, loading: subLoading, hasActiveSubscription } = useSubscription();
+
+  const FREE_LIMIT = 5; // Primeiros 5 Odu são gratuitos
 
   useEffect(() => {
     fetchOdus();
@@ -63,7 +68,20 @@ export default function OduLibrary() {
     }
   }
 
-  if (loading) {
+  const handleOduClick = (odu: Odu) => {
+    const isPremium = odu.numero > FREE_LIMIT;
+    const hasAccess = hasActiveSubscription();
+    
+    if (isPremium && !hasAccess) {
+      toast.error('Este Odu é premium. Faça upgrade para acessar!');
+      navigate('/subscription');
+      return;
+    }
+    
+    navigate(`/odu/${odu.id}`);
+  };
+
+  if (loading || subLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -78,6 +96,11 @@ export default function OduLibrary() {
     <div className="min-h-screen bg-background">
       <DashboardHeader />
       <div className="container mx-auto px-4 py-8">
+        {/* Upgrade Banner */}
+        {!hasActiveSubscription() && (
+          <UpgradeBanner message="Você está no plano gratuito com acesso aos primeiros 5 Odu. Faça upgrade para desbloquear todos os 256 Odu Ifá!" />
+        )}
+        
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-4">
@@ -105,44 +128,72 @@ export default function OduLibrary() {
 
         {/* Odu Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredOdus.map((odu) => (
-            <Card key={odu.id} className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardHeader>
-                <div className="flex items-start justify-between mb-2">
-                  <Badge variant="secondary" className="text-lg px-3 py-1">
-                    #{odu.numero}
-                  </Badge>
-                </div>
-                <CardTitle className="text-2xl">{odu.nome}</CardTitle>
-                <CardDescription className="line-clamp-2">
-                  {odu.texto_principal}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {odu.tags && odu.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {odu.tags.slice(0, 3).map((tag, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {tag}
+          {filteredOdus.map((odu) => {
+            const isPremium = odu.numero > FREE_LIMIT;
+            const isLocked = isPremium && !hasActiveSubscription();
+            
+            return (
+              <Card 
+                key={odu.id} 
+                className={`hover:shadow-lg transition-shadow ${isLocked ? 'opacity-75' : 'cursor-pointer'}`}
+              >
+                <CardHeader>
+                  <div className="flex items-start justify-between mb-2">
+                    <Badge variant="secondary" className="text-lg px-3 py-1">
+                      #{odu.numero}
+                    </Badge>
+                    {isPremium && (
+                      <Badge variant="default" className="bg-gradient-secondary">
+                        <Crown className="h-3 w-3 mr-1" />
+                        Premium
                       </Badge>
-                    ))}
+                    )}
                   </div>
-                )}
-                {odu.verso && (
-                  <blockquote className="border-l-4 border-primary pl-4 italic text-sm text-muted-foreground mb-4">
-                    {odu.verso}
-                  </blockquote>
-                )}
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={() => navigate(`/odu/${odu.id}`)}
-                >
-                  Ver Detalhes
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+                  <CardTitle className="text-2xl flex items-center gap-2">
+                    {odu.nome}
+                    {isLocked && <Lock className="h-5 w-5 text-muted-foreground" />}
+                  </CardTitle>
+                  <CardDescription className="line-clamp-2">
+                    {isLocked ? 'Conteúdo bloqueado. Faça upgrade para acessar.' : odu.texto_principal}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {!isLocked && (
+                    <>
+                      {odu.tags && odu.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {odu.tags.slice(0, 3).map((tag, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                      {odu.verso && (
+                        <blockquote className="border-l-4 border-primary pl-4 italic text-sm text-muted-foreground mb-4">
+                          {odu.verso}
+                        </blockquote>
+                      )}
+                    </>
+                  )}
+                  <Button 
+                    variant={isLocked ? "default" : "outline"}
+                    className={isLocked ? "w-full bg-gradient-secondary" : "w-full"}
+                    onClick={() => handleOduClick(odu)}
+                  >
+                    {isLocked ? (
+                      <>
+                        <Crown className="mr-2 h-4 w-4" />
+                        Fazer Upgrade
+                      </>
+                    ) : (
+                      'Ver Detalhes'
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {filteredOdus.length === 0 && (
