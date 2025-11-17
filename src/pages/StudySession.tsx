@@ -108,6 +108,7 @@ export default function StudySession() {
   
   const [mode, setMode] = useState<StudyMode>("flashcard");
   const [loading, setLoading] = useState(true);
+  const [isLoadingNext, setIsLoadingNext] = useState(false);
   const [sessionComplete, setSessionComplete] = useState(false);
   const [showXPNotification, setShowXPNotification] = useState(false);
   const [lastXPGain, setLastXPGain] = useState(0);
@@ -228,19 +229,35 @@ export default function StudySession() {
   }
 
   async function selectRandomOdu(odusPool?: Odu[]) {
-    const pool = odusPool || availableOdus;
+    let pool = odusPool || availableOdus;
+    
+    console.log('📊 selectRandomOdu - Estado:', {
+      poolLength: pool.length,
+      isRecycling,
+      studiedInSession: studiedInSession.size,
+      mode
+    });
     
     // Se não há Odus disponíveis, reciclar ao invés de terminar
     if (pool.length === 0 && !isRecycling) {
-      console.log("Pool vazio, reciclando Odus estudados...");
+      console.log("Pool vazio, aguardando reciclagem...");
+      setIsLoadingNext(true);
       await recycleStudiedOdus();
-      return;
+      setIsLoadingNext(false);
+      return; // recycleStudiedOdus já chama selectRandomOdu
     }
     
-    // Pré-carregar mais Odus quando estiver acabando
-    if (pool.length <= 2 && !isRecycling && user) {
-      console.log("Pool baixo, pré-carregando Odus...");
-      preloadMoreOdus();
+    // ✅ AGUARDAR pré-carregamento quando crítico (pool < 4)
+    if (pool.length <= 3 && !isRecycling && user) {
+      console.log("Pool crítico, aguardando pré-carregamento...");
+      setIsLoadingNext(true);
+      const loaded = await preloadMoreOdus();
+      setIsLoadingNext(false);
+      
+      // Atualizar pool com os novos Odus
+      if (loaded) {
+        pool = availableOdus;
+      }
     }
     
     if (pool.length === 0) {
@@ -281,8 +298,14 @@ export default function StudySession() {
         });
     }
     
-    // Randomize mode (flashcard or quiz)
-    setMode(Math.random() > 0.5 ? "flashcard" : "quiz");
+    // ✅ VERIFICAR: Se pool < 4, forçar flashcard (quiz precisa de 4 Odus)
+    const selectedMode = (Math.random() > 0.5 ? "flashcard" : "quiz") as StudyMode;
+    if (selectedMode === "quiz" && pool.length < 4) {
+      console.log("⚠️ Pool < 4, forçando flashcard mode");
+      setMode("flashcard");
+    } else {
+      setMode(selectedMode);
+    }
   }
 
   async function handleFlashcardRate(difficulty: number) {
@@ -503,18 +526,19 @@ export default function StudySession() {
     if (!user || isRecycling) return;
     
     setIsRecycling(true);
+    setIsLoadingNext(true);
     
     try {
       const studiedIds = Array.from(studiedInSession);
       
       if (studiedIds.length === 0) {
-        // Se não há Odus estudados ainda, buscar novos
+        // Se não há Odus estudados ainda, buscar TODOS os Odus disponíveis
+        console.log("Nenhum Odu estudado, buscando todos disponíveis...");
         await fetchOdusForReview();
-        setIsRecycling(false);
         return;
       }
       
-      console.log(`Reciclando ${studiedIds.length} Odus estudados...`);
+      console.log(`🔄 Reciclando ${studiedIds.length} Odus estudados...`);
       
       // Buscar dados atualizados dos Odus estudados
       const { data: recycledOdus, error } = await supabase
@@ -535,9 +559,13 @@ export default function StudySession() {
           duration: 3000
         });
         
-        selectRandomOdu(reprioritized);
+        // ✅ AGUARDAR antes de selecionar próximo
+        setTimeout(() => {
+          selectRandomOdu(reprioritized);
+        }, 500);
       } else {
-        // Se não conseguiu reciclar, buscar novos Odus
+        // Se não conseguiu reciclar, buscar TODOS os Odus
+        console.log("Falha ao reciclar, buscando todos Odus...");
         await fetchOdusForReview();
       }
     } catch (error) {
@@ -546,19 +574,25 @@ export default function StudySession() {
       await fetchOdusForReview();
     } finally {
       setIsRecycling(false);
+      setIsLoadingNext(false);
     }
   }
   
-  async function preloadMoreOdus() {
-    if (!user || isRecycling) return;
+  async function preloadMoreOdus(): Promise<boolean> {
+    if (!user || isRecycling) return false;
     
     try {
+      console.log("⏳ Pré-carregando mais Odus...");
+      
       const { data: allOdus } = await supabase
         .from("odu")
         .select("*")
         .order("numero", { ascending: true });
       
-      if (!allOdus || allOdus.length === 0) return;
+      if (!allOdus || allOdus.length === 0) {
+        console.warn("Nenhum Odu disponível para pré-carregar");
+        return false;
+      }
       
       // Criar novo mix intercalado
       const interleavedOdus = await createInterleavedMix(user.id, allOdus);
@@ -570,10 +604,14 @@ export default function StudySession() {
       
       if (newOdus.length > 0) {
         setAvailableOdus(prev => [...prev, ...newOdus]);
-        console.log(`Pré-carregados ${newOdus.length} novos Odus`);
+        console.log(`✅ Pré-carregados ${newOdus.length} novos Odus`);
+        return true;
       }
+      
+      return false;
     } catch (error) {
       console.error("Erro ao pré-carregar Odus:", error);
+      return false;
     }
   }
 
@@ -620,7 +658,16 @@ export default function StudySession() {
   }
 
   const generateQuizQuestion = useMemo((): QuizQuestion | null => {
-    if (!currentOdu || !availableOdus || availableOdus.length < 4) return null;
+    if (!currentOdu) return null;
+    
+    // ✅ FALLBACK: Se não há Odus suficientes para quiz, forçar flashcard
+    if (!availableOdus || availableOdus.length < 4) {
+      if (mode === "quiz") {
+        console.log("⚠️ Quiz indisponível (< 4 Odus), forçando flashcard");
+        setMode("flashcard");
+      }
+      return null;
+    }
     
     const type: "nome" | "numero" = Math.random() > 0.5 ? "nome" : "numero";
     
@@ -642,7 +689,7 @@ export default function StudySession() {
       options,
       type,
     };
-  }, [availableOdus, currentOdu]);
+  }, [availableOdus, currentOdu, mode]);
 
   // Format duration
   const formatDuration = (ms: number) => {
@@ -999,7 +1046,19 @@ export default function StudySession() {
         )}
 
         {/* Study Content */}
-        {mode === "flashcard" ? (
+        {isLoadingNext ? (
+          <Card>
+            <CardContent className="p-8 text-center space-y-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+              <p className="text-muted-foreground">
+                Preparando próximo Odu...
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {isRecycling ? "Reciclando Odus estudados..." : "Carregando novos cards..."}
+              </p>
+            </CardContent>
+          </Card>
+        ) : mode === "flashcard" ? (
           <Flashcard
             numero={currentOdu.numero}
             nome={currentOdu.nome}
@@ -1010,16 +1069,20 @@ export default function StudySession() {
             currentStrength={currentMemorizationData.forca_memoria}
             status={currentMemorizationData.status}
           />
-        ) : generateQuizQuestion ? (
+        ) : mode === "quiz" && generateQuizQuestion ? (
           <Quiz question={generateQuizQuestion} onAnswer={handleQuizAnswer} />
         ) : (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <p className="text-muted-foreground">
-                Carregando pergunta...
-              </p>
-            </CardContent>
-          </Card>
+          // ✅ FALLBACK: Se quiz não disponível, mostrar flashcard
+          <Flashcard
+            numero={currentOdu.numero}
+            nome={currentOdu.nome}
+            texto={currentOdu.texto_principal}
+            verso={currentOdu.verso}
+            onRate={handleFlashcardRate}
+            currentRevisoes={currentMemorizationData.revisoes}
+            currentStrength={currentMemorizationData.forca_memoria}
+            status={currentMemorizationData.status}
+          />
         )}
       </div>
       
