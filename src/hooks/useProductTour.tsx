@@ -172,7 +172,7 @@ export function useProductTour() {
 
       // Navigate to Odu Library when reaching step 6
       if (nextStepIndex === 6 && action === 'next') {
-        navigate('/odu-library');
+        navigate('/odu');
       }
       // Navigate back to Dashboard when going back from step 6
       if (index === 6 && action === 'prev') {
