@@ -46,7 +46,7 @@ export default function DashboardHeader() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex items-center gap-1">
+        <nav className="flex items-center gap-1" data-tour="nav-menu">
           {navItems.map((item) => (
             <Button
               key={item.path}
@@ -84,6 +84,7 @@ export default function DashboardHeader() {
             variant="ghost"
             size="icon"
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            data-tour="theme-toggle"
           >
             {theme === 'dark' ? (
               <Sun className="h-5 w-5" />
@@ -95,7 +96,7 @@ export default function DashboardHeader() {
           {/* User Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative">
+              <Button variant="ghost" size="icon" className="relative" data-tour="user-menu">
                 <User className="h-5 w-5" />
                 {isAdmin && (
                   <span className="absolute -right-1 -top-1 flex h-3 w-3">

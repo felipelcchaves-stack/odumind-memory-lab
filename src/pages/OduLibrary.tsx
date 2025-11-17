@@ -93,7 +93,7 @@ export default function OduLibrary() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" data-tour="odu-library">
       <DashboardHeader />
       <div className="container mx-auto px-4 py-8">
         {/* Upgrade Banner */}
@@ -114,7 +114,7 @@ export default function OduLibrary() {
 
         {/* Search */}
         <div className="mb-8">
-          <div className="relative max-w-md">
+          <div className="relative max-w-md" data-tour="search-bar">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               type="text"
@@ -136,6 +136,7 @@ export default function OduLibrary() {
               <Card 
                 key={odu.id} 
                 className={`hover:shadow-lg transition-shadow ${isLocked ? 'opacity-75' : 'cursor-pointer'}`}
+                data-tour={odu.numero === 1 ? "odu-card" : undefined}
               >
                 <CardHeader>
                   <div className="flex items-start justify-between mb-2">

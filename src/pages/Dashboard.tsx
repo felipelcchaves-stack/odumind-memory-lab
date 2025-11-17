@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import ProductTour from '@/components/ProductTour';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -303,7 +304,8 @@ export default function Dashboard() {
   const dailyGoalPercentage = ((profile?.xp || 0) / (profile?.meta_diaria || 30)) * 100;
 
   return (
-    <div className="min-h-screen bg-gradient-subtle">
+    <div className="min-h-screen bg-gradient-subtle" data-tour="welcome">
+      <ProductTour />
       <DashboardHeader />
 
       {/* Main Content */}
@@ -328,8 +330,8 @@ export default function Dashboard() {
         </div>
 
         {/* Primary Stats Grid */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
-          <Card>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8" data-tour="stats-cards">
+          <Card data-tour="progress-bar">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">% Memorizada</CardTitle>
               <BookOpen className="h-4 w-4 text-muted-foreground" />
@@ -343,7 +345,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card data-tour="daily-reviews">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Revisões Hoje</CardTitle>
               <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -432,6 +434,7 @@ export default function Dashboard() {
             variant="hero" 
             className="text-lg px-8 py-6"
             onClick={() => navigate('/study')}
+            data-tour="study-button"
           >
             <BookOpen className="mr-2 h-5 w-5" />
             {stats?.reviewTodayCount && stats.reviewTodayCount > 0
@@ -487,7 +490,7 @@ export default function Dashboard() {
           <WeeklyRanking currentUserId={user?.id || ''} />
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 mb-8">
+        <div className="grid gap-6 md:grid-cols-2 mb-8" data-tour="badges">
           {/* Badges */}
           {user && <BadgesDisplay userId={user.id} />}
 
