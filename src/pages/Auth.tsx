@@ -11,10 +11,12 @@ import { z } from 'zod';
 
 const emailSchema = z.string().email('Email inválido');
 const passwordSchema = z.string().min(6, 'Senha deve ter no mínimo 6 caracteres');
+const nomeSchema = z.string().trim().min(2, 'Nome deve ter no mínimo 2 caracteres').max(100, 'Nome deve ter no máximo 100 caracteres');
 
 export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [nome, setNome] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn, signUp, resetPassword, user } = useAuth();
   const navigate = useNavigate();
@@ -67,6 +69,7 @@ export default function Auth() {
     e.preventDefault();
     
     try {
+      nomeSchema.parse(nome);
       emailSchema.parse(email);
       passwordSchema.parse(password);
     } catch (error) {
@@ -81,7 +84,7 @@ export default function Auth() {
     }
 
     setLoading(true);
-    const { error } = await signUp(email, password);
+    const { error } = await signUp(email, password, nome);
     
     if (error) {
       toast({
@@ -186,6 +189,17 @@ export default function Auth() {
 
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signup-nome">Nome completo</Label>
+                  <Input
+                    id="signup-nome"
+                    type="text"
+                    placeholder="Seu nome completo"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    required
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">Email</Label>
                   <Input
