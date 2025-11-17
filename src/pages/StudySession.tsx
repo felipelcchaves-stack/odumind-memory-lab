@@ -14,6 +14,7 @@ import Quiz from "@/components/Quiz";
 import XPNotification from "@/components/XPNotification";
 import BadgesDisplay from "@/components/BadgesDisplay";
 import DashboardHeader from "@/components/DashboardHeader";
+import { ProtectedContent } from "@/components/ProtectedContent";
 
 interface Odu {
   id: string;
@@ -442,13 +443,14 @@ export default function StudySession() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardHeader />
-      <XPNotification 
-        xp={lastXPGain} 
-        show={showXPNotification} 
-        onComplete={() => setShowXPNotification(false)} 
-      />
+    <ProtectedContent>
+      <div className="min-h-screen bg-background">
+        <DashboardHeader />
+        <XPNotification 
+          xp={lastXPGain} 
+          show={showXPNotification} 
+          onComplete={() => setShowXPNotification(false)} 
+        />
       
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
@@ -490,6 +492,7 @@ export default function StudySession() {
           </Card>
         )}
       </div>
-    </div>
+      </div>
+    </ProtectedContent>
   );
 }

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Brain, BookOpen, Lightbulb, Landmark, Clock, ArrowRight, CheckCircle2 } from 'lucide-react';
 import DashboardHeader from '@/components/DashboardHeader';
+import { ProtectedContent } from '@/components/ProtectedContent';
 
 export default function Tecnicas() {
   const navigate = useNavigate();
@@ -97,8 +98,9 @@ export default function Tecnicas() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardHeader />
+    <ProtectedContent showWatermark={false}>
+      <div className="min-h-screen bg-background">
+        <DashboardHeader />
       
       <div className="container max-w-6xl py-8 px-4">
         {/* Header */}
@@ -232,7 +234,8 @@ export default function Tecnicas() {
             <ArrowRight className="h-5 w-5" />
           </Button>
         </div>
+        </div>
       </div>
-    </div>
+    </ProtectedContent>
   );
 }

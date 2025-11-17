@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { MnemonicsSection } from "@/components/MnemonicsSection";
 import { ElaborativeEncoding } from "@/components/ElaborativeEncoding";
 import { useSubscription } from "@/hooks/useSubscription";
+import { ProtectedContent } from "@/components/ProtectedContent";
 
 interface Odu {
   id: string;
@@ -154,16 +155,9 @@ export default function OduStudy() {
   if (!odu) return null;
 
   return (
-    <div 
-      className="min-h-screen bg-background"
-      style={{
-        userSelect: "none",
-        WebkitUserSelect: "none",
-        MozUserSelect: "none",
-        msUserSelect: "none",
-      }}
-    >
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <ProtectedContent>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Header */}
         <div className="mb-8">
           <Button 
@@ -290,7 +284,8 @@ export default function OduStudy() {
         <div className="opacity-0 pointer-events-none absolute" aria-hidden="true">
           User: {user?.id} - Odu: {odu.id} - {Date.now()}
         </div>
+        </div>
       </div>
-    </div>
+    </ProtectedContent>
   );
 }
