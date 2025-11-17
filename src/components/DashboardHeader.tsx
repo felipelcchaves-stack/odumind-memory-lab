@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Home, BookOpen, Brain, Shield, Settings, LogOut, Sun, Moon, User, Crown } from 'lucide-react';
+import { Home, BookOpen, Brain, Shield, Settings, LogOut, Sun, Moon, User, Crown, BarChart3 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 export default function DashboardHeader() {
@@ -133,10 +133,16 @@ export default function DashboardHeader() {
                 Configurações
               </DropdownMenuItem>
               {isAdmin && (
-                <DropdownMenuItem onClick={() => navigate('/admin')}>
-                  <Shield className="mr-2 h-4 w-4" />
-                  Painel Admin
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem onClick={() => navigate('/admin')}>
+                    <Shield className="mr-2 h-4 w-4" />
+                    Painel Admin
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/admin/analytics')}>
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    Analytics
+                  </DropdownMenuItem>
+                </>
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
