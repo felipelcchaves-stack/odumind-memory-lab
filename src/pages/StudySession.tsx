@@ -261,9 +261,14 @@ export default function StudySession() {
     }
   }
 
-  const currentOdu = useMemo(() => odus[currentIndex], [odus, currentIndex]);
+  const currentOdu = useMemo(() => {
+    if (!odus || odus.length === 0) return null;
+    return odus[currentIndex];
+  }, [odus, currentIndex]);
 
-  const generateQuizQuestion = useMemo((): QuizQuestion => {
+  const generateQuizQuestion = useMemo((): QuizQuestion | null => {
+    if (!currentOdu || !odus || odus.length < 4) return null;
+    
     const type: "nome" | "numero" = Math.random() > 0.5 ? "nome" : "numero";
     
     // Get wrong answers
@@ -389,6 +394,27 @@ export default function StudySession() {
 
   const progress = ((currentIndex + 1) / odus.length) * 100;
 
+  // Safety check - if no valid Odu, show message
+  if (!currentOdu) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="text-center">Nenhum Odu Disponível</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground text-center">
+              Não há Odus disponíveis para estudo no momento.
+            </p>
+            <Button onClick={() => navigate("/dashboard")} className="w-full">
+              Voltar ao Dashboard
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader />
@@ -426,8 +452,16 @@ export default function StudySession() {
             verso={currentOdu.verso}
             onRate={handleFlashcardRate}
           />
-        ) : (
+        ) : generateQuizQuestion ? (
           <Quiz question={generateQuizQuestion} onAnswer={handleQuizAnswer} />
+        ) : (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <p className="text-muted-foreground">
+                Carregando pergunta...
+              </p>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
