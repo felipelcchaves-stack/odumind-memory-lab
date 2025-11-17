@@ -39,9 +39,18 @@ export const useSubscription = () => {
 
       // Then sync with Stripe
       const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+      
+      // Only call edge function if we have a valid token
+      if (!accessToken) {
+        console.warn('No access token available, skipping Stripe sync');
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('check-subscription', {
         headers: {
-          Authorization: `Bearer ${session.data.session?.access_token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       });
 
@@ -82,10 +91,18 @@ export const useSubscription = () => {
     }
 
     try {
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+      
+      if (!accessToken) {
+        toast.error('Sessão inválida. Faça login novamente.');
+        return null;
+      }
+
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { priceId },
         headers: {
-          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       });
 
@@ -105,9 +122,17 @@ export const useSubscription = () => {
     }
 
     try {
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+      
+      if (!accessToken) {
+        toast.error('Sessão inválida. Faça login novamente.');
+        return null;
+      }
+
       const { data, error } = await supabase.functions.invoke('customer-portal', {
         headers: {
-          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       });
 
