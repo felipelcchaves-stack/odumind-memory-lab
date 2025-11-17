@@ -64,6 +64,7 @@ export const useSubscription = () => {
 
       if (error) {
         console.error('Error checking subscription with Stripe:', error);
+        toast.error('Erro ao verificar assinatura. Seus dados locais foram mantidos.');
         // Default to free plan on error to avoid blocking users
         if (!localData) {
           const freeData: SubscriptionData = {

@@ -180,15 +180,27 @@ export default function Subscription() {
                     </Badge>
                   </CardDescription>
                 </div>
-                {isActive && (
+                <div className="flex gap-2">
                   <Button 
                     variant="outline"
-                    onClick={handleManageSubscription}
+                    onClick={() => {
+                      toast.info('Recarregando assinatura...');
+                      loadSubscription();
+                    }}
+                    size="sm"
                   >
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    Gerenciar Assinatura
+                    Recarregar Status
                   </Button>
-                )}
+                  {isActive && (
+                    <Button 
+                      variant="outline"
+                      onClick={handleManageSubscription}
+                    >
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Gerenciar Assinatura
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardHeader>
             {isActive && subscription.current_period_end && (
