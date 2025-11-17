@@ -74,6 +74,11 @@ export default function StudySession() {
   const [sessionComplete, setSessionComplete] = useState(false);
   const [showXPNotification, setShowXPNotification] = useState(false);
   const [lastXPGain, setLastXPGain] = useState(0);
+  const [currentMemorizationData, setCurrentMemorizationData] = useState<{
+    revisoes: number;
+    forca_memoria: number;
+    status: string;
+  }>({ revisoes: 0, forca_memoria: 0, status: "nao_estudado" });
 
   useEffect(() => {
     if (!user) {
@@ -188,8 +193,8 @@ export default function StudySession() {
       const revisoes = (currentRecord?.revisoes || 0) + 1;
       const facilidade = currentRecord?.facilidade || 2.5;
       const intervalo = currentRecord?.intervalo || 0;
-      const newMemoryStrength = Math.min(100, (currentRecord?.forca_memoria || 0) + qualidade * 5);
-      const newStatus = revisoes >= 3 && newMemoryStrength >= 80 ? "memorizado" : "estudando";
+      const newMemoryStrength = Math.min(100, (currentRecord?.forca_memoria || 0) + qualidade * 8);
+      const newStatus = revisoes >= 3 && newMemoryStrength >= 60 ? "memorizado" : "estudando";
 
       // Calculate next review using SM-2 algorithm
       const { data: nextReview } = await supabase.rpc("calcular_proxima_revisao", {
@@ -539,6 +544,9 @@ export default function StudySession() {
             texto={currentOdu.texto_principal}
             verso={currentOdu.verso}
             onRate={handleFlashcardRate}
+            currentRevisoes={currentMemorizationData.revisoes}
+            currentStrength={currentMemorizationData.forca_memoria}
+            status={currentMemorizationData.status}
           />
         ) : generateQuizQuestion ? (
           <Quiz question={generateQuizQuestion} onAnswer={handleQuizAnswer} />
