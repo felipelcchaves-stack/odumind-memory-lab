@@ -79,6 +79,10 @@ export default function StudySession() {
     forca_memoria: number;
     status: string;
   }>({ revisoes: 0, forca_memoria: 0, status: "nao_estudado" });
+  const [nextReview, setNextReview] = useState<{
+    proxima_revisao: string;
+    odu: { numero: number; nome: string };
+  } | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -88,6 +92,39 @@ export default function StudySession() {
 
     fetchOdusForReview();
   }, [user]);
+
+  async function fetchNextReviewDate() {
+    if (!user) return null;
+    
+    const { data } = await supabase
+      .from("memorizacao")
+      .select("proxima_revisao, odu(numero, nome)")
+      .eq("user_id", user.id)
+      .not("proxima_revisao", "is", null)
+      .gt("proxima_revisao", new Date().toISOString())
+      .order("proxima_revisao", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+      
+    return data;
+  }
+
+  function formatNextReviewDate(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = date.getTime() - now.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffMinutes < 60) {
+      return `Em ${diffMinutes} minuto${diffMinutes !== 1 ? 's' : ''}`;
+    } else if (diffHours < 24) {
+      return `Em ${diffHours} hora${diffHours !== 1 ? 's' : ''}`;
+    } else {
+      return `Em ${diffDays} dia${diffDays !== 1 ? 's' : ''}`;
+    }
+  }
 
   async function fetchOdusForReview() {
     if (!user) return;
@@ -107,6 +144,10 @@ export default function StudySession() {
       if (memError) throw memError;
 
       if (!memorizacaoData || memorizacaoData.length === 0) {
+        // Fetch next review date
+        const nextReviewData = await fetchNextReviewDate();
+        setNextReview(nextReviewData);
+        
         // No Odus to review, fetch new ones
         let query = supabase.from("odu").select("*").order("numero", { ascending: true });
         
@@ -419,18 +460,50 @@ export default function StudySession() {
 
   if (availableOdus.length === 0) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="max-w-md">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
           <CardHeader>
-            <CardTitle>Nenhum Odu para revisar</CardTitle>
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                <Trophy className="h-8 w-8 text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+            <CardTitle className="text-center">Parabéns! 🎉</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-muted-foreground">
-              Você está em dia com suas revisões! Volte mais tarde ou explore a biblioteca.
+            <p className="text-center text-muted-foreground">
+              Você está em dia com todas as suas revisões!
             </p>
-            <Button onClick={() => navigate("/odu")} className="w-full">
-              Ir para Biblioteca
-            </Button>
+            
+            {nextReview && (
+              <div className="p-4 bg-muted rounded-lg space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Clock className="h-4 w-4" />
+                  Próxima Revisão:
+                </div>
+                <p className="text-lg font-semibold">
+                  {formatNextReviewDate(nextReview.proxima_revisao)}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Odu #{nextReview.odu.numero} - {nextReview.odu.nome}
+                </p>
+              </div>
+            )}
+            
+            {!nextReview && (
+              <p className="text-center text-sm text-muted-foreground">
+                Comece estudando novos Odus na biblioteca!
+              </p>
+            )}
+            
+            <div className="space-y-2">
+              <Button onClick={() => navigate("/odu")} className="w-full">
+                Explorar Biblioteca
+              </Button>
+              <Button onClick={() => navigate("/dashboard")} variant="outline" className="w-full">
+                Voltar ao Dashboard
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
