@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -18,7 +18,7 @@ export const useSubscription = () => {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadSubscription = useCallback(async () => {
+  const loadSubscription = async () => {
     if (!user) {
       setSubscription(null);
       setLoading(false);
@@ -38,15 +38,17 @@ export const useSubscription = () => {
       }
 
       // Then sync with Stripe
+      const session = await supabase.auth.getSession();
       const { data, error } = await supabase.functions.invoke('check-subscription', {
         headers: {
-          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          Authorization: `Bearer ${session.data.session?.access_token}`,
         },
       });
 
       if (error) {
         console.error('Error checking subscription with Stripe:', error);
         // Keep using local data if Stripe check fails
+        setLoading(false);
         return;
       }
 
@@ -67,11 +69,11 @@ export const useSubscription = () => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  };
 
   useEffect(() => {
     loadSubscription();
-  }, [loadSubscription]);
+  }, [user]);
 
   const createCheckout = async (priceId: string) => {
     if (!user) {
