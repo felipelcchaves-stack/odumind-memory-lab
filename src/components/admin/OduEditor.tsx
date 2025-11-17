@@ -5,7 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { X, Save, History } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Switch } from '@/components/ui/switch';
+import { X, Save, History, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -58,6 +61,8 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+  const [debugMode, setDebugMode] = useState(false);
   const [formData, setFormData] = useState({
     numero: '',
     nome: '',
@@ -128,8 +133,42 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setUpdateError(null);
 
     try {
+      // ✅ VERIFICAR SESSÃO
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (!session || sessionError) {
+        console.error('❌ SESSÃO INVÁLIDA:', { sessionError });
+        toast.error('Sessão expirada. Faça login novamente.', { duration: 5000 });
+        setUpdateError('Sessão expirada. Faça login novamente.');
+        setLoading(false);
+        return;
+      }
+
+      // ✅ VERIFICAR PERMISSÕES
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('❌ USUÁRIO NÃO ENCONTRADO');
+        toast.error('Usuário não encontrado', { duration: 5000 });
+        setUpdateError('Usuário não encontrado');
+        setLoading(false);
+        return;
+      }
+
+      const { data: hasRole } = await supabase
+        .rpc('has_colaborador_role', { _user_id: user.id });
+      
+      if (!hasRole) {
+        console.error('❌ PERMISSÃO NEGADA:', { userId: user.id, email: user.email });
+        toast.error('Você não tem permissão para editar Odus', { duration: 5000 });
+        setUpdateError('Você não tem permissão para editar Odus');
+        setLoading(false);
+        return;
+      }
+
+      console.log('✅ Usuário autorizado:', { userId: user.id, email: user.email });
+
       // Validate input
       const validation = oduSchema.safeParse({
         numero: parseInt(formData.numero),
@@ -143,7 +182,9 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
 
       if (!validation.success) {
         const firstError = validation.error.errors[0];
+        console.error('❌ VALIDAÇÃO FALHOU:', firstError);
         toast.error(firstError.message);
+        setUpdateError(`Validação: ${firstError.message}`);
         setLoading(false);
         return;
       }
@@ -159,26 +200,78 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
       };
 
       if (oduId && oduId !== 'new') {
+        // 🔍 LOG ANTES DO UPDATE
+        console.log('🔍 TENTANDO ATUALIZAR ODU:', {
+          oduId,
+          isUpdate: true,
+          userId: user.id,
+          userEmail: user.email,
+          formData: {
+            numero: oduData.numero,
+            nome: oduData.nome,
+            hasTexto: !!oduData.texto_principal,
+            hasVerso: !!oduData.verso,
+            textoLength: oduData.texto_principal?.length,
+          }
+        });
+
         // Update existing
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('odu')
           .update(oduData)
-          .eq('id', oduId);
+          .eq('id', oduId)
+          .select();
 
-        if (error) throw error;
+        console.log('📊 RESULTADO DO UPDATE:', { data, error, rowsAffected: data?.length });
+
+        if (error) {
+          console.error('❌ ERRO DETALHADO DO SUPABASE:', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+          });
+          setUpdateError(`${error.message}${error.hint ? ' | ' + error.hint : ''}`);
+          throw error;
+        }
+
+        if (!data || data.length === 0) {
+          console.warn('⚠️ UPDATE NÃO RETORNOU DADOS - Possível problema de RLS');
+          setUpdateError('UPDATE executado mas nenhum registro foi atualizado. Possível problema de RLS.');
+          toast.error('Nenhum registro foi atualizado. Verifique suas permissões.');
+          setLoading(false);
+          return;
+        }
+
+        console.log('✅ ODU ATUALIZADO COM SUCESSO:', data[0]);
         toast.success('Odu atualizado com sucesso');
       } else {
         // Create new
+        console.log('🔍 CRIANDO NOVO ODU:', oduData);
         const { error } = await supabase.from('odu').insert([oduData]);
 
-        if (error) throw error;
+        if (error) {
+          console.error('❌ ERRO AO CRIAR ODU:', error);
+          throw error;
+        }
+        console.log('✅ ODU CRIADO COM SUCESSO');
         toast.success('Odu criado com sucesso');
       }
 
       onSaved();
     } catch (error: any) {
-      console.error('Error saving Odu:', error);
-      toast.error(error.message || 'Erro ao salvar Odu');
+      console.error('❌ ERRO AO SALVAR ODU:', {
+        error,
+        message: error?.message,
+        details: error?.details,
+        code: error?.code,
+        hint: error?.hint,
+        stack: error?.stack
+      });
+      
+      const errorMsg = error?.message || error?.details || 'Erro desconhecido';
+      setUpdateError(errorMsg);
+      toast.error(`Erro ao salvar: ${errorMsg}`, { duration: 5000 });
     } finally {
       setLoading(false);
     }
@@ -245,6 +338,53 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
               )}
             </div>
           </div>
+
+          {/* Debug Mode Toggle */}
+          <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+            <Label htmlFor="debug-mode" className="text-sm">
+              Modo Debug (logs detalhados no console)
+            </Label>
+            <Switch
+              id="debug-mode"
+              checked={debugMode}
+              onCheckedChange={setDebugMode}
+            />
+          </div>
+
+          {/* Debug Info Card */}
+          {debugMode && (
+            <Card className="p-4 bg-muted/50 border-yellow-500">
+              <h4 className="font-semibold mb-2 text-sm">🔍 Debug Info:</h4>
+              <pre className="text-xs overflow-auto max-h-40">
+                {JSON.stringify({
+                  oduId,
+                  isNew: oduId === 'new',
+                  formLoaded: !!formData.nome,
+                  formData: {
+                    numero: formData.numero,
+                    nome: formData.nome,
+                    texto_length: formData.texto_principal?.length,
+                    tags: formData.tags
+                  }
+                }, null, 2)}
+              </pre>
+            </Card>
+          )}
+
+          {/* Error Alert */}
+          {updateError && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Erro ao Salvar Odu</AlertTitle>
+              <AlertDescription>
+                {updateError}
+                <br />
+                <span className="text-xs mt-2 block opacity-75">
+                  Abra o console do navegador (F12) para mais detalhes técnicos.
+                </span>
+              </AlertDescription>
+            </Alert>
+          )}
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
@@ -342,7 +482,7 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
 
           <Separator />
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
             <Button type="submit" disabled={loading} className="flex-1">
               <Save className="h-4 w-4 mr-2" />
               {loading ? 'Salvando...' : 'Salvar Odu'}
@@ -350,6 +490,33 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
             <Button type="button" variant="outline" onClick={onCancel}>
               Cancelar
             </Button>
+            
+            {/* Test Button - Only in Debug Mode */}
+            {debugMode && oduId && oduId !== 'new' && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={async () => {
+                  const { data, error } = await supabase
+                    .from('odu')
+                    .update({ updated_at: new Date().toISOString() })
+                    .eq('id', oduId)
+                    .select();
+                  
+                  console.log('🧪 TESTE DIRETO:', { data, error, oduId });
+                  
+                  if (error) {
+                    toast.error('Teste falhou: ' + error.message);
+                  } else if (data && data.length > 0) {
+                    toast.success('Teste bem-sucedido! UPDATE funciona.');
+                  } else {
+                    toast.warning('Teste executado mas nenhum registro atualizado.');
+                  }
+                }}
+              >
+                🧪 Testar UPDATE Direto
+              </Button>
+            )}
           </div>
         </form>
       )}
