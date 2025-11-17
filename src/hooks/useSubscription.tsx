@@ -25,13 +25,17 @@ export const useSubscription = () => {
       return;
     }
 
+    let localData = null;
+
     try {
       // First check local database
-      const { data: localData } = await supabase
+      const { data } = await supabase
         .from('subscriptions')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
+
+      localData = data;
 
       if (localData) {
         setSubscription(localData as SubscriptionData);
@@ -52,7 +56,7 @@ export const useSubscription = () => {
       }
 
       console.log('Calling check-subscription with valid token');
-      const { data, error } = await supabase.functions.invoke('check-subscription', {
+      const { data: stripeData, error } = await supabase.functions.invoke('check-subscription', {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
@@ -60,12 +64,19 @@ export const useSubscription = () => {
 
       if (error) {
         console.error('Error checking subscription with Stripe:', error);
-        // Keep using local data if Stripe check fails
+        // Default to free plan on error to avoid blocking users
+        if (!localData) {
+          const freeData: SubscriptionData = {
+            status: 'free',
+            plan_name: 'Gratuito',
+          };
+          setSubscription(freeData);
+        }
         setLoading(false);
         return;
       }
 
-      if (data) {
+      if (stripeData) {
         // Update local state with fresh data from Stripe
         const { data: updatedData } = await supabase
           .from('subscriptions')
@@ -79,6 +90,14 @@ export const useSubscription = () => {
       }
     } catch (error) {
       console.error('Error in loadSubscription:', error);
+      // Default to free plan on error to avoid blocking users
+      if (!localData) {
+        const freeData: SubscriptionData = {
+          status: 'free',
+          plan_name: 'Gratuito',
+        };
+        setSubscription(freeData);
+      }
     } finally {
       setLoading(false);
     }
