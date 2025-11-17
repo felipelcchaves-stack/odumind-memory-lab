@@ -80,7 +80,7 @@ export default function Admin() {
     );
   }
 
-  if (!isAdmin) {
+  if (!isColaborador) {
     return null;
   }
 
