@@ -37,17 +37,21 @@ export const useSubscription = () => {
         setSubscription(localData as SubscriptionData);
       }
 
+      // Wait a bit to ensure session is fully loaded
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       // Then sync with Stripe
       const session = await supabase.auth.getSession();
       const accessToken = session.data.session?.access_token;
       
       // Only call edge function if we have a valid token
-      if (!accessToken) {
-        console.warn('No access token available, skipping Stripe sync');
+      if (!accessToken || accessToken === 'undefined') {
+        console.warn('No valid access token available, skipping Stripe sync');
         setLoading(false);
         return;
       }
 
+      console.log('Calling check-subscription with valid token');
       const { data, error } = await supabase.functions.invoke('check-subscription', {
         headers: {
           Authorization: `Bearer ${accessToken}`,
