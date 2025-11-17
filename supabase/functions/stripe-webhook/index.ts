@@ -178,7 +178,7 @@ async function updateSubscription(
 
     await supabaseClient
       .from('subscriptions')
-      .upsert(subscriptionData);
+      .upsert(subscriptionData, { onConflict: 'user_id' });
 
     logStep("Subscription updated in database", { 
       userId: targetUserId, 

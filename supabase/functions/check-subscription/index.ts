@@ -81,7 +81,7 @@ serve(async (req) => {
           stripe_subscription_id: null,
           stripe_price_id: null,
           current_period_end: null,
-        });
+        }, { onConflict: 'user_id' });
 
       return new Response(JSON.stringify({ 
         subscribed: false,
@@ -116,7 +116,7 @@ serve(async (req) => {
           stripe_subscription_id: null,
           stripe_price_id: null,
           current_period_end: null,
-        });
+        }, { onConflict: 'user_id' });
 
       if (upsertError) {
         logStep("ERROR upserting free subscription", { error: upsertError });
@@ -188,7 +188,7 @@ serve(async (req) => {
     // Update subscription in database with detailed logging
     const { data: upsertedData, error: upsertError } = await supabaseClient
       .from('subscriptions')
-      .upsert(subscriptionData)
+      .upsert(subscriptionData, { onConflict: 'user_id' })
       .select();
 
     if (upsertError) {
