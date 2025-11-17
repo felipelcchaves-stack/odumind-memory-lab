@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Trophy, Lock } from "lucide-react";
+import { ArrowLeft, Trophy, Lock, Clock } from "lucide-react";
 import { toast } from "sonner";
 import Flashcard from "@/components/Flashcard";
 import Quiz from "@/components/Quiz";
@@ -43,6 +43,12 @@ interface QuizQuestion {
   type: "nome" | "numero";
 }
 
+interface SessionStats {
+  cardsStudied: number;
+  totalXP: number;
+  startTime: number;
+}
+
 type StudyMode = "flashcard" | "quiz";
 
 const FREE_LIMIT = 5; // Usuários gratuitos podem estudar os primeiros 5 Odus
@@ -51,12 +57,21 @@ export default function StudySession() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { hasActiveSubscription, loading: subscriptionLoading } = useSubscription();
-  const [odus, setOdus] = useState<Odu[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  
+  // Session state
+  const [availableOdus, setAvailableOdus] = useState<Odu[]>([]);
+  const [currentOdu, setCurrentOdu] = useState<Odu | null>(null);
+  const [studiedInSession, setStudiedInSession] = useState<Set<string>>(new Set());
+  const [isSessionActive, setIsSessionActive] = useState(true);
+  const [sessionStats, setSessionStats] = useState<SessionStats>({
+    cardsStudied: 0,
+    totalXP: 0,
+    startTime: Date.now()
+  });
+  
   const [mode, setMode] = useState<StudyMode>("flashcard");
   const [loading, setLoading] = useState(true);
   const [sessionComplete, setSessionComplete] = useState(false);
-  const [xpGained, setXpGained] = useState(0);
   const [showXPNotification, setShowXPNotification] = useState(false);
   const [lastXPGain, setLastXPGain] = useState(0);
 
@@ -75,14 +90,14 @@ export default function StudySession() {
     try {
       const isActiveSubscription = hasActiveSubscription();
       
-      // Fetch Odus that need review
+      // Fetch Odus that need review - increased to 50 cards
       const { data: memorizacaoData, error: memError } = await supabase
         .from("memorizacao")
         .select("odu_id, revisoes, facilidade, intervalo, forca_memoria, id")
         .eq("user_id", user.id)
         .or("proxima_revisao.is.null,proxima_revisao.lte.now()")
         .order("revisoes", { ascending: true })
-        .limit(10);
+        .limit(50);
 
       if (memError) throw memError;
 
@@ -95,11 +110,16 @@ export default function StudySession() {
           query = query.lte("numero", FREE_LIMIT);
         }
         
-        query = query.limit(5);
+        query = query.limit(30);
         const { data: newOdus, error: newError } = await query;
 
         if (newError) throw newError;
-        setOdus(newOdus || []);
+        setAvailableOdus(newOdus || []);
+        
+        // Select first random Odu
+        if (newOdus && newOdus.length > 0) {
+          selectRandomOdu(newOdus);
+        }
       } else {
         // Fetch full Odu data
         const oduIds = memorizacaoData.map((m) => m.odu_id);
@@ -113,7 +133,12 @@ export default function StudySession() {
         const { data: oduData, error: oduError } = await query;
 
         if (oduError) throw oduError;
-        setOdus(oduData || []);
+        setAvailableOdus(oduData || []);
+        
+        // Select first random Odu
+        if (oduData && oduData.length > 0) {
+          selectRandomOdu(oduData);
+        }
       }
     } catch (error) {
       console.error("Error fetching Odus for review:", error);
@@ -123,10 +148,32 @@ export default function StudySession() {
     }
   }
 
-  async function handleFlashcardRate(difficulty: number) {
-    if (!user) return;
+  function selectRandomOdu(odusPool?: Odu[]) {
+    const pool = odusPool || availableOdus;
+    if (pool.length === 0) {
+      setSessionComplete(true);
+      return;
+    }
 
-    const currentOdu = odus[currentIndex];
+    // Select random index
+    const randomIndex = Math.floor(Math.random() * pool.length);
+    const selectedOdu = pool[randomIndex];
+    
+    setCurrentOdu(selectedOdu);
+    setStudiedInSession(prev => new Set(prev).add(selectedOdu.id));
+    
+    // Randomize mode (flashcard or quiz)
+    setMode(Math.random() > 0.5 ? "flashcard" : "quiz");
+  }
+
+  function handleEndSession() {
+    setIsSessionActive(false);
+    setSessionComplete(true);
+  }
+
+  async function handleFlashcardRate(difficulty: number) {
+    if (!user || !currentOdu) return;
+
     const qualidade = difficulty; // 1=difícil, 3=médio, 5=fácil
 
     try {
@@ -171,9 +218,15 @@ export default function StudySession() {
 
         // Calculate XP based on difficulty and performance
         const xp = qualidade * 10;
-        setXpGained((prev) => prev + xp);
         setLastXPGain(xp);
         setShowXPNotification(true);
+        
+        // Update session stats
+        setSessionStats(prev => ({
+          ...prev,
+          cardsStudied: prev.cardsStudied + 1,
+          totalXP: prev.totalXP + xp
+        }));
 
         // Get current profile
         const { data: currentProfile } = await supabase
@@ -250,7 +303,8 @@ export default function StudySession() {
         }
       }
 
-      moveToNext();
+      // Select next random card
+      selectRandomOdu();
     } catch (error) {
       console.error("Error updating memorization:", error);
       toast.error("Erro ao atualizar progresso");
@@ -260,41 +314,17 @@ export default function StudySession() {
   async function handleQuizAnswer(correct: boolean) {
     if (!user) return;
 
-    const currentOdu = odus[currentIndex];
     const qualidade = correct ? 5 : 1;
-
     await handleFlashcardRate(qualidade);
   }
 
-  function moveToNext() {
-    if (currentIndex < odus.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-      setMode(Math.random() > 0.5 ? "flashcard" : "quiz");
-    } else {
-      setSessionComplete(true);
-    }
-  }
-
-  const currentOdu = useMemo(() => {
-    if (!odus || odus.length === 0) return null;
-    const odu = odus[currentIndex];
-    
-    // Verify if user has access to this Odu
-    const isPremium = odu.numero > FREE_LIMIT;
-    if (isPremium && !hasActiveSubscription()) {
-      return null; // Will show upgrade screen
-    }
-    
-    return odu;
-  }, [odus, currentIndex, hasActiveSubscription]);
-
   const generateQuizQuestion = useMemo((): QuizQuestion | null => {
-    if (!currentOdu || !odus || odus.length < 4) return null;
+    if (!currentOdu || !availableOdus || availableOdus.length < 4) return null;
     
     const type: "nome" | "numero" = Math.random() > 0.5 ? "nome" : "numero";
     
     // Get wrong answers
-    const otherOdus = odus.filter((o) => o.id !== currentOdu.id);
+    const otherOdus = availableOdus.filter((o) => o.id !== currentOdu.id);
     const wrongAnswers = otherOdus
       .sort(() => Math.random() - 0.5)
       .slice(0, 3)
@@ -311,7 +341,16 @@ export default function StudySession() {
       options,
       type,
     };
-  }, [odus, currentOdu, currentIndex]);
+  }, [availableOdus, currentOdu]);
+
+  // Format duration
+  const formatDuration = (ms: number) => {
+    const minutes = Math.floor(ms / 60000);
+    const seconds = Math.floor((ms % 60000) / 1000);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const sessionDuration = Date.now() - sessionStats.startTime;
 
   if (loading || subscriptionLoading) {
     return (
@@ -325,8 +364,7 @@ export default function StudySession() {
   }
 
   // Show upgrade screen if current Odu is premium and user is free
-  if (currentOdu === null && odus.length > 0) {
-    const blockedOdu = odus[currentIndex];
+  if (currentOdu && currentOdu.numero > FREE_LIMIT && !hasActiveSubscription()) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-md">
@@ -339,7 +377,7 @@ export default function StudySession() {
           <CardContent className="space-y-4">
             <p className="text-muted-foreground text-center">
               Você completou os {FREE_LIMIT} Odu gratuitos! 
-              O Odu #{blockedOdu?.numero} - {blockedOdu?.nome} é conteúdo premium.
+              O Odu #{currentOdu?.numero} - {currentOdu?.nome} é conteúdo premium.
             </p>
             <p className="text-sm text-center font-medium">
               Assine Premium para acessar todos os 256 Odu Ifá e acelerar seu aprendizado!
@@ -358,7 +396,7 @@ export default function StudySession() {
     );
   }
 
-  if (odus.length === 0) {
+  if (availableOdus.length === 0) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="max-w-md">
@@ -380,7 +418,7 @@ export default function StudySession() {
 
   if (sessionComplete) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardHeader>
             <div className="flex justify-center mb-4">
@@ -392,12 +430,19 @@ export default function StudySession() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="text-center space-y-3">
-              <p className="text-muted-foreground">
-                Você revisou {odus.length} Odu{odus.length > 1 ? "s" : ""}
-              </p>
+              <h3 className="text-lg font-semibold">Estatísticas da Sessão</h3>
+              <div className="space-y-2">
+                <p className="text-muted-foreground">
+                  📚 {sessionStats.cardsStudied} cards revisados
+                </p>
+                <p className="text-muted-foreground">
+                  ⏱️ Tempo total: {formatDuration(sessionDuration)}
+                </p>
+              </div>
+              
               <div className="py-6">
                 <div className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-gradient-primary">
-                  <span className="text-5xl font-bold text-primary-foreground">+{xpGained}</span>
+                  <span className="text-5xl font-bold text-primary-foreground">+{sessionStats.totalXP}</span>
                   <span className="text-xl text-primary-foreground">XP</span>
                 </div>
               </div>
@@ -418,8 +463,6 @@ export default function StudySession() {
       </div>
     );
   }
-
-  const progress = ((currentIndex + 1) / odus.length) * 100;
 
   // Safety check - if no valid Odu, show message
   if (!currentOdu) {
@@ -453,21 +496,38 @@ export default function StudySession() {
         />
       
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
+        {/* Header with Session Stats */}
         <div className="mb-8">
           <Button variant="ghost" onClick={() => navigate("/dashboard")} className="mb-4">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Sair da Sessão
+            Voltar ao Dashboard
           </Button>
 
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-4">
               <h1 className="text-3xl font-bold">Sessão de Memorização</h1>
-              <Badge variant="secondary" className="text-lg px-4 py-2">
-                {currentIndex + 1} / {odus.length}
+              <Button onClick={handleEndSession} variant="destructive" size="lg">
+                Encerrar Sessão
+              </Button>
+            </div>
+            
+            {/* Session Stats */}
+            <div className="flex flex-wrap gap-3">
+              <Badge variant="secondary" className="text-base px-4 py-2">
+                📚 {sessionStats.cardsStudied} cards estudados
+              </Badge>
+              <Badge variant="secondary" className="text-base px-4 py-2">
+                <Clock className="h-4 w-4 mr-1" />
+                {formatDuration(sessionDuration)}
+              </Badge>
+              <Badge variant="secondary" className="text-base px-4 py-2">
+                ⭐ {sessionStats.totalXP} XP ganho
               </Badge>
             </div>
-            <Progress value={progress} className="h-2" />
+            
+            <p className="text-sm text-muted-foreground text-center">
+              Continue estudando até se sentir confiante
+            </p>
           </div>
         </div>
 
