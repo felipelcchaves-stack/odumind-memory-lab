@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useAdmin } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Crown, Check, CreditCard, Calendar, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Crown, Check, CreditCard, Calendar, AlertCircle, Shield } from 'lucide-react';
 import DashboardHeader from '@/components/DashboardHeader';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -68,6 +69,7 @@ const plans = [
 
 export default function Subscription() {
   const { user, loading: authLoading } = useAuth();
+  const { isAdmin, isColaborador } = useAdmin();
   const { subscription, loading: subLoading, loadSubscription, createCheckout, openCustomerPortal } = useSubscription();
   const navigate = useNavigate();
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
@@ -90,6 +92,48 @@ export default function Subscription() {
       navigate('/auth');
     }
   }, [user, authLoading, navigate]);
+
+  // Show special message for admins/collaborators
+  if (isAdmin || isColaborador) {
+    return (
+      <div className="min-h-screen bg-background">
+        <DashboardHeader />
+        <div className="container mx-auto px-4 py-8">
+          <Card className="max-w-2xl mx-auto border-primary/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-6 w-6 text-primary" />
+                Acesso Administrativo
+              </CardTitle>
+              <CardDescription>
+                Sua conta tem privilégios especiais
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground mb-4">
+                Você tem acesso completo como <span className="font-semibold text-foreground">{isAdmin ? 'Administrador' : 'Colaborador'}</span>. 
+                Todas as funcionalidades estão disponíveis sem necessidade de assinatura.
+              </p>
+              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-primary" />
+                  <span className="text-sm">Acesso ilimitado a todos os 256 Odu</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-primary" />
+                  <span className="text-sm">Recursos avançados de memorização</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-primary" />
+                  <span className="text-sm">Ferramentas de gerenciamento de conteúdo</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubscribe = async (planId: string, stripeId?: string) => {
     if (planId === 'free') {

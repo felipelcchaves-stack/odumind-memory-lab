@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAdmin } from '@/hooks/useAdmin';
 
 export interface SubscriptionData {
   status: 'free' | 'active' | 'trialing' | 'past_due' | 'canceled';
@@ -15,12 +16,24 @@ export interface SubscriptionData {
 
 export const useSubscription = () => {
   const { user } = useAuth();
+  const { isAdmin, isColaborador, loading: rolesLoading } = useAdmin();
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadSubscription = async () => {
     if (!user) {
       setSubscription(null);
+      setLoading(false);
+      return;
+    }
+
+    // Skip Stripe sync for admins/collaborators
+    if (isAdmin || isColaborador) {
+      console.log('User is admin/collaborator, granting full access');
+      setSubscription({
+        status: 'active',
+        plan_name: 'Administrativo',
+      } as SubscriptionData);
       setLoading(false);
       return;
     }
@@ -194,25 +207,37 @@ export const useSubscription = () => {
   };
 
   const hasActiveSubscription = () => {
+    // Admins and Colaboradores always have access
+    if (isAdmin || isColaborador) return true;
+    
     if (!subscription) return false;
     return subscription.status === 'active' || subscription.status === 'trialing';
   };
 
   const isPremium = () => {
+    // Admins and Colaboradores have premium access
+    if (isAdmin || isColaborador) return true;
+    
     return hasActiveSubscription() && subscription?.plan_name === 'Premium';
   };
 
   const isProfessional = () => {
+    // Admins and Colaboradores have professional access
+    if (isAdmin || isColaborador) return true;
+    
     return hasActiveSubscription() && subscription?.plan_name === 'Profissional';
   };
 
   const isFree = () => {
+    // Admins and Colaboradores are never on free plan
+    if (isAdmin || isColaborador) return false;
+    
     return !subscription || subscription.status === 'free';
   };
 
   return {
     subscription,
-    loading,
+    loading: loading || rolesLoading,
     loadSubscription,
     hasActiveSubscription,
     isPremium,

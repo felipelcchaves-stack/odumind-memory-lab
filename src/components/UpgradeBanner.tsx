@@ -3,14 +3,19 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAdmin } from '@/hooks/useAdmin';
 
 interface UpgradeBannerProps {
   message?: string;
 }
 
 const UpgradeBanner = ({ message = "Você está no plano gratuito. Faça upgrade para desbloquear todos os 256 Odu e recursos avançados!" }: UpgradeBannerProps) => {
+  const { isAdmin, isColaborador } = useAdmin();
   const [isVisible, setIsVisible] = useState(true);
   const navigate = useNavigate();
+
+  // Hide for admins/collaborators
+  if (isAdmin || isColaborador) return null;
 
   if (!isVisible) return null;
 
