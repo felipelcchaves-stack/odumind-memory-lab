@@ -16,6 +16,7 @@ import XPNotification from "@/components/XPNotification";
 import BadgesDisplay from "@/components/BadgesDisplay";
 import DashboardHeader from "@/components/DashboardHeader";
 import { ProtectedContent } from "@/components/ProtectedContent";
+import { SessionControls } from "@/components/SessionControls";
 import {
   calculateLearningProfile,
   calculateAdaptiveInterval,
@@ -85,6 +86,10 @@ export default function StudySession() {
     totalXP: 0,
     startTime: Date.now()
   });
+  const [sessionRounds, setSessionRounds] = useState(0);
+  const [isRecycling, setIsRecycling] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [pauseStartTime, setPauseStartTime] = useState<number | null>(null);
   
   // Learning intelligence state
   const [userProfile, setUserProfile] = useState<UserLearningProfile | null>(null);
@@ -224,6 +229,20 @@ export default function StudySession() {
 
   async function selectRandomOdu(odusPool?: Odu[]) {
     const pool = odusPool || availableOdus;
+    
+    // Se não há Odus disponíveis, reciclar ao invés de terminar
+    if (pool.length === 0 && !isRecycling) {
+      console.log("Pool vazio, reciclando Odus estudados...");
+      await recycleStudiedOdus();
+      return;
+    }
+    
+    // Pré-carregar mais Odus quando estiver acabando
+    if (pool.length <= 2 && !isRecycling && user) {
+      console.log("Pool baixo, pré-carregando Odus...");
+      preloadMoreOdus();
+    }
+    
     if (pool.length === 0) {
       setSessionComplete(true);
       return;
@@ -308,6 +327,17 @@ export default function StudySession() {
       const accuracyRate = newMetrics.totalCards > 0 
         ? newMetrics.correctAnswers / newMetrics.totalCards 
         : 1;
+
+      // Recomendação de pausa inteligente
+      if (newMetrics.totalCards > 0 && newMetrics.totalCards % 20 === 0 && !isPaused) {
+        toast.info("💡 Você já estudou 20 cards! Considere fazer uma pausa de 5 minutos.", {
+          duration: 8000,
+          action: {
+            label: "Pausar Agora",
+            onClick: handlePauseSession
+          }
+        });
+      }
 
       if (sessionTime > 45 && accuracyRate < 0.7) {
         toast.warning("🧠 Sua atenção pode estar caindo. Recomendamos um intervalo!", {
@@ -469,12 +499,96 @@ export default function StudySession() {
     }
   }
 
+  async function recycleStudiedOdus() {
+    if (!user || isRecycling) return;
+    
+    setIsRecycling(true);
+    
+    try {
+      const studiedIds = Array.from(studiedInSession);
+      
+      if (studiedIds.length === 0) {
+        // Se não há Odus estudados ainda, buscar novos
+        await fetchOdusForReview();
+        setIsRecycling(false);
+        return;
+      }
+      
+      console.log(`Reciclando ${studiedIds.length} Odus estudados...`);
+      
+      // Buscar dados atualizados dos Odus estudados
+      const { data: recycledOdus, error } = await supabase
+        .from("odu")
+        .select("*")
+        .in("id", studiedIds);
+      
+      if (error) throw error;
+      
+      if (recycledOdus && recycledOdus.length > 0) {
+        // Re-priorizar baseado na nova força de memória
+        const reprioritized = await prioritizeOdusForReview(user.id, recycledOdus, userProfile);
+        
+        setAvailableOdus(reprioritized);
+        setSessionRounds(prev => prev + 1);
+        
+        toast.success(`🔄 Rodada ${sessionRounds + 1} iniciada! ${reprioritized.length} Odus disponíveis`, {
+          duration: 3000
+        });
+        
+        selectRandomOdu(reprioritized);
+      } else {
+        // Se não conseguiu reciclar, buscar novos Odus
+        await fetchOdusForReview();
+      }
+    } catch (error) {
+      console.error("Erro ao reciclar Odus:", error);
+      toast.error("Erro ao reciclar Odus. Buscando novos...");
+      await fetchOdusForReview();
+    } finally {
+      setIsRecycling(false);
+    }
+  }
+  
+  async function preloadMoreOdus() {
+    if (!user || isRecycling) return;
+    
+    try {
+      const { data: allOdus } = await supabase
+        .from("odu")
+        .select("*")
+        .order("numero", { ascending: true });
+      
+      if (!allOdus || allOdus.length === 0) return;
+      
+      // Criar novo mix intercalado
+      const interleavedOdus = await createInterleavedMix(user.id, allOdus);
+      const prioritizedOdus = await prioritizeOdusForReview(user.id, interleavedOdus, userProfile);
+      
+      // Mesclar com os Odus atuais (sem duplicatas)
+      const currentIds = new Set(availableOdus.map(o => o.id));
+      const newOdus = prioritizedOdus.filter(o => !currentIds.has(o.id));
+      
+      if (newOdus.length > 0) {
+        setAvailableOdus(prev => [...prev, ...newOdus]);
+        console.log(`Pré-carregados ${newOdus.length} novos Odus`);
+      }
+    } catch (error) {
+      console.error("Erro ao pré-carregar Odus:", error);
+    }
+  }
+
   async function handleQuizAnswer(isCorrect: boolean) {
     const difficulty = isCorrect ? 5 : 1;
     await handleFlashcardRate(difficulty);
   }
 
   async function handleEndSession() {
+    const shouldEnd = window.confirm(
+      `Você estudou ${sessionMetrics.totalCards} cards em ${sessionRounds + 1} rodada(s).\n\nTem certeza que deseja finalizar?`
+    );
+    
+    if (!shouldEnd) return;
+    
     setIsSessionActive(false);
     setSessionComplete(true);
     
@@ -486,6 +600,22 @@ export default function StudySession() {
         sessionMetrics.wrongAnswers,
         sessionMetrics.averageResponseTime
       );
+    }
+    
+    toast.success("Sessão finalizada! Ótimo trabalho! 🎉");
+  }
+  
+  function handlePauseSession() {
+    if (isPaused) {
+      // Retomar sessão
+      setIsPaused(false);
+      setPauseStartTime(null);
+      toast.success("Sessão retomada! Vamos continuar! 💪");
+    } else {
+      // Pausar sessão
+      setIsPaused(true);
+      setPauseStartTime(Date.now());
+      toast.info("Sessão pausada. Descanse um pouco! 😌");
     }
   }
 
@@ -709,15 +839,15 @@ export default function StudySession() {
           <div className="space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <h1 className="text-3xl font-bold">Sessão de Memorização</h1>
-              <Button onClick={handleEndSession} variant="destructive" size="lg">
-                Encerrar Sessão
-              </Button>
             </div>
             
             {/* Session Stats */}
             <div className="flex flex-wrap gap-3">
               <Badge variant="secondary" className="text-base px-4 py-2">
                 📚 {sessionStats.cardsStudied} cards estudados
+              </Badge>
+              <Badge variant="secondary" className="text-base px-4 py-2">
+                🔄 Rodada {sessionRounds + 1}
               </Badge>
               <Badge variant="secondary" className="text-base px-4 py-2">
                 <Clock className="h-4 w-4 mr-1" />
@@ -892,6 +1022,22 @@ export default function StudySession() {
           </Card>
         )}
       </div>
+      
+      {/* Session Controls - Floating UI */}
+      <SessionControls
+        onEndSession={handleEndSession}
+        onPauseSession={handlePauseSession}
+        isPaused={isPaused}
+        sessionStats={{
+          cardsStudied: sessionStats.cardsStudied,
+          totalCards: sessionMetrics.totalCards,
+          correctAnswers: sessionMetrics.correctAnswers,
+          wrongAnswers: sessionMetrics.wrongAnswers,
+          startTime: sessionStats.startTime
+        }}
+        sessionRounds={sessionRounds}
+        isSessionActive={isSessionActive}
+      />
       </div>
     </ProtectedContent>
   );
