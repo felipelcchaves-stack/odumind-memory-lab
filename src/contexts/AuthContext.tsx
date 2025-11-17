@@ -28,7 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         
         // Check subscription status on sign in
-        if (event === 'SIGNED_IN' && session?.user) {
+        if (event === 'SIGNED_IN' && session?.user && session?.access_token) {
           setTimeout(async () => {
             try {
               await supabase.functions.invoke('check-subscription', {
