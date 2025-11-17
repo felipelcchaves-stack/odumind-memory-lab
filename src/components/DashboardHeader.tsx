@@ -33,7 +33,7 @@ export default function DashboardHeader() {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/auth');
+    navigate('/');
   };
 
   return (
