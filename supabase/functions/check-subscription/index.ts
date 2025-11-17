@@ -96,7 +96,7 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
-    // Get active subscriptions
+    // Get active subscriptions using list first
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
       status: "all",
@@ -106,7 +106,7 @@ serve(async (req) => {
     if (subscriptions.data.length === 0) {
       logStep("No subscription found");
       
-      await supabaseClient
+      const { error: upsertError } = await supabaseClient
         .from('subscriptions')
         .upsert({
           user_id: user.id,
@@ -118,6 +118,12 @@ serve(async (req) => {
           current_period_end: null,
         });
 
+      if (upsertError) {
+        logStep("ERROR upserting free subscription", { error: upsertError });
+      } else {
+        logStep("Successfully updated to free subscription");
+      }
+
       return new Response(JSON.stringify({ 
         subscribed: false,
         status: 'free',
@@ -128,7 +134,10 @@ serve(async (req) => {
       });
     }
 
-    const subscription = subscriptions.data[0];
+    // Retrieve full subscription details to ensure we get complete data
+    logStep("Found subscription, retrieving full details", { subscriptionId: subscriptions.data[0].id });
+    const subscription = await stripe.subscriptions.retrieve(subscriptions.data[0].id);
+    
     const isActive = subscription.status === 'active' || subscription.status === 'trialing';
     const priceId = subscription.items.data[0].price.id;
     
@@ -136,7 +145,8 @@ serve(async (req) => {
       subscriptionId: subscription.id,
       status: subscription.status,
       periodStart: subscription.current_period_start,
-      periodEnd: subscription.current_period_end
+      periodEnd: subscription.current_period_end,
+      priceId
     });
     
     // Determine plan name based on price ID
@@ -147,28 +157,18 @@ serve(async (req) => {
       planName = 'Profissional';
     }
 
-    // Safely convert timestamps to ISO strings
+    // Convert timestamps to ISO strings
     let currentPeriodStart = null;
     let currentPeriodEnd = null;
     
-    try {
-      if (subscription.current_period_start && typeof subscription.current_period_start === 'number' && subscription.current_period_start > 0) {
-        currentPeriodStart = new Date(subscription.current_period_start * 1000).toISOString();
-        logStep("Converted period_start", { original: subscription.current_period_start, converted: currentPeriodStart });
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      logStep("Error converting period_start", { value: subscription.current_period_start, error: errorMessage });
+    if (subscription.current_period_start) {
+      currentPeriodStart = new Date(subscription.current_period_start * 1000).toISOString();
+      logStep("Converted period_start", { original: subscription.current_period_start, converted: currentPeriodStart });
     }
     
-    try {
-      if (subscription.current_period_end && typeof subscription.current_period_end === 'number' && subscription.current_period_end > 0) {
-        currentPeriodEnd = new Date(subscription.current_period_end * 1000).toISOString();
-        logStep("Converted period_end", { original: subscription.current_period_end, converted: currentPeriodEnd });
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      logStep("Error converting period_end", { value: subscription.current_period_end, error: errorMessage });
+    if (subscription.current_period_end) {
+      currentPeriodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+      logStep("Converted period_end", { original: subscription.current_period_end, converted: currentPeriodEnd });
     }
 
     const subscriptionData = {
@@ -183,12 +183,20 @@ serve(async (req) => {
       cancel_at_period_end: subscription.cancel_at_period_end || false,
     };
 
-    logStep("Subscription data", subscriptionData);
+    logStep("Subscription data to upsert", subscriptionData);
 
-    // Update subscription in database
-    await supabaseClient
+    // Update subscription in database with detailed logging
+    const { data: upsertedData, error: upsertError } = await supabaseClient
       .from('subscriptions')
-      .upsert(subscriptionData);
+      .upsert(subscriptionData)
+      .select();
+
+    if (upsertError) {
+      logStep("ERROR upserting subscription", { error: upsertError });
+      throw new Error(`Failed to update subscription: ${upsertError.message}`);
+    }
+    
+    logStep("Successfully upserted subscription", { data: upsertedData });
 
     return new Response(JSON.stringify({
       subscribed: isActive,
