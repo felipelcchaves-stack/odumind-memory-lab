@@ -22,13 +22,13 @@ export const useChangelog = () => {
   const [showModal, setShowModal] = useState(false);
   const [latestChangelog, setLatestChangelog] = useState<ChangelogVersion | null>(null);
   const [hasUnreadChangelog, setHasUnreadChangelog] = useState(false);
-  const { user } = useAuth();
+  const { user, session } = useAuth();
 
   useEffect(() => {
-    if (user) {
+    if (user && session) {
       checkForNewChangelog();
     }
-  }, [user]);
+  }, [user, session?.access_token]);
 
   const checkForNewChangelog = async () => {
     if (!user) return;
