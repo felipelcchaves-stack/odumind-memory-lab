@@ -27,13 +27,33 @@ serve(async (req) => {
     );
 
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header provided");
+    if (!authHeader) {
+      logStep("ERROR: No authorization header");
+      throw new Error("No authorization header provided");
+    }
 
     const token = authHeader.replace("Bearer ", "");
+    
+    // Validate token format
+    if (!token || token === 'undefined' || token === 'null' || token.length < 20) {
+      logStep("ERROR: Invalid token format", { tokenLength: token?.length });
+      throw new Error("Invalid or expired session token. Please log in again.");
+    }
+    
+    logStep("Attempting authentication", { tokenPrefix: token.substring(0, 10) + "..." });
+    
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
+    
+    if (userError) {
+      logStep("ERROR: Authentication failed", { error: userError.message, code: userError.status });
+      throw new Error(`Authentication error: ${userError.message}`);
+    }
+    
     const user = userData.user;
-    if (!user?.email) throw new Error("User not authenticated or email not available");
+    if (!user?.email) {
+      logStep("ERROR: No user or email found");
+      throw new Error("User not authenticated or email not available");
+    }
     
     logStep("User authenticated", { userId: user.id, email: user.email });
 
