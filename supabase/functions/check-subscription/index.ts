@@ -124,9 +124,13 @@ serve(async (req) => {
       stripe_customer_id: customerId,
       stripe_subscription_id: subscription.id,
       stripe_price_id: priceId,
-      current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-      current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-      cancel_at_period_end: subscription.cancel_at_period_end,
+      current_period_start: subscription.current_period_start 
+        ? new Date(subscription.current_period_start * 1000).toISOString() 
+        : null,
+      current_period_end: subscription.current_period_end 
+        ? new Date(subscription.current_period_end * 1000).toISOString() 
+        : null,
+      cancel_at_period_end: subscription.cancel_at_period_end || false,
     };
 
     logStep("Subscription data", subscriptionData);
