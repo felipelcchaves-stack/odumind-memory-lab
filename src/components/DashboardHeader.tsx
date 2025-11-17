@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Home, BookOpen, Brain, Shield, Settings, LogOut, Sun, Moon, User, Crown, BarChart3, Edit } from 'lucide-react';
+import { Home, BookOpen, Brain, Shield, Settings, LogOut, Sun, Moon, User, Crown, BarChart3, Edit, Landmark } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 export default function DashboardHeader() {
@@ -25,6 +25,7 @@ export default function DashboardHeader() {
     { path: '/dashboard', icon: Home, label: 'Dashboard' },
     { path: '/odu', icon: BookOpen, label: 'Biblioteca' },
     { path: '/study', icon: Brain, label: 'Estudar' },
+    { path: '/memory-palace', icon: Landmark, label: 'Palácio' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
