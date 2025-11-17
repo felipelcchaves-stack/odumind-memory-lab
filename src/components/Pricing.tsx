@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, Crown, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const plans = [
   {
@@ -62,6 +64,17 @@ const plans = [
 ];
 
 const Pricing = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const handleCTAClick = (planName: string) => {
+    if (user) {
+      navigate('/subscription');
+    } else {
+      navigate('/auth');
+    }
+  };
+
   return (
     <section className="py-24 px-4 bg-background">
       <div className="container mx-auto">
@@ -114,6 +127,7 @@ const Pricing = () => {
                   className="w-full"
                   size="lg"
                   variant={plan.variant}
+                  onClick={() => handleCTAClick(plan.name)}
                 >
                   {plan.cta}
                 </Button>
