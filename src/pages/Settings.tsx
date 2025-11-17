@@ -1,10 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Play } from 'lucide-react';
+import { ArrowLeft, Play, AlertTriangle } from 'lucide-react';
 import NotificationSettings from '@/components/NotificationSettings';
 import DashboardHeader from '@/components/DashboardHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useProductTour } from '@/hooks/useProductTour';
+import { ResetProgressDialog } from '@/components/ResetProgressDialog';
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -46,6 +47,21 @@ export default function Settings() {
           </Card>
           
           <NotificationSettings />
+
+          <Card className="border-destructive">
+            <CardHeader>
+              <CardTitle className="text-destructive flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                Zona de Perigo
+              </CardTitle>
+              <CardDescription>
+                Ações irreversíveis que afetam permanentemente seu progresso
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResetProgressDialog />
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

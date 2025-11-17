@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Step, CallBackProps, STATUS } from 'react-joyride';
+import { toast } from 'sonner';
 
 const TOUR_VERSION = '1.0';
 
@@ -191,18 +192,31 @@ export function useProductTour() {
 
   // Reset tour
   const resetTour = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      toast.error('Usuário não encontrado');
+      return;
+    }
     
     try {
-      await supabase
+      toast.loading('Reiniciando tour...', { id: 'reset-tour' });
+      
+      const { error } = await supabase
         .from('user_tour_progress')
         .delete()
         .eq('user_id', user.id)
         .eq('tour_version', TOUR_VERSION);
 
-      startTour();
+      if (error) throw error;
+
+      toast.success('Tour reiniciado! Começando...', { id: 'reset-tour' });
+      
+      // Dar um pequeno delay para o toast aparecer
+      setTimeout(() => {
+        startTour();
+      }, 500);
     } catch (error) {
       console.error('Error resetting tour:', error);
+      toast.error('Erro ao reiniciar tour', { id: 'reset-tour' });
     }
   }, [user, startTour]);
 
