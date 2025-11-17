@@ -15,6 +15,8 @@ import AchievementsHistory from '@/components/AchievementsHistory';
 import NotificationPrompt from '@/components/NotificationPrompt';
 import { useNotifications } from '@/hooks/useNotifications';
 import DashboardHeader from '@/components/DashboardHeader';
+import UpgradeBanner from '@/components/UpgradeBanner';
+import { useSubscription } from '@/hooks/useSubscription';
 
 interface ProfileData {
   xp: number;
@@ -51,6 +53,7 @@ export default function Dashboard() {
     scheduleStreakReminder, 
     scheduleReviewReminder 
   } = useNotifications();
+  const { subscription, loading: subLoading } = useSubscription();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -305,6 +308,11 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <main className="container px-4 py-8">
+        {/* Upgrade Banner for Free Users */}
+        {!subLoading && subscription && subscription.status === 'free' && (
+          <UpgradeBanner />
+        )}
+        
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-2">
             {getGreeting()}{profile?.nome ? `, ${profile.nome}` : ''}! 🌟
