@@ -28,7 +28,7 @@ const Success = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-center text-muted-foreground">
-            Agora você tem acesso completo a todos os recursos premium do Odùmind.
+            Agora você tem acesso completo a todos os recursos premium do Isesemind.
             Comece sua jornada de memorização dos 256 Odu de Ifá!
           </p>
           <div className="flex flex-col gap-2">

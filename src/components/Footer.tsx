@@ -11,7 +11,7 @@ const Footer = () => {
               <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center">
                 <BookOpen className="w-6 h-6 text-primary-foreground" />
               </div>
-              <span className="text-2xl font-bold">Odùmind</span>
+              <span className="text-2xl font-bold">Isesemind</span>
             </div>
             <p className="text-sm text-muted-foreground">
               Memorização científica dos Odu Ifá através de repetição espaçada, storytelling e gamificação.
@@ -70,14 +70,14 @@ const Footer = () => {
               </a>
             </div>
             <p className="text-sm text-muted-foreground mt-4">
-              contato@odumind.com
+              contato@isesemind.com
             </p>
           </div>
         </div>
 
         {/* Bottom Bar */}
         <div className="border-t border-border mt-12 pt-6 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
-          <p>© 2024 Odùmind. Todos os direitos reservados.</p>
+          <p>© 2024 Isesemind. Todos os direitos reservados.</p>
           <div className="flex gap-6">
             <a href="#" className="hover:text-primary transition-smooth">Termos de Uso</a>
             <a href="#" className="hover:text-primary transition-smooth">Privacidade</a>

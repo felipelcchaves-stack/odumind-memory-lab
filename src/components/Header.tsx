@@ -16,7 +16,7 @@ const Header = () => {
             <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center">
               <BookOpen className="w-6 h-6 text-primary-foreground" />
             </div>
-            <span className="text-2xl font-bold">Odùmind</span>
+            <span className="text-2xl font-bold">Isesemind</span>
           </div>
 
           {/* Desktop Navigation */}
