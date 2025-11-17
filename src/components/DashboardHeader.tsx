@@ -11,14 +11,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Home, BookOpen, Brain, Shield, Settings, LogOut, Sun, Moon, User, Crown, BarChart3 } from 'lucide-react';
+import { Home, BookOpen, Brain, Shield, Settings, LogOut, Sun, Moon, User, Crown, BarChart3, Edit } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 export default function DashboardHeader() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, signOut } = useAuth();
-  const { isAdmin } = useAdmin();
+  const { isAdmin, isColaborador } = useAdmin();
   const { theme, setTheme } = useTheme();
 
   const navItems = [
@@ -75,6 +75,22 @@ export default function DashboardHeader() {
               </Badge>
             </Button>
           )}
+
+          {/* Colaborador Link - Only show for colaboradores who are not admins */}
+          {isColaborador && !isAdmin && (
+            <Button
+              variant={isActive('/colaborador') ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => navigate('/colaborador')}
+              className="gap-2"
+            >
+              <Edit className="h-4 w-4" />
+              <span className="hidden sm:inline">Editar Odu</span>
+              <Badge variant="secondary" className="ml-1 hidden lg:inline-flex">
+                Colaborador
+              </Badge>
+            </Button>
+          )}
         </nav>
 
         {/* User Menu */}
@@ -118,6 +134,11 @@ export default function DashboardHeader() {
                       Administrador
                     </Badge>
                   )}
+                  {isColaborador && !isAdmin && (
+                    <Badge variant="outline" className="w-fit text-xs">
+                      Colaborador
+                    </Badge>
+                  )}
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -144,6 +165,12 @@ export default function DashboardHeader() {
                     Analytics
                   </DropdownMenuItem>
                 </>
+              )}
+              {isColaborador && !isAdmin && (
+                <DropdownMenuItem onClick={() => navigate('/colaborador')}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Editar Odu
+                </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
