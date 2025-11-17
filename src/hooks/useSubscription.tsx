@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export interface SubscriptionData {
   status: 'free' | 'active' | 'trialing' | 'past_due' | 'canceled';
@@ -17,7 +18,7 @@ export const useSubscription = () => {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadSubscription = async () => {
+  const loadSubscription = useCallback(async () => {
     if (!user) {
       setSubscription(null);
       setLoading(false);
@@ -25,44 +26,97 @@ export const useSubscription = () => {
     }
 
     try {
-      const { data, error } = await supabase
+      // First check local database
+      const { data: localData } = await supabase
         .from('subscriptions')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error loading subscription:', error);
-        throw error;
+      if (localData) {
+        setSubscription(localData as SubscriptionData);
+      }
+
+      // Then sync with Stripe
+      const { data, error } = await supabase.functions.invoke('check-subscription', {
+        headers: {
+          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+      });
+
+      if (error) {
+        console.error('Error checking subscription with Stripe:', error);
+        // Keep using local data if Stripe check fails
+        return;
       }
 
       if (data) {
-        setSubscription(data as SubscriptionData);
-      } else {
-        // Create free subscription if doesn't exist
-        const { data: newSub, error: insertError } = await supabase
+        // Update local state with fresh data from Stripe
+        const { data: updatedData } = await supabase
           .from('subscriptions')
-          .insert({
-            user_id: user.id,
-            status: 'free',
-            plan_name: 'Gratuito'
-          })
-          .select()
-          .single();
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
 
-        if (insertError) throw insertError;
-        setSubscription(newSub as SubscriptionData);
+        if (updatedData) {
+          setSubscription(updatedData as SubscriptionData);
+        }
       }
     } catch (error) {
       console.error('Error in loadSubscription:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     loadSubscription();
-  }, [user]);
+  }, [loadSubscription]);
+
+  const createCheckout = async (priceId: string) => {
+    if (!user) {
+      toast.error('Faça login para continuar');
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { priceId },
+        headers: {
+          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+      return data.url;
+    } catch (error) {
+      console.error('Error creating checkout:', error);
+      toast.error('Erro ao criar sessão de checkout');
+      return null;
+    }
+  };
+
+  const openCustomerPortal = async () => {
+    if (!user) {
+      toast.error('Faça login para continuar');
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('customer-portal', {
+        headers: {
+          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+      });
+
+      if (error) throw error;
+      return data.url;
+    } catch (error) {
+      console.error('Error opening portal:', error);
+      toast.error('Erro ao abrir portal de gerenciamento');
+      return null;
+    }
+  };
 
   const hasActiveSubscription = () => {
     if (!subscription) return false;
@@ -88,6 +142,8 @@ export const useSubscription = () => {
     hasActiveSubscription,
     isPremium,
     isProfessional,
-    isFree
+    isFree,
+    createCheckout,
+    openCustomerPortal,
   };
 };

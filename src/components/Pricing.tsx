@@ -41,6 +41,7 @@ const plans = [
     cta: "Começar Premium",
     variant: "premium" as const,
     popular: true,
+    stripeId: "price_1SUQd7Do1RHWW8lpaKCqKH8g",
   },
   {
     name: "Profissional",
@@ -60,6 +61,7 @@ const plans = [
     cta: "Começar Profissional",
     variant: "hero" as const,
     popular: false,
+    stripeId: "price_1SUQe8Do1RHWW8lpTManIdtD",
   },
 ];
 

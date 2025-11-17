@@ -44,7 +44,7 @@ const plans = [
       "Suporte prioritário",
     ],
     planId: "premium",
-    stripeId: "price_premium_placeholder", // Will be updated with real Stripe price ID
+    stripeId: "price_1SUQd7Do1RHWW8lpaKCqKH8g",
   },
   {
     name: "Profissional",
@@ -62,15 +62,27 @@ const plans = [
       "Badge de mestre verificado",
     ],
     planId: "professional",
-    stripeId: "price_professional_placeholder", // Will be updated with real Stripe price ID
+    stripeId: "price_1SUQe8Do1RHWW8lpTManIdtD",
   },
 ];
 
 export default function Subscription() {
   const { user, loading: authLoading } = useAuth();
-  const { subscription, loading: subLoading, loadSubscription } = useSubscription();
+  const { subscription, loading: subLoading, loadSubscription, createCheckout, openCustomerPortal } = useSubscription();
   const navigate = useNavigate();
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('success')) {
+      toast.success('Assinatura ativada com sucesso!');
+      loadSubscription();
+      window.history.replaceState({}, '', '/subscription');
+    } else if (params.get('canceled')) {
+      toast.info('Checkout cancelado');
+      window.history.replaceState({}, '', '/subscription');
+    }
+  }, [loadSubscription]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -92,9 +104,10 @@ export default function Subscription() {
     setProcessingPlan(planId);
     
     try {
-      // This will be implemented with Stripe checkout
-      toast.info('Funcionalidade de checkout será implementada em breve');
-      console.log('Subscribe to plan:', planId, 'with Stripe ID:', stripeId);
+      const url = await createCheckout(stripeId);
+      if (url) {
+        window.open(url, '_blank');
+      }
     } catch (error) {
       console.error('Error subscribing:', error);
       toast.error('Erro ao processar assinatura');
@@ -105,8 +118,10 @@ export default function Subscription() {
 
   const handleManageSubscription = async () => {
     try {
-      // This will be implemented with Stripe customer portal
-      toast.info('Portal de gerenciamento será implementado em breve');
+      const url = await openCustomerPortal();
+      if (url) {
+        window.open(url, '_blank');
+      }
     } catch (error) {
       console.error('Error opening portal:', error);
       toast.error('Erro ao abrir portal de gerenciamento');

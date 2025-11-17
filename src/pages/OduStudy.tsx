@@ -10,6 +10,7 @@ import { ArrowLeft, BookOpen, Sparkles, Lightbulb, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { MnemonicsSection } from "@/components/MnemonicsSection";
 import { ElaborativeEncoding } from "@/components/ElaborativeEncoding";
+import { useSubscription } from "@/hooks/useSubscription";
 
 interface Odu {
   id: string;
@@ -28,6 +29,9 @@ export default function OduStudy() {
   const { user } = useAuth();
   const [odu, setOdu] = useState<Odu | null>(null);
   const [loading, setLoading] = useState(true);
+  const { hasActiveSubscription, loading: subLoading } = useSubscription();
+
+  const FREE_LIMIT = 5;
 
   useEffect(() => {
     if (!user) {
@@ -89,6 +93,15 @@ export default function OduStudy() {
         .single();
 
       if (error) throw error;
+      
+      // Check premium access
+      const isPremium = data.numero > FREE_LIMIT;
+      if (isPremium && !subLoading && !hasActiveSubscription()) {
+        toast.error("Este Odu é premium. Faça upgrade para acessar!");
+        navigate("/subscription");
+        return;
+      }
+      
       setOdu(data);
 
       // Create or update memorization record
