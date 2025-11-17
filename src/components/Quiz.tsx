@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +18,7 @@ interface QuizProps {
   onAnswer: (correct: boolean) => void;
 }
 
-export default function Quiz({ question, onAnswer }: QuizProps) {
+const Quiz = memo(function Quiz({ question, onAnswer }: QuizProps) {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
 
@@ -114,4 +114,6 @@ export default function Quiz({ question, onAnswer }: QuizProps) {
       </Card>
     </div>
   );
-}
+});
+
+export default Quiz;
