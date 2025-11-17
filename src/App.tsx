@@ -22,6 +22,7 @@ import Profile from "./pages/Profile";
 import Subscription from "./pages/Subscription";
 import Success from "./pages/Success";
 import NotFound from "./pages/NotFound";
+import Changelog from "./pages/Changelog";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +51,7 @@ const App = () => (
               <Route path="/profile" element={<Profile />} />
               <Route path="/subscription" element={<Subscription />} />
               <Route path="/success" element={<Success />} />
+              <Route path="/novidades" element={<Changelog />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

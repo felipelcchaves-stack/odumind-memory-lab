@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useChangelog } from '@/hooks/useChangelog';
+import ChangelogModal from '@/components/ChangelogModal';
 import ProductTour from '@/components/ProductTour';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,6 +57,9 @@ export default function Dashboard() {
     scheduleReviewReminder 
   } = useNotifications();
   const { subscription, loading: subLoading } = useSubscription();
+  const [achievementsHistory, setAchievementsHistory] = useState<any[]>([]);
+  const hasScheduledNotifications = useRef(false);
+  const { showModal, latestChangelog, markAsViewed, setShowModal } = useChangelog();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -597,6 +602,14 @@ export default function Dashboard() {
 
       {/* Notification Prompt */}
       <NotificationPrompt />
+      
+      {/* Changelog Modal */}
+      <ChangelogModal 
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        changelog={latestChangelog}
+        onMarkAsViewed={markAsViewed}
+      />
     </div>
   );
 }

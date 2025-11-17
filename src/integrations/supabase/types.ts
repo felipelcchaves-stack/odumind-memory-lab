@@ -47,6 +47,36 @@ export type Database = {
         }
         Relationships: []
       }
+      changelog: {
+        Row: {
+          created_at: string | null
+          destaque: boolean | null
+          id: string
+          items: Json
+          release_date: string
+          titulo: string
+          version: string
+        }
+        Insert: {
+          created_at?: string | null
+          destaque?: boolean | null
+          id?: string
+          items: Json
+          release_date?: string
+          titulo: string
+          version: string
+        }
+        Update: {
+          created_at?: string | null
+          destaque?: boolean | null
+          id?: string
+          items?: Json
+          release_date?: string
+          titulo?: string
+          version?: string
+        }
+        Relationships: []
+      }
       conquistas: {
         Row: {
           conquistado_em: string
@@ -381,6 +411,7 @@ export type Database = {
           created_at: string
           id: string
           last_study_date: string | null
+          last_viewed_changelog: string | null
           meta_diaria: number
           nome: string | null
           streak: number
@@ -393,6 +424,7 @@ export type Database = {
           created_at?: string
           id?: string
           last_study_date?: string | null
+          last_viewed_changelog?: string | null
           meta_diaria?: number
           nome?: string | null
           streak?: number
@@ -405,6 +437,7 @@ export type Database = {
           created_at?: string
           id?: string
           last_study_date?: string | null
+          last_viewed_changelog?: string | null
           meta_diaria?: number
           nome?: string | null
           streak?: number

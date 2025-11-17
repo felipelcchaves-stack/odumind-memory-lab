@@ -1,6 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useChangelog } from '@/hooks/useChangelog';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Home, BookOpen, Brain, Shield, Settings, LogOut, Sun, Moon, User, Crown, BarChart3, Edit, Landmark, Lightbulb } from 'lucide-react';
+import { Home, BookOpen, Brain, Shield, Settings, LogOut, Sun, Moon, User, Crown, BarChart3, Edit, Landmark, Lightbulb, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 export default function DashboardHeader() {
@@ -20,6 +21,7 @@ export default function DashboardHeader() {
   const { user, signOut } = useAuth();
   const { isAdmin, isColaborador } = useAdmin();
   const { theme, setTheme } = useTheme();
+  const { hasUnreadChangelog } = useChangelog();
 
   const navItems = [
     { path: '/dashboard', icon: Home, label: 'Dashboard' },
@@ -27,6 +29,7 @@ export default function DashboardHeader() {
     { path: '/study', icon: Brain, label: 'Estudar' },
     { path: '/memory-palace', icon: Landmark, label: 'Palácio' },
     { path: '/tecnicas', icon: Lightbulb, label: 'Técnicas' },
+    { path: '/novidades', icon: Sparkles, label: 'Novidades', showBadge: hasUnreadChangelog },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -49,18 +52,21 @@ export default function DashboardHeader() {
 
         {/* Navigation */}
         <nav className="flex items-center gap-1" data-tour="nav-menu">
-          {navItems.map((item) => (
-            <Button
-              key={item.path}
-              variant={isActive(item.path) ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => navigate(item.path)}
-              className="gap-2"
-            >
-              <item.icon className="h-4 w-4" />
-              <span className="hidden sm:inline">{item.label}</span>
-            </Button>
-          ))}
+      {navItems.map((item) => (
+        <Button
+          key={item.path}
+          variant={isActive(item.path) ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => navigate(item.path)}
+          className="gap-2 relative"
+        >
+          <item.icon className="h-4 w-4" />
+          <span className="hidden sm:inline">{item.label}</span>
+          {item.showBadge && (
+            <Badge variant="destructive" className="absolute -top-1 -right-1 h-2 w-2 p-0 animate-pulse" />
+          )}
+        </Button>
+      ))}
 
           {/* Admin Link */}
           {isAdmin && (
