@@ -146,21 +146,45 @@ export const useSubscription = () => {
     }
 
     try {
-      const session = await supabase.auth.getSession();
-      const accessToken = session.data.session?.access_token;
+      console.log('Refreshing session before opening portal...');
       
-      if (!accessToken) {
-        toast.error('Sessão inválida. Faça login novamente.');
+      // Force refresh session to get a fresh token
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError) {
+        console.error('Session refresh failed:', refreshError);
+        toast.error('Sessão expirada. Faça login novamente.');
         return null;
       }
 
+      const accessToken = refreshData.session?.access_token;
+      
+      if (!accessToken || accessToken === 'undefined') {
+        console.error('No valid access token after refresh');
+        toast.error('Erro ao obter token válido. Faça login novamente.');
+        return null;
+      }
+
+      console.log('Calling customer-portal with fresh token');
+      
       const { data, error } = await supabase.functions.invoke('customer-portal', {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Portal invocation error:', error);
+        
+        // If token is still invalid after refresh, prompt re-login
+        if (error.message?.includes('session') || error.message?.includes('token') || error.message?.includes('authentication')) {
+          toast.error('Sessão expirada. Faça login novamente.');
+        } else {
+          toast.error('Erro ao abrir portal de gerenciamento');
+        }
+        return null;
+      }
+
       return data.url;
     } catch (error) {
       console.error('Error opening portal:', error);

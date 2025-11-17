@@ -71,6 +71,7 @@ export default function Subscription() {
   const { subscription, loading: subLoading, loadSubscription, createCheckout, openCustomerPortal } = useSubscription();
   const navigate = useNavigate();
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
+  const [managingSubscription, setManagingSubscription] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -117,14 +118,19 @@ export default function Subscription() {
   };
 
   const handleManageSubscription = async () => {
+    setManagingSubscription(true);
+    
     try {
       const url = await openCustomerPortal();
       if (url) {
         window.open(url, '_blank');
+        toast.success('Portal aberto em nova aba');
       }
     } catch (error) {
-      console.error('Error opening portal:', error);
-      toast.error('Erro ao abrir portal de gerenciamento');
+      console.error('Error managing subscription:', error);
+      toast.error('Erro ao abrir gerenciamento de assinatura');
+    } finally {
+      setManagingSubscription(false);
     }
   };
 
@@ -195,9 +201,10 @@ export default function Subscription() {
                     <Button 
                       variant="outline"
                       onClick={handleManageSubscription}
+                      disabled={managingSubscription}
                     >
                       <CreditCard className="mr-2 h-4 w-4" />
-                      Gerenciar Assinatura
+                      {managingSubscription ? 'Abrindo portal...' : 'Gerenciar Assinatura'}
                     </Button>
                   )}
                 </div>
