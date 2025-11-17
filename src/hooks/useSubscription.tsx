@@ -63,12 +63,27 @@ export const useSubscription = () => {
       // Wait a bit to ensure session is fully loaded
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Then sync with Stripe
-      const session = await supabase.auth.getSession();
-      const accessToken = session.data.session?.access_token;
+      // Get current session and validate/refresh if needed
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      // If session is invalid or expired, try to refresh it
+      if (sessionError || !sessionData.session) {
+        console.warn('No valid session, attempting to refresh...');
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        
+        if (refreshError || !refreshData.session) {
+          console.warn('Unable to refresh session, skipping Stripe sync');
+          setLoading(false);
+          return;
+        }
+        
+        sessionData.session = refreshData.session;
+      }
+      
+      const accessToken = sessionData.session?.access_token;
       
       // Only call edge function if we have a valid token
-      if (!accessToken || accessToken === 'undefined') {
+      if (!accessToken || accessToken === 'undefined' || accessToken === 'null') {
         console.warn('No valid access token available, skipping Stripe sync');
         setLoading(false);
         return;
