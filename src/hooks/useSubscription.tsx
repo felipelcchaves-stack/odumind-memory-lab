@@ -27,6 +27,12 @@ export const useSubscription = () => {
       return;
     }
 
+    // Wait for roles to load before proceeding
+    if (rolesLoading) {
+      console.log('Roles still loading, waiting...');
+      return;
+    }
+
     // Skip Stripe sync for admins/collaborators
     if (isAdmin || isColaborador) {
       console.log('User is admin/collaborator, granting full access');
@@ -119,7 +125,7 @@ export const useSubscription = () => {
 
   useEffect(() => {
     loadSubscription();
-  }, [user]);
+  }, [user, isAdmin, isColaborador, rolesLoading]);
 
   const createCheckout = async (priceId: string) => {
     if (!user) {
