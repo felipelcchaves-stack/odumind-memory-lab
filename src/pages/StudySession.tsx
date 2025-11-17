@@ -255,17 +255,55 @@ export default function StudySession() {
     setMode(Math.random() > 0.5 ? "flashcard" : "quiz");
   }
 
-  function handleEndSession() {
-    setIsSessionActive(false);
-    setSessionComplete(true);
-  }
-
   async function handleFlashcardRate(difficulty: number) {
     if (!user || !currentOdu) return;
 
     const qualidade = difficulty; // 1=difícil, 3=médio, 5=fácil
+    const responseTime = Math.floor((Date.now() - cardStartTime) / 1000);
+    const isCorrect = qualidade >= 3;
 
     try {
+      // Update session metrics
+      const newMetrics = {
+        ...sessionMetrics,
+        totalCards: sessionMetrics.totalCards + 1,
+        correctAnswers: sessionMetrics.correctAnswers + (isCorrect ? 1 : 0),
+        wrongAnswers: sessionMetrics.wrongAnswers + (isCorrect ? 0 : 1),
+        consecutiveCorrect: isCorrect ? sessionMetrics.consecutiveCorrect + 1 : 0,
+        consecutiveWrong: isCorrect ? 0 : sessionMetrics.consecutiveWrong + 1,
+        averageResponseTime: Math.floor(
+          (sessionMetrics.averageResponseTime * sessionMetrics.totalCards + responseTime) / 
+          (sessionMetrics.totalCards + 1)
+        )
+      };
+      setSessionMetrics(newMetrics);
+
+      // 🔥 FEEDBACK EM TEMPO REAL - Consecutive wrong
+      if (newMetrics.consecutiveWrong >= 3) {
+        toast.info("😴 3 erros seguidos. Recomendamos uma pausa de 5 minutos!", {
+          duration: 5000
+        });
+      }
+
+      // 🎯 FEEDBACK EM TEMPO REAL - Perfect streak
+      if (newMetrics.consecutiveCorrect >= 10) {
+        toast.success("🎯 10 acertos seguidos! Você está dominando!", {
+          duration: 3000
+        });
+      }
+
+      // 🧠 FEEDBACK EM TEMPO REAL - Attention drop
+      const sessionTime = (Date.now() - sessionStats.startTime) / (1000 * 60);
+      const accuracyRate = newMetrics.totalCards > 0 
+        ? newMetrics.correctAnswers / newMetrics.totalCards 
+        : 1;
+
+      if (sessionTime > 45 && accuracyRate < 0.7) {
+        toast.warning("🧠 Sua atenção pode estar caindo. Recomendamos um intervalo!", {
+          duration: 5000
+        });
+      }
+
       // Get current memorization record
       const { data: currentRecord } = await supabase
         .from("memorizacao")
@@ -277,134 +315,140 @@ export default function StudySession() {
       const revisoes = (currentRecord?.revisoes || 0) + 1;
       const facilidade = currentRecord?.facilidade || 2.5;
       const intervalo = currentRecord?.intervalo || 0;
+      
+      // 🚀 ALGORITMO ADAPTATIVO - Use new adaptive algorithm
+      const { novaFacilidade, novoIntervalo } = calculateAdaptiveInterval(
+        facilidade,
+        intervalo,
+        qualidade,
+        userProfile,
+        revisoes
+      );
+      
       const newMemoryStrength = Math.min(100, (currentRecord?.forca_memoria || 0) + qualidade * 8);
       const newStatus = revisoes >= 3 && newMemoryStrength >= 60 ? "memorizado" : "estudando";
+      
+      // Calculate next review date
+      const proximaData = new Date();
+      proximaData.setDate(proximaData.getDate() + novoIntervalo);
 
-      // Calculate next review using SM-2 algorithm
-      const { data: nextReview } = await supabase.rpc("calcular_proxima_revisao", {
-        _facilidade: facilidade,
-        _intervalo: intervalo,
-        _qualidade: qualidade,
+      // Update memorization record with additional intelligence fields
+      await supabase
+        .from("memorizacao")
+        .upsert({
+          user_id: user.id,
+          odu_id: currentOdu.id,
+          revisoes,
+          ultima_revisao: new Date().toISOString(),
+          proxima_revisao: proximaData.toISOString(),
+          facilidade: novaFacilidade,
+          intervalo: novoIntervalo,
+          forca_memoria: newMemoryStrength,
+          status: newStatus,
+          marked_difficult: qualidade === 1,
+          consecutive_correct: isCorrect ? (currentRecord?.consecutive_correct || 0) + 1 : 0,
+          consecutive_wrong: isCorrect ? 0 : (currentRecord?.consecutive_wrong || 0) + 1,
+          total_study_time: (currentRecord?.total_study_time || 0) + responseTime,
+          last_response_time: responseTime
+        });
+
+      // Calculate XP based on difficulty and performance
+      const xp = qualidade * 10;
+      setLastXPGain(xp);
+      setShowXPNotification(true);
+      
+      // Update session stats
+      setSessionStats(prev => ({
+        ...prev,
+        cardsStudied: prev.cardsStudied + 1,
+        totalXP: prev.totalXP + xp
+      }));
+
+      // Update profile
+      const { data: currentProfile } = await supabase
+        .from("profiles")
+        .select("xp")
+        .eq("user_id", user.id)
+        .single();
+
+      const newXp = (currentProfile?.xp || 0) + xp;
+      await supabase
+        .from("profiles")
+        .update({ xp: newXp })
+        .eq("user_id", user.id);
+
+      // Update streak
+      await supabase.rpc("update_user_streak", { _user_id: user.id });
+
+      // Check achievements and badges
+      await supabase.rpc("check_and_award_achievements", { _user_id: user.id });
+      await supabase.rpc("check_and_award_badges", { _user_id: user.id });
+
+      // Log event
+      await supabase.from("gamification_logs").insert({
+        user_id: user.id,
+        tipo_evento: "xp_ganho",
+        valor: xp,
+        detalhes: { odu_id: currentOdu.id, qualidade, odu_nome: currentOdu.nome },
       });
 
-      if (nextReview && nextReview.length > 0) {
-        const { nova_facilidade, novo_intervalo, proxima_data } = nextReview[0];
+      // Check for new badges
+      const { data: recentBadges } = await supabase
+        .from("user_badges")
+        .select(`badge_id, badges (nome, icon)`)
+        .eq("user_id", user.id)
+        .gte("conquistado_em", new Date(Date.now() - 5000).toISOString());
 
-        // Update memorization record
-        await supabase
-          .from("memorizacao")
-          .upsert({
-            user_id: user.id,
-            odu_id: currentOdu.id,
-            revisoes,
-            ultima_revisao: new Date().toISOString(),
-            proxima_revisao: proxima_data,
-            facilidade: nova_facilidade,
-            intervalo: novo_intervalo,
-            forca_memoria: newMemoryStrength,
-            status: newStatus,
-          });
-
-        // Calculate XP based on difficulty and performance
-        const xp = qualidade * 10;
-        setLastXPGain(xp);
-        setShowXPNotification(true);
-        
-        // Update session stats
-        setSessionStats(prev => ({
-          ...prev,
-          cardsStudied: prev.cardsStudied + 1,
-          totalXP: prev.totalXP + xp
-        }));
-
-        // Get current profile
-        const { data: currentProfile } = await supabase
-          .from("profiles")
-          .select("xp")
-          .eq("user_id", user.id)
-          .single();
-
-        const newXp = (currentProfile?.xp || 0) + xp;
-
-        // Update profile with new XP
-        await supabase
-          .from("profiles")
-          .update({ xp: newXp })
-          .eq("user_id", user.id);
-
-        // Update streak
-        await supabase.rpc("update_user_streak", { _user_id: user.id });
-
-        // Check and award achievements
-        await supabase.rpc("check_and_award_achievements", { _user_id: user.id });
-
-        // Log XP gain
-        await supabase.from("gamification_logs").insert({
-          user_id: user.id,
-          tipo_evento: "xp_ganho",
-          valor: xp,
-          detalhes: { odu_id: currentOdu.id, qualidade, odu_nome: currentOdu.nome },
+      if (recentBadges && recentBadges.length > 0) {
+        recentBadges.forEach((badge: any) => {
+          toast.success(
+            `🎖️ Novo Badge: ${badge.badges.nome}!`,
+            { duration: 4000 }
+          );
         });
-
-        // Check and award badges
-        const { data: newBadges, error: badgeError } = await supabase.rpc("check_and_award_badges", { 
-          _user_id: user.id 
-        });
-
-        // Check and award achievements
-        await supabase.rpc("check_and_award_achievements", { 
-          _user_id: user.id 
-        });
-
-        // Check if new badges were awarded
-        const { data: recentBadges } = await supabase
-          .from("user_badges")
-          .select(`
-            badge_id,
-            badges (nome, icon)
-          `)
-          .eq("user_id", user.id)
-          .gte("conquistado_em", new Date(Date.now() - 5000).toISOString());
-
-        if (recentBadges && recentBadges.length > 0) {
-          recentBadges.forEach((badge: any) => {
-            toast.success(
-              `🎉 Novo badge conquistado: ${badge.badges.icon} ${badge.badges.nome}!`,
-              { duration: 5000 }
-            );
-          });
-        }
-
-        // Check if new achievements were unlocked
-        const { data: recentAchievements } = await supabase
-          .from("conquistas")
-          .select("*")
-          .eq("user_id", user.id)
-          .gte("conquistado_em", new Date(Date.now() - 5000).toISOString());
-
-        if (recentAchievements && recentAchievements.length > 0) {
-          recentAchievements.forEach((conquista: any) => {
-            toast.success(
-              `${conquista.icone} Conquista desbloqueada: ${conquista.titulo}!`,
-              { duration: 5000 }
-            );
-          });
-        }
       }
 
-      // Select next random card
-      selectRandomOdu();
+      // 📊 FEEDBACK EM TEMPO REAL - Study block recommendation
+      const studyBlock = determineStudyBlock(newMetrics);
+      if (studyBlock.breakAfter && newMetrics.totalCards % studyBlock.targetCards === 0) {
+        toast.info(`✨ Você completou ${studyBlock.targetCards} cards! Recomendamos uma pausa.`, {
+          duration: 5000
+        });
+      }
+
+      // Remove studied Odu from pool and select next
+      const remainingOdus = availableOdus.filter(o => o.id !== currentOdu.id);
+      setAvailableOdus(remainingOdus);
+      
+      setTimeout(() => {
+        setShowXPNotification(false);
+        selectRandomOdu(remainingOdus);
+      }, 1000);
+
     } catch (error) {
-      console.error("Error updating memorization:", error);
-      toast.error("Erro ao atualizar progresso");
+      console.error("Error handling flashcard rate:", error);
+      toast.error("Erro ao processar resposta");
     }
   }
 
-  async function handleQuizAnswer(correct: boolean) {
-    if (!user) return;
+  async function handleQuizAnswer(isCorrect: boolean) {
+    const difficulty = isCorrect ? 5 : 1;
+    await handleFlashcardRate(difficulty);
+  }
 
-    const qualidade = correct ? 5 : 1;
-    await handleFlashcardRate(qualidade);
+  async function handleEndSession() {
+    setIsSessionActive(false);
+    setSessionComplete(true);
+    
+    if (sessionId && user) {
+      await endStudySession(
+        sessionId,
+        sessionMetrics.totalCards,
+        sessionMetrics.correctAnswers,
+        sessionMetrics.wrongAnswers,
+        sessionMetrics.averageResponseTime
+      );
+    }
   }
 
   const generateQuizQuestion = useMemo((): QuizQuestion | null => {
@@ -651,6 +695,140 @@ export default function StudySession() {
             </p>
           </div>
         </div>
+
+        {/* Real-time Feedback Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {/* Session Accuracy Card */}
+          <Card className={
+            sessionMetrics.totalCards >= 5 
+              ? sessionMetrics.correctAnswers / sessionMetrics.totalCards >= 0.85
+                ? "border-green-500 bg-green-50 dark:bg-green-900/20"
+                : sessionMetrics.correctAnswers / sessionMetrics.totalCards >= 0.6
+                  ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20"
+                  : "border-red-500 bg-red-50 dark:bg-red-900/20"
+              : ""
+          }>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Precisão</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold">
+                  {sessionMetrics.totalCards > 0 
+                    ? Math.round((sessionMetrics.correctAnswers / sessionMetrics.totalCards) * 100)
+                    : 0}%
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {sessionMetrics.correctAnswers}/{sessionMetrics.totalCards}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Consecutive Streak Card */}
+          <Card className={
+            sessionMetrics.consecutiveCorrect >= 10
+              ? "border-green-500 bg-green-50 dark:bg-green-900/20"
+              : sessionMetrics.consecutiveWrong >= 3
+                ? "border-orange-500 bg-orange-50 dark:bg-orange-900/20"
+                : ""
+          }>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Zap className="h-4 w-4" />
+                Sequência
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-1">
+                {sessionMetrics.consecutiveCorrect > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">🔥</span>
+                    <span className="text-lg font-semibold text-green-600 dark:text-green-400">
+                      {sessionMetrics.consecutiveCorrect} corretos
+                    </span>
+                  </div>
+                )}
+                {sessionMetrics.consecutiveWrong > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">😓</span>
+                    <span className="text-lg font-semibold text-orange-600 dark:text-orange-400">
+                      {sessionMetrics.consecutiveWrong} erros
+                    </span>
+                  </div>
+                )}
+                {sessionMetrics.consecutiveCorrect === 0 && sessionMetrics.consecutiveWrong === 0 && (
+                  <span className="text-sm text-muted-foreground">Comece a estudar</span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Average Response Time Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Brain className="h-4 w-4" />
+                Tempo Médio
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold">
+                  {sessionMetrics.averageResponseTime}
+                </span>
+                <span className="text-sm text-muted-foreground">segundos</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Unlock Progress Card (for free users) */}
+        {!hasActiveSubscription() && unlockProgress && (
+          <Card className="mb-6 border-primary/30 bg-gradient-to-r from-primary/5 to-secondary/5">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                🎯 Próximo Desbloqueio
+                {unlockProgress.requirementType === 'upgrade' && (
+                  <Badge variant="secondary" className="ml-2">Premium</Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-muted-foreground">
+                    {unlockProgress.requirementType === 'mastery' && `Memorize ${unlockProgress.requirementValue} Odu`}
+                    {unlockProgress.requirementType === 'streak' && `${unlockProgress.requirementValue} dias de sequência`}
+                    {unlockProgress.requirementType === 'xp' && `${unlockProgress.requirementValue} XP`}
+                    {unlockProgress.requirementType === 'upgrade' && 'Faça upgrade para Premium'}
+                  </span>
+                  <span className="font-semibold">
+                    {unlockProgress.requirementType !== 'upgrade' 
+                      ? `${unlockProgress.currentProgress}/${unlockProgress.requirementValue}`
+                      : ''}
+                  </span>
+                </div>
+                {unlockProgress.requirementType !== 'upgrade' && (
+                  <Progress value={unlockProgress.progressPercentage} className="h-2" />
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Desbloqueie +{unlockProgress.nextUnlock - unlockProgress.currentLimit} novos Odu ao completar!
+              </p>
+              {unlockProgress.requirementType === 'upgrade' && (
+                <Button 
+                  onClick={() => navigate("/subscription")} 
+                  variant="hero" 
+                  size="sm"
+                  className="w-full"
+                >
+                  Ver Planos Premium
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Study Content */}
         {mode === "flashcard" ? (
