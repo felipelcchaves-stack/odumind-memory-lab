@@ -13,6 +13,7 @@ import OduStudy from "./pages/OduStudy";
 import StudySession from "./pages/StudySession";
 import MemoryPalace from "./pages/MemoryPalace";
 import Admin from "./pages/Admin";
+import Analytics from "./pages/Analytics";
 import UserDetail from "./pages/UserDetail";
 import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="/study" element={<StudySession />} />
               <Route path="/memory-palace" element={<MemoryPalace />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/admin/analytics" element={<Analytics />} />
               <Route path="/admin/user/:userId" element={<UserDetail />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/profile" element={<Profile />} />
