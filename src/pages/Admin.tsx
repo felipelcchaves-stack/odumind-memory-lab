@@ -22,6 +22,7 @@ export default function Admin() {
   const [stats, setStats] = useState({ totalOdus: 0, totalUsers: 0 });
   const [selectedOdu, setSelectedOdu] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [activeTab, setActiveTab] = useState("list");
 
   useEffect(() => {
     if (!adminLoading && !user) {
@@ -62,12 +63,14 @@ export default function Admin() {
 
   const handleOduSaved = () => {
     setSelectedOdu(null);
+    setActiveTab("list");
     setRefreshTrigger((prev) => prev + 1);
     loadStats();
   };
 
   const handleEditOdu = (oduId: string) => {
     setSelectedOdu(oduId);
+    setActiveTab("editor");
   };
 
   if (adminLoading) {
@@ -129,7 +132,7 @@ export default function Admin() {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="list" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'}`}>
             <TabsTrigger value="list">Lista de Odu</TabsTrigger>
             <TabsTrigger value="editor">Editor</TabsTrigger>
@@ -151,7 +154,10 @@ export default function Admin() {
                   Visualize, edite ou exclua os Odu cadastrados
                 </p>
               </div>
-              <Button onClick={() => setSelectedOdu('new')}>
+              <Button onClick={() => {
+                setSelectedOdu('new');
+                setActiveTab("editor");
+              }}>
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Odu
               </Button>
@@ -181,7 +187,10 @@ export default function Admin() {
                     <p className="text-muted-foreground mb-4">
                       Nenhum Odu selecionado para edição
                     </p>
-                    <Button onClick={() => setSelectedOdu('new')}>
+                    <Button onClick={() => {
+                      setSelectedOdu('new');
+                      setActiveTab("editor");
+                    }}>
                       <Plus className="h-4 w-4 mr-2" />
                       Criar Novo Odu
                     </Button>
