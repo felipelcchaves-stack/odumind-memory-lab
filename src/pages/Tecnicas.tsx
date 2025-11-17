@@ -126,7 +126,7 @@ export default function Tecnicas() {
               Cada técnica ativa diferentes áreas do cérebro. Ao combiná-las, você cria múltiplos "caminhos" para a mesma memória, tornando-a muito mais forte e duradoura.
             </p>
             <p className="font-medium text-foreground">
-              O sistema Odùmind integra todas essas técnicas automaticamente para resultados máximos.
+              O sistema Isesemind integra todas essas técnicas automaticamente para resultados máximos.
             </p>
           </CardContent>
         </Card>

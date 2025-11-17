@@ -1,6 +1,6 @@
 # Como Configurar um Usuário como Administrador
 
-Para dar acesso administrativo a um usuário no sistema Odùmind, você precisa adicionar o papel de "admin" na tabela `user_roles` no banco de dados.
+Para dar acesso administrativo a um usuário no sistema Isesemind, você precisa adicionar o papel de "admin" na tabela `user_roles` no banco de dados.
 
 ## Passo a Passo
 
@@ -24,10 +24,10 @@ VALUES ('USER_ID_AQUI', 'admin');
 ### Exemplo Completo
 
 ```sql
--- Exemplo: tornar admin@odumind.com um administrador
+-- Exemplo: tornar admin@isesemind.com um administrador
 
 -- 1. Buscar o ID do usuário
-SELECT id FROM auth.users WHERE email = 'admin@odumind.com';
+SELECT id FROM auth.users WHERE email = 'admin@isesemind.com';
 
 -- Suponha que retornou: 123e4567-e89b-12d3-a456-426614174000
 

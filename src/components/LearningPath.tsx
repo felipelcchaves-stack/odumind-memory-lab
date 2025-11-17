@@ -110,7 +110,7 @@ const LearningPath = () => {
         {/* CTA Section */}
         <div className="mt-16 text-center space-y-4">
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Não importa onde você está em sua jornada, o Odùmind se adapta ao seu nível e ritmo de aprendizado
+            Não importa onde você está em sua jornada, o Isesemind se adapta ao seu nível e ritmo de aprendizado
           </p>
         </div>
       </div>

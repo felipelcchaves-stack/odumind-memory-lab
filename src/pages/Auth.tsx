@@ -58,7 +58,7 @@ export default function Auth() {
     } else {
       toast({
         title: 'Login realizado!',
-        description: 'Bem-vindo ao Odùmind'
+        description: 'Bem-vindo ao Isesemind'
       });
       navigate('/dashboard');
     }
@@ -143,7 +143,7 @@ export default function Auth() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            Odùmind
+            Isesemind
           </CardTitle>
           <CardDescription>
             Sistema de memorização dos 256 Odu Ifá

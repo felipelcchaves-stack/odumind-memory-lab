@@ -44,7 +44,7 @@ export default function DashboardHeader() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <span className="text-lg font-bold text-primary-foreground">Ọ</span>
           </div>
-          <span className="hidden font-semibold sm:inline-block">Odùmind</span>
+          <span className="hidden font-semibold sm:inline-block">Isesemind</span>
         </div>
 
         {/* Navigation */}

@@ -17,8 +17,8 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'robots.txt'],
       manifest: {
-        name: 'Odùmind - Domine os Odu Ifá',
-        short_name: 'Odùmind',
+        name: 'Isesemind - Domine os Odu Ifá',
+        short_name: 'Isesemind',
         description: 'Sistema de memorização dos Odu Ifá com ciência e gamificação',
         theme_color: '#8B5CF6',
         background_color: '#ffffff',
