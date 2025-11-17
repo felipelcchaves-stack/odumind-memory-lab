@@ -142,6 +142,28 @@ async function updateSubscription(
       planName = 'Profissional';
     }
 
+    // Safely convert timestamps to ISO strings
+    let currentPeriodStart = null;
+    let currentPeriodEnd = null;
+    
+    try {
+      if (subscription.current_period_start && typeof subscription.current_period_start === 'number' && subscription.current_period_start > 0) {
+        currentPeriodStart = new Date(subscription.current_period_start * 1000).toISOString();
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logStep("Error converting period_start in webhook", { value: subscription.current_period_start, error: errorMessage });
+    }
+    
+    try {
+      if (subscription.current_period_end && typeof subscription.current_period_end === 'number' && subscription.current_period_end > 0) {
+        currentPeriodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logStep("Error converting period_end in webhook", { value: subscription.current_period_end, error: errorMessage });
+    }
+
     const subscriptionData = {
       user_id: targetUserId,
       status: subscription.status,
@@ -149,12 +171,8 @@ async function updateSubscription(
       stripe_customer_id: customer.id,
       stripe_subscription_id: subscription.id,
       stripe_price_id: priceId,
-      current_period_start: subscription.current_period_start 
-        ? new Date(subscription.current_period_start * 1000).toISOString() 
-        : null,
-      current_period_end: subscription.current_period_end 
-        ? new Date(subscription.current_period_end * 1000).toISOString() 
-        : null,
+      current_period_start: currentPeriodStart,
+      current_period_end: currentPeriodEnd,
       cancel_at_period_end: subscription.cancel_at_period_end || false,
     };
 

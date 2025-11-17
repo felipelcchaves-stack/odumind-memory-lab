@@ -109,12 +109,43 @@ serve(async (req) => {
     const isActive = subscription.status === 'active' || subscription.status === 'trialing';
     const priceId = subscription.items.data[0].price.id;
     
+    logStep("Processing subscription", { 
+      subscriptionId: subscription.id,
+      status: subscription.status,
+      periodStart: subscription.current_period_start,
+      periodEnd: subscription.current_period_end
+    });
+    
     // Determine plan name based on price ID
     let planName = 'Gratuito';
     if (priceId === 'price_1SUQd7Do1RHWW8lpaKCqKH8g') {
       planName = 'Premium';
     } else if (priceId === 'price_1SUQe8Do1RHWW8lpTManIdtD') {
       planName = 'Profissional';
+    }
+
+    // Safely convert timestamps to ISO strings
+    let currentPeriodStart = null;
+    let currentPeriodEnd = null;
+    
+    try {
+      if (subscription.current_period_start && typeof subscription.current_period_start === 'number' && subscription.current_period_start > 0) {
+        currentPeriodStart = new Date(subscription.current_period_start * 1000).toISOString();
+        logStep("Converted period_start", { original: subscription.current_period_start, converted: currentPeriodStart });
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logStep("Error converting period_start", { value: subscription.current_period_start, error: errorMessage });
+    }
+    
+    try {
+      if (subscription.current_period_end && typeof subscription.current_period_end === 'number' && subscription.current_period_end > 0) {
+        currentPeriodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+        logStep("Converted period_end", { original: subscription.current_period_end, converted: currentPeriodEnd });
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logStep("Error converting period_end", { value: subscription.current_period_end, error: errorMessage });
     }
 
     const subscriptionData = {
@@ -124,12 +155,8 @@ serve(async (req) => {
       stripe_customer_id: customerId,
       stripe_subscription_id: subscription.id,
       stripe_price_id: priceId,
-      current_period_start: subscription.current_period_start 
-        ? new Date(subscription.current_period_start * 1000).toISOString() 
-        : null,
-      current_period_end: subscription.current_period_end 
-        ? new Date(subscription.current_period_end * 1000).toISOString() 
-        : null,
+      current_period_start: currentPeriodStart,
+      current_period_end: currentPeriodEnd,
       cancel_at_period_end: subscription.cancel_at_period_end || false,
     };
 
