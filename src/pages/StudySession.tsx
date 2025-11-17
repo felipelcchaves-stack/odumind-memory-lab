@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Trophy, Lock, Clock } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ArrowLeft, Trophy, Lock, Clock, TrendingUp, Zap, Brain } from "lucide-react";
 import { toast } from "sonner";
 import Flashcard from "@/components/Flashcard";
 import Quiz from "@/components/Quiz";
@@ -15,6 +16,21 @@ import XPNotification from "@/components/XPNotification";
 import BadgesDisplay from "@/components/BadgesDisplay";
 import DashboardHeader from "@/components/DashboardHeader";
 import { ProtectedContent } from "@/components/ProtectedContent";
+import {
+  calculateLearningProfile,
+  calculateAdaptiveInterval,
+  prioritizeOdusForReview,
+  createInterleavedMix,
+  determineStudyBlock,
+  type UserLearningProfile,
+  type SessionMetrics
+} from "@/lib/adaptiveLearning";
+import {
+  calculateUnlockProgress,
+  startStudySession,
+  endStudySession,
+  type UnlockProgress
+} from "@/lib/learningAnalytics";
 
 interface Odu {
   id: string;
@@ -51,14 +67,14 @@ interface SessionStats {
 
 type StudyMode = "flashcard" | "quiz";
 
-const FREE_LIMIT = 5; // Usuários gratuitos podem estudar os primeiros 5 Odus
+const FREE_LIMIT = 5; // Limite para usuários gratuitos (agora progressivo)
 
 export default function StudySession() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { hasActiveSubscription, loading: subscriptionLoading } = useSubscription();
   
-  // Session state
+  // Core session state
   const [availableOdus, setAvailableOdus] = useState<Odu[]>([]);
   const [currentOdu, setCurrentOdu] = useState<Odu | null>(null);
   const [studiedInSession, setStudiedInSession] = useState<Set<string>>(new Set());
@@ -68,6 +84,21 @@ export default function StudySession() {
     totalXP: 0,
     startTime: Date.now()
   });
+  
+  // Learning intelligence state
+  const [userProfile, setUserProfile] = useState<UserLearningProfile | null>(null);
+  const [unlockProgress, setUnlockProgress] = useState<UnlockProgress | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionMetrics, setSessionMetrics] = useState<SessionMetrics>({
+    consecutiveCorrect: 0,
+    consecutiveWrong: 0,
+    totalCards: 0,
+    correctAnswers: 0,
+    wrongAnswers: 0,
+    averageResponseTime: 0,
+    sessionStartTime: new Date()
+  });
+  const [cardStartTime, setCardStartTime] = useState<number>(0);
   
   const [mode, setMode] = useState<StudyMode>("flashcard");
   const [loading, setLoading] = useState(true);
@@ -90,8 +121,28 @@ export default function StudySession() {
       return;
     }
 
-    fetchOdusForReview();
+    initializeSession();
   }, [user]);
+
+  async function initializeSession() {
+    if (!user) return;
+    
+    try {
+      const newSessionId = await startStudySession(user.id, 'intelligent');
+      setSessionId(newSessionId);
+      
+      const profile = await calculateLearningProfile(user.id);
+      setUserProfile(profile);
+      
+      const progress = await calculateUnlockProgress(user.id);
+      setUnlockProgress(progress);
+      
+      await fetchOdusForReview(progress);
+    } catch (error) {
+      console.error("Error initializing session:", error);
+      toast.error("Erro ao inicializar sessão");
+    }
+  }
 
   async function fetchNextReviewDate() {
     if (!user) return null;
@@ -126,65 +177,41 @@ export default function StudySession() {
     }
   }
 
-  async function fetchOdusForReview() {
+  async function fetchOdusForReview(progress?: UnlockProgress | null) {
     if (!user) return;
 
     try {
       const isActiveSubscription = hasActiveSubscription();
+      const currentLimit = progress?.currentLimit || FREE_LIMIT;
       
-      // Fetch Odus that need review - increased to 50 cards
-      const { data: memorizacaoData, error: memError } = await supabase
-        .from("memorizacao")
-        .select("odu_id, revisoes, facilidade, intervalo, forca_memoria, id")
-        .eq("user_id", user.id)
-        .or("proxima_revisao.is.null,proxima_revisao.lte.now()")
-        .order("revisoes", { ascending: true })
-        .limit(50);
+      // Determinar limite baseado em assinatura e progresso
+      let oduLimit = isActiveSubscription ? 256 : currentLimit;
+      
+      // Fetch all Odus até o limite
+      const { data: allOdus } = await supabase
+        .from("odu")
+        .select("*")
+        .lte("numero", oduLimit)
+        .order("numero", { ascending: true });
 
-      if (memError) throw memError;
+      if (!allOdus || allOdus.length === 0) {
+        setLoading(false);
+        return;
+      }
 
-      if (!memorizacaoData || memorizacaoData.length === 0) {
-        // Fetch next review date
+      // Criar mix intercalado inteligente
+      const interleavedOdus = await createInterleavedMix(user.id, allOdus);
+      
+      // Priorizar Odus
+      const prioritizedOdus = await prioritizeOdusForReview(user.id, interleavedOdus, userProfile);
+      
+      setAvailableOdus(prioritizedOdus);
+      
+      if (prioritizedOdus.length === 0) {
         const nextReviewData = await fetchNextReviewDate();
         setNextReview(nextReviewData);
-        
-        // No Odus to review, fetch new ones
-        let query = supabase.from("odu").select("*").order("numero", { ascending: true });
-        
-        // If free user, limit to first 5 Odus
-        if (!isActiveSubscription) {
-          query = query.lte("numero", FREE_LIMIT);
-        }
-        
-        query = query.limit(30);
-        const { data: newOdus, error: newError } = await query;
-
-        if (newError) throw newError;
-        setAvailableOdus(newOdus || []);
-        
-        // Select first random Odu
-        if (newOdus && newOdus.length > 0) {
-          selectRandomOdu(newOdus);
-        }
       } else {
-        // Fetch full Odu data
-        const oduIds = memorizacaoData.map((m) => m.odu_id);
-        let query = supabase.from("odu").select("*").in("id", oduIds);
-        
-        // If free user, filter to only first 5 Odus
-        if (!isActiveSubscription) {
-          query = query.lte("numero", FREE_LIMIT);
-        }
-        
-        const { data: oduData, error: oduError } = await query;
-
-        if (oduError) throw oduError;
-        setAvailableOdus(oduData || []);
-        
-        // Select first random Odu
-        if (oduData && oduData.length > 0) {
-          selectRandomOdu(oduData);
-        }
+        selectRandomOdu(prioritizedOdus);
       }
     } catch (error) {
       console.error("Error fetching Odus for review:", error);
@@ -201,12 +228,12 @@ export default function StudySession() {
       return;
     }
 
-    // Select random index
-    const randomIndex = Math.floor(Math.random() * pool.length);
-    const selectedOdu = pool[randomIndex];
+    // Select first from prioritized list
+    const selectedOdu = pool[0];
     
     setCurrentOdu(selectedOdu);
     setStudiedInSession(prev => new Set(prev).add(selectedOdu.id));
+    setCardStartTime(Date.now());
     
     // Load current memorization data for this Odu
     if (user) {
