@@ -17,6 +17,7 @@ import UserDetail from "./pages/UserDetail";
 import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
 import Subscription from "./pages/Subscription";
+import Success from "./pages/Success";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const App = () => (
               <Route path="/settings" element={<Settings />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/subscription" element={<Subscription />} />
+              <Route path="/success" element={<Success />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

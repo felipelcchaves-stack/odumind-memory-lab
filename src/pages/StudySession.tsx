@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/hooks/useSubscription";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Trophy } from "lucide-react";
+import { ArrowLeft, Trophy, Lock } from "lucide-react";
 import { toast } from "sonner";
 import Flashcard from "@/components/Flashcard";
 import Quiz from "@/components/Quiz";
@@ -46,6 +47,7 @@ type StudyMode = "flashcard" | "quiz";
 export default function StudySession() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { hasActiveSubscription, loading: subscriptionLoading } = useSubscription();
   const [odus, setOdus] = useState<Odu[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [mode, setMode] = useState<StudyMode>("flashcard");
@@ -259,8 +261,9 @@ export default function StudySession() {
     }
   }
 
-  function generateQuizQuestion(): QuizQuestion {
-    const currentOdu = odus[currentIndex];
+  const currentOdu = useMemo(() => odus[currentIndex], [odus, currentIndex]);
+
+  const generateQuizQuestion = useMemo((): QuizQuestion => {
     const type: "nome" | "numero" = Math.random() > 0.5 ? "nome" : "numero";
     
     // Get wrong answers
@@ -281,15 +284,44 @@ export default function StudySession() {
       options,
       type,
     };
-  }
+  }, [odus, currentOdu, currentIndex]);
 
-  if (loading) {
+  if (loading || subscriptionLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Preparando sessão de estudo...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (!hasActiveSubscription()) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md">
+          <CardHeader>
+            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+              <Lock className="w-8 h-8 text-primary" />
+            </div>
+            <CardTitle className="text-center">Conteúdo Premium</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground text-center">
+              As sessões de estudo são exclusivas para assinantes Premium e Profissional.
+              Assine agora para ter acesso ilimitado!
+            </p>
+            <div className="flex flex-col gap-2">
+              <Button onClick={() => navigate("/subscription")} className="w-full">
+                Ver Planos
+              </Button>
+              <Button onClick={() => navigate("/dashboard")} variant="outline" className="w-full">
+                Voltar ao Dashboard
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -355,7 +387,6 @@ export default function StudySession() {
     );
   }
 
-  const currentOdu = odus[currentIndex];
   const progress = ((currentIndex + 1) / odus.length) * 100;
 
   return (
@@ -396,7 +427,7 @@ export default function StudySession() {
             onRate={handleFlashcardRate}
           />
         ) : (
-          <Quiz question={generateQuizQuestion()} onAnswer={handleQuizAnswer} />
+          <Quiz question={generateQuizQuestion} onAnswer={handleQuizAnswer} />
         )}
       </div>
     </div>

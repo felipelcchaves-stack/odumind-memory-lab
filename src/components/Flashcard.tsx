@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,7 @@ interface FlashcardProps {
   onRate: (difficulty: number) => void;
 }
 
-export default function Flashcard({ numero, nome, texto, verso, onRate }: FlashcardProps) {
+const Flashcard = memo(function Flashcard({ numero, nome, texto, verso, onRate }: FlashcardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
 
   return (
@@ -108,4 +108,6 @@ export default function Flashcard({ numero, nome, texto, verso, onRate }: Flashc
       )}
     </div>
   );
-}
+});
+
+export default Flashcard;
