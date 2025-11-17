@@ -27,20 +27,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
         setLoading(false);
         
-        // Check subscription status on sign in
-        if (event === 'SIGNED_IN' && session?.user && session?.access_token) {
-          setTimeout(async () => {
-            try {
-              await supabase.functions.invoke('check-subscription', {
-                headers: {
-                  Authorization: `Bearer ${session.access_token}`,
-                },
-              });
-            } catch (error) {
-              console.error('Error checking subscription on login:', error);
-            }
-          }, 0);
-        }
+        // Subscription check is now handled by useSubscription hook
+        // No need to call check-subscription here
       }
     );
 
