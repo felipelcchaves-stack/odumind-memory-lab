@@ -153,7 +153,7 @@ export default function StudySession() {
     }
   }
 
-  function selectRandomOdu(odusPool?: Odu[]) {
+  async function selectRandomOdu(odusPool?: Odu[]) {
     const pool = odusPool || availableOdus;
     if (pool.length === 0) {
       setSessionComplete(true);
@@ -166,6 +166,22 @@ export default function StudySession() {
     
     setCurrentOdu(selectedOdu);
     setStudiedInSession(prev => new Set(prev).add(selectedOdu.id));
+    
+    // Load current memorization data for this Odu
+    if (user) {
+      const { data: memData } = await supabase
+        .from("memorizacao")
+        .select("revisoes, forca_memoria, status")
+        .eq("user_id", user.id)
+        .eq("odu_id", selectedOdu.id)
+        .maybeSingle();
+      
+      if (memData) {
+        setCurrentMemorizationData(memData);
+      } else {
+        setCurrentMemorizationData({ revisoes: 0, forca_memoria: 0, status: "nao_estudado" });
+      }
+    }
     
     // Randomize mode (flashcard or quiz)
     setMode(Math.random() > 0.5 ? "flashcard" : "quiz");
