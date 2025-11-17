@@ -70,18 +70,38 @@ serve(async (req) => {
     if (customers.data.length === 0) {
       logStep("No customer found, updating to free status");
       
-      // Update subscription in database to free
-      await supabaseClient
+      // Update subscription in database to free - use update first, then insert if not found
+      const { data: existingData } = await supabaseClient
         .from('subscriptions')
-        .upsert({
-          user_id: user.id,
-          status: 'free',
-          plan_name: 'Gratuito',
-          stripe_customer_id: null,
-          stripe_subscription_id: null,
-          stripe_price_id: null,
-          current_period_end: null,
-        }, { onConflict: 'user_id' });
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existingData) {
+        await supabaseClient
+          .from('subscriptions')
+          .update({
+            status: 'free',
+            plan_name: 'Gratuito',
+            stripe_customer_id: null,
+            stripe_subscription_id: null,
+            stripe_price_id: null,
+            current_period_end: null,
+          })
+          .eq('user_id', user.id);
+      } else {
+        await supabaseClient
+          .from('subscriptions')
+          .insert({
+            user_id: user.id,
+            status: 'free',
+            plan_name: 'Gratuito',
+            stripe_customer_id: null,
+            stripe_subscription_id: null,
+            stripe_price_id: null,
+            current_period_end: null,
+          });
+      }
 
       return new Response(JSON.stringify({ 
         subscribed: false,
@@ -106,22 +126,48 @@ serve(async (req) => {
     if (subscriptions.data.length === 0) {
       logStep("No subscription found");
       
-      const { error: upsertError } = await supabaseClient
+      const { data: existingData2 } = await supabaseClient
         .from('subscriptions')
-        .upsert({
-          user_id: user.id,
-          status: 'free',
-          plan_name: 'Gratuito',
-          stripe_customer_id: customerId,
-          stripe_subscription_id: null,
-          stripe_price_id: null,
-          current_period_end: null,
-        }, { onConflict: 'user_id' });
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-      if (upsertError) {
-        logStep("ERROR upserting free subscription", { error: upsertError });
+      if (existingData2) {
+        const { error: updateError } = await supabaseClient
+          .from('subscriptions')
+          .update({
+            status: 'free',
+            plan_name: 'Gratuito',
+            stripe_customer_id: customerId,
+            stripe_subscription_id: null,
+            stripe_price_id: null,
+            current_period_end: null,
+          })
+          .eq('user_id', user.id);
+
+        if (updateError) {
+          logStep("ERROR updating free subscription", { error: updateError });
+        } else {
+          logStep("Successfully updated to free subscription");
+        }
       } else {
-        logStep("Successfully updated to free subscription");
+        const { error: insertError } = await supabaseClient
+          .from('subscriptions')
+          .insert({
+            user_id: user.id,
+            status: 'free',
+            plan_name: 'Gratuito',
+            stripe_customer_id: customerId,
+            stripe_subscription_id: null,
+            stripe_price_id: null,
+            current_period_end: null,
+          });
+
+        if (insertError) {
+          logStep("ERROR inserting free subscription", { error: insertError });
+        } else {
+          logStep("Successfully inserted free subscription");
+        }
       }
 
       return new Response(JSON.stringify({ 
@@ -185,18 +231,41 @@ serve(async (req) => {
 
     logStep("Subscription data to upsert", subscriptionData);
 
-    // Update subscription in database with detailed logging
-    const { data: upsertedData, error: upsertError } = await supabaseClient
+    // Check if subscription exists, then update or insert
+    const { data: existingSubscription } = await supabaseClient
       .from('subscriptions')
-      .upsert(subscriptionData, { onConflict: 'user_id' })
-      .select();
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
 
-    if (upsertError) {
-      logStep("ERROR upserting subscription", { error: upsertError });
-      throw new Error(`Failed to update subscription: ${upsertError.message}`);
+    if (existingSubscription) {
+      // Update existing subscription
+      const { data: updatedData, error: updateError } = await supabaseClient
+        .from('subscriptions')
+        .update(subscriptionData)
+        .eq('user_id', user.id)
+        .select();
+
+      if (updateError) {
+        logStep("ERROR updating subscription", { error: updateError });
+        throw new Error(`Failed to update subscription: ${updateError.message}`);
+      }
+      
+      logStep("Successfully updated subscription", { data: updatedData });
+    } else {
+      // Insert new subscription
+      const { data: insertedData, error: insertError } = await supabaseClient
+        .from('subscriptions')
+        .insert(subscriptionData)
+        .select();
+
+      if (insertError) {
+        logStep("ERROR inserting subscription", { error: insertError });
+        throw new Error(`Failed to insert subscription: ${insertError.message}`);
+      }
+      
+      logStep("Successfully inserted subscription", { data: insertedData });
     }
-    
-    logStep("Successfully upserted subscription", { data: upsertedData });
 
     return new Response(JSON.stringify({
       subscribed: isActive,

@@ -176,15 +176,43 @@ async function updateSubscription(
       cancel_at_period_end: subscription.cancel_at_period_end || false,
     };
 
-    await supabaseClient
-      .from('subscriptions')
-      .upsert(subscriptionData, { onConflict: 'user_id' });
-
-    logStep("Subscription updated in database", { 
+    logStep("Subscription data to upsert", { 
       userId: targetUserId, 
       plan: planName,
       status: subscription.status 
     });
+
+    // Check if subscription exists, then update or insert
+    const { data: existingSubscription } = await supabaseClient
+      .from('subscriptions')
+      .select('id')
+      .eq('user_id', targetUserId)
+      .maybeSingle();
+
+    if (existingSubscription) {
+      // Update existing subscription
+      await supabaseClient
+        .from('subscriptions')
+        .update(subscriptionData)
+        .eq('user_id', targetUserId);
+      
+      logStep("Updated existing subscription in database", { 
+        userId: targetUserId, 
+        plan: planName,
+        status: subscription.status 
+      });
+    } else {
+      // Insert new subscription
+      await supabaseClient
+        .from('subscriptions')
+        .insert(subscriptionData);
+      
+      logStep("Inserted new subscription in database", { 
+        userId: targetUserId, 
+        plan: planName,
+        status: subscription.status 
+      });
+    }
   } catch (error) {
     logStep("Error updating subscription", { error });
     throw error;
