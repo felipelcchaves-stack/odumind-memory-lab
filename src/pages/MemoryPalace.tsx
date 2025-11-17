@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Home, MapPin, Plus, Loader2, ArrowLeft } from "lucide-react";
+import { ProtectedContent } from "@/components/ProtectedContent";
 
 interface PalacePosition {
   id: string;
@@ -147,8 +148,9 @@ export default function MemoryPalace() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <ProtectedContent>
+      <div className="min-h-screen bg-background p-4 md:p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
@@ -281,7 +283,8 @@ export default function MemoryPalace() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
-    </div>
+    </ProtectedContent>
   );
 }
