@@ -336,17 +336,48 @@ export default function Dashboard() {
 
         {/* Primary Stats Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8" data-tour="stats-cards">
-          <Card data-tour="progress-bar">
+          <Card data-tour="progress-bar" className="md:col-span-2">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">% Memorizada</CardTitle>
+              <CardTitle className="text-sm font-medium">Status de Memorização</CardTitle>
               <BookOpen className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{memorizedPercentage}%</div>
-              <Progress value={memorizedPercentage} className="mt-2" />
-              <p className="text-xs text-muted-foreground mt-2">
-                {stats?.memorizedCount || 0} de {stats?.totalOdus || 256} Odu memorizado
-              </p>
+            <CardContent className="space-y-4">
+              <div>
+                <div className="flex justify-between mb-2">
+                  <span className="text-3xl font-bold">{memorizedPercentage}%</span>
+                  <span className="text-sm text-muted-foreground">
+                    {stats?.memorizedCount || 0} de {stats?.totalOdus || 256}
+                  </span>
+                </div>
+                <Progress value={memorizedPercentage} className="h-3" />
+              </div>
+              
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div className="flex flex-col items-start gap-1 p-2 rounded-lg bg-red-50 dark:bg-red-900/10">
+                  <Badge variant="outline" className="bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400 border-red-200">
+                    🔴 Não Estudados
+                  </Badge>
+                  <span className="text-lg font-bold text-red-700 dark:text-red-400">
+                    {stats?.notStudiedCount || 0}
+                  </span>
+                </div>
+                <div className="flex flex-col items-start gap-1 p-2 rounded-lg bg-yellow-50 dark:bg-yellow-900/10">
+                  <Badge variant="outline" className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400 border-yellow-200">
+                    🟡 Estudando
+                  </Badge>
+                  <span className="text-lg font-bold text-yellow-700 dark:text-yellow-400">
+                    {stats?.studyingCount || 0}
+                  </span>
+                </div>
+                <div className="flex flex-col items-start gap-1 p-2 rounded-lg bg-green-50 dark:bg-green-900/10">
+                  <Badge variant="outline" className="bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200">
+                    🟢 Memorizados
+                  </Badge>
+                  <span className="text-lg font-bold text-green-700 dark:text-green-400">
+                    {stats?.memorizedCount || 0}
+                  </span>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
