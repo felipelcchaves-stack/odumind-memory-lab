@@ -9,7 +9,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { BookOpen, Sparkles, Lightbulb, Tag } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BookOpen, Sparkles, Lightbulb, Tag, TrendingDown } from "lucide-react";
+import ForgettingCurveChart from "./ForgettingCurveChart";
 
 interface Odu {
   id: string;
@@ -111,93 +113,123 @@ export default function OduDetailDialog({ odu, open, onOpenChange }: OduDetailDi
         </DialogHeader>
 
         <ScrollArea className="max-h-[calc(85vh-120px)] pr-4">
-          <div className="space-y-6" style={{ userSelect: "none" }}>
-            {/* Texto Principal */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <BookOpen className="h-5 w-5 text-primary" />
-                <h3 className="text-lg font-semibold">Texto Principal</h3>
-              </div>
-              <p className="text-foreground leading-relaxed">
-                {odu.texto_principal}
-              </p>
-            </div>
+          <Tabs defaultValue="content" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="content" className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4" />
+                Conteúdo
+              </TabsTrigger>
+              <TabsTrigger value="curve" className="flex items-center gap-2">
+                <TrendingDown className="h-4 w-4" />
+                Curva de Esquecimento
+              </TabsTrigger>
+            </TabsList>
 
-            <Separator />
-
-            {/* Verso */}
-            {odu.verso && (
-              <>
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Sparkles className="h-5 w-5 text-primary" />
-                    <h3 className="text-lg font-semibold">Verso</h3>
-                  </div>
-                  <blockquote className="border-l-4 border-primary pl-4 italic text-muted-foreground">
-                    {odu.verso}
-                  </blockquote>
-                </div>
-                <Separator />
-              </>
-            )}
-
-            {/* Significado */}
-            {odu.significado && (
-              <>
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Lightbulb className="h-5 w-5 text-primary" />
-                    <h3 className="text-lg font-semibold">Significado</h3>
-                  </div>
-                  <p className="text-foreground leading-relaxed">
-                    {odu.significado}
-                  </p>
-                </div>
-                <Separator />
-              </>
-            )}
-
-            {/* Exemplos Práticos */}
-            {odu.exemplos_praticos && (
-              <>
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <BookOpen className="h-5 w-5 text-primary" />
-                    <h3 className="text-lg font-semibold">Exemplos Práticos</h3>
-                  </div>
-                  <p className="text-foreground leading-relaxed">
-                    {odu.exemplos_praticos}
-                  </p>
-                </div>
-                <Separator />
-              </>
-            )}
-
-            {/* Tags */}
-            {odu.tags && odu.tags.length > 0 && (
+            <TabsContent value="content" className="space-y-6 mt-0" style={{ userSelect: "none" }}>
+              {/* Texto Principal */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <Tag className="h-5 w-5 text-primary" />
-                  <h3 className="text-lg font-semibold">Tags</h3>
+                  <BookOpen className="h-5 w-5 text-primary" />
+                  <h3 className="text-lg font-semibold">Texto Principal</h3>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {odu.tags.map((tag, index) => (
-                    <Badge key={index} variant="outline">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
+                <p className="text-foreground leading-relaxed">
+                  {odu.texto_principal}
+                </p>
               </div>
-            )}
 
-            {/* Marca d'água invisível */}
-            <div 
-              className="opacity-0 pointer-events-none absolute"
-              aria-hidden="true"
-            >
-              User ID: {odu.id} - Timestamp: {Date.now()}
-            </div>
-          </div>
+              <Separator />
+
+              {/* Verso */}
+              {odu.verso && (
+                <>
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles className="h-5 w-5 text-primary" />
+                      <h3 className="text-lg font-semibold">Verso</h3>
+                    </div>
+                    <blockquote className="border-l-4 border-primary pl-4 italic text-muted-foreground">
+                      {odu.verso}
+                    </blockquote>
+                  </div>
+                  <Separator />
+                </>
+              )}
+
+              {/* Significado */}
+              {odu.significado && (
+                <>
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Lightbulb className="h-5 w-5 text-primary" />
+                      <h3 className="text-lg font-semibold">Significado</h3>
+                    </div>
+                    <p className="text-foreground leading-relaxed">
+                      {odu.significado}
+                    </p>
+                  </div>
+                  <Separator />
+                </>
+              )}
+
+              {/* Exemplos Práticos */}
+              {odu.exemplos_praticos && (
+                <>
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <BookOpen className="h-5 w-5 text-primary" />
+                      <h3 className="text-lg font-semibold">Exemplos Práticos</h3>
+                    </div>
+                    <p className="text-foreground leading-relaxed">
+                      {odu.exemplos_praticos}
+                    </p>
+                  </div>
+                  <Separator />
+                </>
+              )}
+
+              {/* Tags */}
+              {odu.tags && odu.tags.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Tag className="h-5 w-5 text-primary" />
+                    <h3 className="text-lg font-semibold">Tags</h3>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {odu.tags.map((tag, index) => (
+                      <Badge key={index} variant="outline">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Marca d'água invisível */}
+              <div 
+                className="opacity-0 pointer-events-none absolute"
+                aria-hidden="true"
+                style={{ 
+                  position: 'fixed', 
+                  top: '50%', 
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  fontSize: '2rem',
+                  color: 'rgba(0,0,0,0.03)',
+                  zIndex: -1 
+                }}
+              >
+                Propriedade Protegida • Não Copiar
+              </div>
+            </TabsContent>
+
+            <TabsContent value="curve" className="mt-0">
+              <ForgettingCurveChart 
+                oduId={odu.id}
+                oduNome={odu.nome}
+                oduNumero={odu.numero}
+              />
+            </TabsContent>
+          </Tabs>
         </ScrollArea>
 
         {/* Overlay de aviso ao tentar copiar */}
