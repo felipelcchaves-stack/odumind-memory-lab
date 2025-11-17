@@ -177,43 +177,58 @@ export type Database = {
       }
       memorizacao: {
         Row: {
+          consecutive_correct: number | null
+          consecutive_wrong: number | null
           created_at: string
           facilidade: number
           forca_memoria: number
           id: string
           intervalo: number
+          last_response_time: number | null
+          marked_difficult: boolean | null
           odu_id: string
           proxima_revisao: string | null
           revisoes: number
           status: Database["public"]["Enums"]["status_memorizacao"]
+          total_study_time: number | null
           ultima_revisao: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          consecutive_correct?: number | null
+          consecutive_wrong?: number | null
           created_at?: string
           facilidade?: number
           forca_memoria?: number
           id?: string
           intervalo?: number
+          last_response_time?: number | null
+          marked_difficult?: boolean | null
           odu_id: string
           proxima_revisao?: string | null
           revisoes?: number
           status?: Database["public"]["Enums"]["status_memorizacao"]
+          total_study_time?: number | null
           ultima_revisao?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          consecutive_correct?: number | null
+          consecutive_wrong?: number | null
           created_at?: string
           facilidade?: number
           forca_memoria?: number
           id?: string
           intervalo?: number
+          last_response_time?: number | null
+          marked_difficult?: boolean | null
           odu_id?: string
           proxima_revisao?: string | null
           revisoes?: number
           status?: Database["public"]["Enums"]["status_memorizacao"]
+          total_study_time?: number | null
           ultima_revisao?: string | null
           updated_at?: string
           user_id?: string
@@ -447,6 +462,45 @@ export type Database = {
         }
         Relationships: []
       }
+      study_sessions: {
+        Row: {
+          average_response_time: number | null
+          correct_answers: number | null
+          created_at: string
+          ended_at: string | null
+          id: string
+          session_mode: string | null
+          started_at: string
+          total_cards: number | null
+          user_id: string
+          wrong_answers: number | null
+        }
+        Insert: {
+          average_response_time?: number | null
+          correct_answers?: number | null
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          session_mode?: string | null
+          started_at?: string
+          total_cards?: number | null
+          user_id: string
+          wrong_answers?: number | null
+        }
+        Update: {
+          average_response_time?: number | null
+          correct_answers?: number | null
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          session_mode?: string | null
+          started_at?: string
+          total_cards?: number | null
+          user_id?: string
+          wrong_answers?: number | null
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null
@@ -492,6 +546,39 @@ export type Database = {
         }
         Relationships: []
       }
+      unlock_progress: {
+        Row: {
+          created_at: string
+          current_limit: number
+          id: string
+          next_unlock: number
+          unlock_requirement_type: string
+          unlock_requirement_value: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_limit?: number
+          id?: string
+          next_unlock?: number
+          unlock_requirement_type?: string
+          unlock_requirement_value?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_limit?: number
+          id?: string
+          next_unlock?: number
+          unlock_requirement_type?: string
+          unlock_requirement_value?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_badges: {
         Row: {
           badge_id: string
@@ -520,6 +607,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_learning_profile: {
+        Row: {
+          average_accuracy: number
+          average_speed: number
+          best_study_hour: number | null
+          created_at: string
+          fast_learner: boolean
+          id: string
+          learning_curve_data: Json | null
+          needs_reinforcement: boolean
+          optimal_session_time: number
+          updated_at: string
+          user_id: string
+          weak_odus: string[] | null
+        }
+        Insert: {
+          average_accuracy?: number
+          average_speed?: number
+          best_study_hour?: number | null
+          created_at?: string
+          fast_learner?: boolean
+          id?: string
+          learning_curve_data?: Json | null
+          needs_reinforcement?: boolean
+          optimal_session_time?: number
+          updated_at?: string
+          user_id: string
+          weak_odus?: string[] | null
+        }
+        Update: {
+          average_accuracy?: number
+          average_speed?: number
+          best_study_hour?: number | null
+          created_at?: string
+          fast_learner?: boolean
+          id?: string
+          learning_curve_data?: Json | null
+          needs_reinforcement?: boolean
+          optimal_session_time?: number
+          updated_at?: string
+          user_id?: string
+          weak_odus?: string[] | null
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
