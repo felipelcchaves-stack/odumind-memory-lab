@@ -19,6 +19,7 @@ import NotificationPrompt from '@/components/NotificationPrompt';
 import { useNotifications } from '@/hooks/useNotifications';
 import DashboardHeader from '@/components/DashboardHeader';
 import UpgradeBanner from '@/components/UpgradeBanner';
+import ForgettingRiskAlert from '@/components/ForgettingRiskAlert';
 import { useSubscription } from '@/hooks/useSubscription';
 
 interface ProfileData {
@@ -357,6 +358,13 @@ export default function Dashboard() {
         {/* Upgrade Banner for Free Users */}
         {!subLoading && subscription && subscription.status === 'free' && (
           <UpgradeBanner />
+        )}
+        
+        {/* Forgetting Risk Alert - Predição de Ebbinghaus */}
+        {user && (
+          <div className="mb-6">
+            <ForgettingRiskAlert />
+          </div>
         )}
         
         <div className="mb-8">

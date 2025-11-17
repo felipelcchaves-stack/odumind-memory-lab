@@ -22,6 +22,7 @@ import {
   prioritizeOdusForReview,
   createInterleavedMix,
   determineStudyBlock,
+  predictForgetProbability,
   type UserLearningProfile,
   type SessionMetrics
 } from "@/lib/adaptiveLearning";
@@ -231,24 +232,34 @@ export default function StudySession() {
     // Select first from prioritized list
     const selectedOdu = pool[0];
     
+    // Imediatamente mostrar o card (sem "Carregando...")
     setCurrentOdu(selectedOdu);
     setStudiedInSession(prev => new Set(prev).add(selectedOdu.id));
     setCardStartTime(Date.now());
     
-    // Load current memorization data for this Odu
+    // Load current memorization data for this Odu (em paralelo)
     if (user) {
-      const { data: memData } = await supabase
+      supabase
         .from("memorizacao")
         .select("revisoes, forca_memoria, status")
         .eq("user_id", user.id)
         .eq("odu_id", selectedOdu.id)
-        .maybeSingle();
-      
-      if (memData) {
-        setCurrentMemorizationData(memData);
-      } else {
-        setCurrentMemorizationData({ revisoes: 0, forca_memoria: 0, status: "nao_estudado" });
-      }
+        .maybeSingle()
+        .then(({ data: memData }) => {
+          if (memData) {
+            setCurrentMemorizationData({
+              revisoes: memData.revisoes,
+              forca_memoria: memData.forca_memoria,
+              status: memData.status
+            });
+          } else {
+            setCurrentMemorizationData({
+              revisoes: 0,
+              forca_memoria: 0,
+              status: "nao_estudado"
+            });
+          }
+        });
     }
     
     // Randomize mode (flashcard or quiz)
@@ -414,6 +425,33 @@ export default function StudySession() {
         toast.info(`✨ Você completou ${studyBlock.targetCards} cards! Recomendamos uma pausa.`, {
           duration: 5000
         });
+      }
+
+      // 🧠 PREDIÇÃO DE ESQUECIMENTO - Feedback após revisão
+      if (currentRecord && isCorrect) {
+        const oldForgetProb = predictForgetProbability(
+          currentRecord.forca_memoria,
+          currentRecord.ultima_revisao,
+          currentRecord.revisoes
+        );
+        
+        const newForgetProb = predictForgetProbability(
+          newMemoryStrength,
+          new Date().toISOString(),
+          revisoes
+        );
+        
+        if (oldForgetProb > 0.5 && newForgetProb < 0.3) {
+          toast.success(
+            `🎯 Odu ${currentOdu.numero} salvo do esquecimento! Risco reduzido de ${Math.round(oldForgetProb * 100)}% → ${Math.round(newForgetProb * 100)}%`,
+            { duration: 5000 }
+          );
+        } else if (newForgetProb < 0.1) {
+          toast.success(
+            `✨ Odu ${currentOdu.numero} fortemente memorizado! Próxima revisão em ${novoIntervalo} dias`,
+            { duration: 4000 }
+          );
+        }
       }
 
       // Remove studied Odu from pool and select next
