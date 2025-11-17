@@ -44,6 +44,8 @@ interface QuizQuestion {
 
 type StudyMode = "flashcard" | "quiz";
 
+const FREE_LIMIT = 5; // Usuários gratuitos podem estudar os primeiros 5 Odus
+
 export default function StudySession() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -70,6 +72,8 @@ export default function StudySession() {
     if (!user) return;
 
     try {
+      const isActiveSubscription = hasActiveSubscription();
+      
       // Fetch Odus that need review
       const { data: memorizacaoData, error: memError } = await supabase
         .from("memorizacao")
@@ -83,20 +87,29 @@ export default function StudySession() {
 
       if (!memorizacaoData || memorizacaoData.length === 0) {
         // No Odus to review, fetch new ones
-        const { data: newOdus, error: newError } = await supabase
-          .from("odu")
-          .select("*")
-          .limit(5);
+        let query = supabase.from("odu").select("*").order("numero", { ascending: true });
+        
+        // If free user, limit to first 5 Odus
+        if (!isActiveSubscription) {
+          query = query.lte("numero", FREE_LIMIT);
+        }
+        
+        query = query.limit(5);
+        const { data: newOdus, error: newError } = await query;
 
         if (newError) throw newError;
         setOdus(newOdus || []);
       } else {
         // Fetch full Odu data
         const oduIds = memorizacaoData.map((m) => m.odu_id);
-        const { data: oduData, error: oduError } = await supabase
-          .from("odu")
-          .select("*")
-          .in("id", oduIds);
+        let query = supabase.from("odu").select("*").in("id", oduIds);
+        
+        // If free user, filter to only first 5 Odus
+        if (!isActiveSubscription) {
+          query = query.lte("numero", FREE_LIMIT);
+        }
+        
+        const { data: oduData, error: oduError } = await query;
 
         if (oduError) throw oduError;
         setOdus(oduData || []);
@@ -263,8 +276,16 @@ export default function StudySession() {
 
   const currentOdu = useMemo(() => {
     if (!odus || odus.length === 0) return null;
-    return odus[currentIndex];
-  }, [odus, currentIndex]);
+    const odu = odus[currentIndex];
+    
+    // Verify if user has access to this Odu
+    const isPremium = odu.numero > FREE_LIMIT;
+    if (isPremium && !hasActiveSubscription()) {
+      return null; // Will show upgrade screen
+    }
+    
+    return odu;
+  }, [odus, currentIndex, hasActiveSubscription]);
 
   const generateQuizQuestion = useMemo((): QuizQuestion | null => {
     if (!currentOdu || !odus || odus.length < 4) return null;
@@ -302,7 +323,9 @@ export default function StudySession() {
     );
   }
 
-  if (!hasActiveSubscription()) {
+  // Show upgrade screen if current Odu is premium and user is free
+  if (currentOdu === null && odus.length > 0) {
+    const blockedOdu = odus[currentIndex];
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-md">
@@ -310,12 +333,15 @@ export default function StudySession() {
             <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
               <Lock className="w-8 h-8 text-primary" />
             </div>
-            <CardTitle className="text-center">Conteúdo Premium</CardTitle>
+            <CardTitle className="text-center">Desbloqueie mais Odu</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-muted-foreground text-center">
-              As sessões de estudo são exclusivas para assinantes Premium e Profissional.
-              Assine agora para ter acesso ilimitado!
+              Você completou os {FREE_LIMIT} Odu gratuitos! 
+              O Odu #{blockedOdu?.numero} - {blockedOdu?.nome} é conteúdo premium.
+            </p>
+            <p className="text-sm text-center font-medium">
+              Assine Premium para acessar todos os 256 Odu Ifá e acelerar seu aprendizado!
             </p>
             <div className="flex flex-col gap-2">
               <Button onClick={() => navigate("/subscription")} className="w-full">
