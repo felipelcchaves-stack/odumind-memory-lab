@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, Target, Zap, BookOpen, Brain, Calendar, TrendingUp, Award, Home } from 'lucide-react';
+import { Trophy, Target, Zap, BookOpen, Brain, Calendar, TrendingUp, Award, Home, Clock } from 'lucide-react';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import BadgesDisplay from '@/components/BadgesDisplay';
@@ -43,6 +43,10 @@ interface MemorizationStats {
     proxima_revisao: string;
     forca_memoria: number;
   }>;
+  nextReview: {
+    proxima_revisao: string;
+    odu: { numero: number; nome: string };
+  } | null;
 }
 
 export default function Dashboard() {
@@ -93,6 +97,23 @@ export default function Dashboard() {
     if (hour >= 5 && hour < 12) return "Bom dia";
     if (hour >= 12 && hour < 18) return "Boa tarde";
     return "Boa noite";
+  };
+
+  const formatNextReviewDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = date.getTime() - now.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffMinutes < 60) {
+      return `Em ${diffMinutes} minuto${diffMinutes !== 1 ? 's' : ''}`;
+    } else if (diffHours < 24) {
+      return `Em ${diffHours} hora${diffHours !== 1 ? 's' : ''}`;
+    } else {
+      return `Em ${diffDays} dia${diffDays !== 1 ? 's' : ''}`;
+    }
   };
 
   const getMotivationalMessage = () => {
@@ -274,6 +295,23 @@ export default function Dashboard() {
           forca_memoria: r.forca_memoria,
         }));
 
+      // Get next review
+      const nextReviewRecord = records
+        .filter((r) => r.proxima_revisao && new Date(r.proxima_revisao) > today)
+        .sort((a, b) => {
+          const dateA = new Date(a.proxima_revisao || 0);
+          const dateB = new Date(b.proxima_revisao || 0);
+          return dateA.getTime() - dateB.getTime();
+        })[0];
+
+      const nextReview = nextReviewRecord ? {
+        proxima_revisao: nextReviewRecord.proxima_revisao || '',
+        odu: {
+          numero: (nextReviewRecord.odu as any)?.numero || 0,
+          nome: (nextReviewRecord.odu as any)?.nome || 'Desconhecido',
+        }
+      } : null;
+
       setStats({
         totalOdus: totalOdus || 0,
         memorizedCount,
@@ -283,6 +321,7 @@ export default function Dashboard() {
         averageMemoryStrength,
         weeklyProgress,
         upcomingReviews,
+        nextReview,
       });
     } catch (error) {
       console.error('Error loading memorization stats:', error);
@@ -429,6 +468,38 @@ export default function Dashboard() {
 
         {/* Secondary Stats */}
         <div className="grid gap-6 md:grid-cols-3 mb-8">
+          {stats?.nextReview && (
+            <Card className="md:col-span-3">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Próxima Revisão
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div className="space-y-2">
+                    <p className="text-2xl font-bold">
+                      {formatNextReviewDate(stats.nextReview.proxima_revisao)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Odu #{stats.nextReview.odu.numero} - {stats.nextReview.odu.nome}
+                    </p>
+                  </div>
+                  <Button 
+                    variant={new Date(stats.nextReview.proxima_revisao) > new Date() ? "outline" : "default"}
+                    disabled={new Date(stats.nextReview.proxima_revisao) > new Date()}
+                    onClick={() => new Date(stats.nextReview.proxima_revisao) <= new Date() && navigate("/study")}
+                  >
+                    {new Date(stats.nextReview.proxima_revisao) > new Date() 
+                      ? "Aguarde a próxima revisão" 
+                      : "Estudar Agora"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">XP Total</CardTitle>
