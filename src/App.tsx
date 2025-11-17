@@ -12,6 +12,7 @@ import OduLibrary from "./pages/OduLibrary";
 import OduStudy from "./pages/OduStudy";
 import StudySession from "./pages/StudySession";
 import MemoryPalace from "./pages/MemoryPalace";
+import Tecnicas from "./pages/Tecnicas";
 import Admin from "./pages/Admin";
 import Colaborador from "./pages/Colaborador";
 import Analytics from "./pages/Analytics";
@@ -40,6 +41,7 @@ const App = () => (
               <Route path="/odu/:id" element={<OduStudy />} />
               <Route path="/study" element={<StudySession />} />
               <Route path="/memory-palace" element={<MemoryPalace />} />
+              <Route path="/tecnicas" element={<Tecnicas />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/colaborador" element={<Colaborador />} />
               <Route path="/admin/analytics" element={<Analytics />} />
