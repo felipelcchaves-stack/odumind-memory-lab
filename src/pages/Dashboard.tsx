@@ -21,6 +21,7 @@ import DashboardHeader from '@/components/DashboardHeader';
 import UpgradeBanner from '@/components/UpgradeBanner';
 import ForgettingRiskAlert from '@/components/ForgettingRiskAlert';
 import { useSubscription } from '@/hooks/useSubscription';
+import MemorizationStatusBadge from '@/components/MemorizationStatusBadge';
 
 interface ProfileData {
   xp: number;
@@ -400,27 +401,21 @@ export default function Dashboard() {
               </div>
               
               <div className="grid grid-cols-3 gap-2 text-sm">
-                <div className="flex flex-col items-start gap-1 p-2 rounded-lg bg-red-50 dark:bg-red-900/10">
-                  <Badge variant="outline" className="bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400 border-red-200">
-                    🔴 Não Estudados
-                  </Badge>
-                  <span className="text-lg font-bold text-red-700 dark:text-red-400">
+                <div className="flex flex-col items-start gap-1 p-2 rounded-lg bg-muted/30">
+                  <MemorizationStatusBadge status="nao_estudado" />
+                  <span className="text-lg font-bold">
                     {stats?.notStudiedCount || 0}
                   </span>
                 </div>
-                <div className="flex flex-col items-start gap-1 p-2 rounded-lg bg-yellow-50 dark:bg-yellow-900/10">
-                  <Badge variant="outline" className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400 border-yellow-200">
-                    🟡 Estudando
-                  </Badge>
-                  <span className="text-lg font-bold text-yellow-700 dark:text-yellow-400">
+                <div className="flex flex-col items-start gap-1 p-2 rounded-lg bg-muted/30">
+                  <MemorizationStatusBadge status="estudando" showProgress />
+                  <span className="text-lg font-bold">
                     {stats?.studyingCount || 0}
                   </span>
                 </div>
-                <div className="flex flex-col items-start gap-1 p-2 rounded-lg bg-green-50 dark:bg-green-900/10">
-                  <Badge variant="outline" className="bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200">
-                    🟢 Memorizados
-                  </Badge>
-                  <span className="text-lg font-bold text-green-700 dark:text-green-400">
+                <div className="flex flex-col items-start gap-1 p-2 rounded-lg bg-muted/30">
+                  <MemorizationStatusBadge status="memorizado" />
+                  <span className="text-lg font-bold">
                     {stats?.memorizedCount || 0}
                   </span>
                 </div>
