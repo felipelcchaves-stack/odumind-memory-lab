@@ -491,6 +491,7 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
               </div>
             </div>
             <ReactQuill
+              key={`texto-${oduId}`}
               ref={textoQuillRef}
               theme="snow"
               className="min-h-[200px] border border-input rounded-md"
@@ -542,6 +543,7 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
               </div>
             </div>
             <ReactQuill
+              key={`verso-${oduId}`}
               ref={versoQuillRef}
               theme="snow"
               className="min-h-[200px] border border-input rounded-md"
@@ -611,6 +613,7 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
               </div>
             </div>
             <ReactQuill
+              key={`significado-${oduId}`}
               ref={significadoQuillRef}
               theme="snow"
               value={formData.significado}
@@ -652,6 +655,7 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
               </div>
             </div>
             <ReactQuill
+              key={`exemplos-${oduId}`}
               ref={exemplosQuillRef}
               theme="snow"
               value={formData.exemplos_praticos}
