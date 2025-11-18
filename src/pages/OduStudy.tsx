@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, BookOpen, Sparkles, Lightbulb, Tag } from "lucide-react";
+import { ArrowLeft, BookOpen, Sparkles, Lightbulb, Tag, Users } from "lucide-react";
 import { toast } from "sonner";
 import { MnemonicsSection } from "@/components/MnemonicsSection";
 import { ElaborativeEncoding } from "@/components/ElaborativeEncoding";
@@ -24,6 +24,10 @@ interface Odu {
   significado: string | null;
   exemplos_praticos: string | null;
   tags: string[] | null;
+  contexto_historico?: string | null;
+  personagens?: string | null;
+  tema_principal?: string | null;
+  tema_secundario?: string | null;
 }
 
 export default function OduStudy() {
@@ -161,28 +165,73 @@ export default function OduStudy() {
       <div className="min-h-screen bg-background">
         <DashboardHeader />
         <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Header */}
-        <div className="mb-8">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate("/odu")}
-            className="mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar para Biblioteca
-          </Button>
+          {/* Contexto Narrativo */}
+          {(odu.contexto_historico || odu.personagens || odu.tema_principal) && (
+            <Card className="mb-6 border-primary/20 bg-primary/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5" />
+                  Contexto da História
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {odu.contexto_historico && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">
+                      📖 Onde essa história acontece
+                    </p>
+                    <p className="text-base leading-relaxed">{odu.contexto_historico}</p>
+                  </div>
+                )}
+                
+                {odu.personagens && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Personagens
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {odu.personagens.split(',').map((p, idx) => (
+                        <Badge key={idx} variant="secondary" className="text-sm">{p.trim()}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {(odu.tema_principal || odu.tema_secundario) && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">
+                      🎭 Temas
+                    </p>
+                    <div className="flex gap-2">
+                      {odu.tema_principal && (
+                        <Badge className="bg-primary capitalize text-sm">{odu.tema_principal}</Badge>
+                      )}
+                      {odu.tema_secundario && (
+                        <Badge variant="outline" className="capitalize text-sm">{odu.tema_secundario}</Badge>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
-          <div className="flex items-center gap-3 mb-4">
-            <Badge variant="secondary" className="text-2xl px-4 py-2">
-              #{odu.numero}
-            </Badge>
-            <h1 className="text-4xl font-bold">{odu.nome}</h1>
-          </div>
-        </div>
-
-        {/* Content Card */}
+          {/* Main Content Card */}
         <Card className="mb-6">
-          <CardContent className="pt-6 space-y-6">
+          <CardHeader>
+            <div className="flex items-center justify-between mb-2">
+              <Badge variant="outline" className="text-xs px-2 py-0.5 text-muted-foreground">
+                #{odu.numero}
+              </Badge>
+              <Badge variant="outline" className="gap-2">
+                <BookOpen className="h-4 w-4" />
+                Texto Principal
+              </Badge>
+            </div>
+            <CardTitle className="text-3xl">{odu.nome}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
             {/* Texto Principal */}
             <div>
               <div className="flex items-center gap-2 mb-3">
