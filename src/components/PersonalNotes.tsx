@@ -3,7 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Edit, Save, X, Loader2, Trash2 } from "lucide-react";
+import { FileText, Edit, Save, X, Loader2, Trash2, ClipboardList } from "lucide-react";
+import { MarkdownViewer } from "@/components/MarkdownViewer";
+import { usePasteHandler } from "@/hooks/usePasteHandler";
 import { usePersonalNotes } from "@/hooks/usePersonalNotes";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -49,6 +51,17 @@ export function PersonalNotes({ odu }: PersonalNotesProps) {
       saveNote(localContent);
     }
   }, [localContent, isEditing, note, saveNote]);
+
+  // Handler de colagem com conversão HTML → Markdown
+  const { handlePaste } = usePasteHandler({
+    onPaste: (text) => {
+      const currentLength = localContent.length;
+      const availableSpace = MAX_CHARS - currentLength;
+      const textToInsert = text.substring(0, availableSpace);
+      setLocalContent(localContent + textToInsert);
+    },
+    maxLength: MAX_CHARS,
+  });
 
   const handleStartEdit = () => {
     setIsEditing(true);
@@ -145,9 +158,7 @@ export function PersonalNotes({ odu }: PersonalNotesProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="prose prose-sm dark:prose-invert max-w-none">
-            <pre className="whitespace-pre-wrap font-sans text-sm">{note}</pre>
-          </div>
+          <MarkdownViewer content={note} />
           {lastSaved && (
             <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
               <span>✏️</span>
@@ -183,16 +194,23 @@ export function PersonalNotes({ odu }: PersonalNotesProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <Textarea
-          value={localContent}
-          onChange={(e) => {
-            if (e.target.value.length <= MAX_CHARS) {
-              setLocalContent(e.target.value);
-            }
-          }}
-          placeholder="Escreva suas anotações, resumos e insights sobre este Odu..."
-          className="min-h-[200px] resize-y"
-        />
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <ClipboardList className="h-3 w-3" />
+            <span>Cole do Google Docs, Word ou Notion - a formatação será preservada</span>
+          </div>
+          <Textarea
+            value={localContent}
+            onChange={(e) => {
+              if (e.target.value.length <= MAX_CHARS) {
+                setLocalContent(e.target.value);
+              }
+            }}
+            onPaste={handlePaste}
+            placeholder="Escreva suas anotações, resumos e insights sobre este Odu...&#10;&#10;Suporta: **negrito**, *itálico*, listas, links"
+            className="min-h-[200px] resize-y font-mono text-sm"
+          />
+        </div>
         <div className="mt-3 flex items-center justify-between text-sm">
           <div className="flex items-center gap-2">
             <Badge variant={isNearLimit ? "destructive" : "secondary"}>

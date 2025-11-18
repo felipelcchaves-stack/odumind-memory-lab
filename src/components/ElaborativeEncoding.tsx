@@ -7,7 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { toast } from "sonner";
-import { Lightbulb, Save, Trash2, Loader2, Network } from "lucide-react";
+import { Lightbulb, Save, Trash2, Loader2, Edit, ClipboardList } from "lucide-react";
+import { MarkdownViewer } from "@/components/MarkdownViewer";
+import { usePasteHandler } from "@/hooks/usePasteHandler";
 
 interface ElaborativeNote {
   id: string;
@@ -65,6 +67,17 @@ export const ElaborativeEncoding = ({ odu }: ElaborativeEncodingProps) => {
   const [loading, setLoading] = useState(true);
   const [editingNote, setEditingNote] = useState<{ [key: string]: string }>({});
   const [saving, setSaving] = useState<{ [key: string]: boolean }>({});
+  const [viewMode, setViewMode] = useState<{ [key: string]: boolean }>({});
+
+  // Handlers de colagem com conversão HTML → Markdown para cada pergunta
+  const pasteHandlers = Object.keys(perguntasElaborativas).reduce((acc, tipo) => {
+    acc[tipo] = usePasteHandler({
+      onPaste: (text) => {
+        setEditingNote(prev => ({ ...prev, [tipo]: (prev[tipo] || '') + text }));
+      },
+    });
+    return acc;
+  }, {} as { [key: string]: { handlePaste: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void } });
 
   useEffect(() => {
     if (user && odu.id) {
@@ -84,12 +97,15 @@ export const ElaborativeEncoding = ({ odu }: ElaborativeEncodingProps) => {
       if (error) throw error;
       setNotes(data || []);
       
-      // Initialize editing state
+      // Initialize editing state and view mode
       const initialEditing: { [key: string]: string } = {};
+      const initialViewMode: { [key: string]: boolean } = {};
       (data || []).forEach(note => {
         initialEditing[note.pergunta_tipo] = note.resposta;
+        initialViewMode[note.pergunta_tipo] = true; // Start in view mode if has content
       });
       setEditingNote(initialEditing);
+      setViewMode(initialViewMode);
     } catch (error) {
       console.error("Error fetching elaborative notes:", error);
       toast.error("Erro ao carregar elaborações");
@@ -176,7 +192,7 @@ export const ElaborativeEncoding = ({ odu }: ElaborativeEncodingProps) => {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <Network className="h-5 w-5" />
+              <Lightbulb className="h-5 w-5" />
               Codificação Elaborativa
             </CardTitle>
             <CardDescription>
@@ -226,45 +242,74 @@ export const ElaborativeEncoding = ({ odu }: ElaborativeEncodingProps) => {
                   <p className="text-sm text-muted-foreground italic">
                     {config.pergunta}
                   </p>
-                  <Textarea
-                    placeholder="Escreva sua reflexão aqui..."
-                    value={editingNote[tipo] || ""}
-                    onChange={(e) => setEditingNote({ ...editingNote, [tipo]: e.target.value })}
-                    rows={5}
-                    className="resize-none"
-                  />
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => saveNote(tipo)}
-                      disabled={isSaving || !editingNote[tipo]?.trim()}
-                      size="sm"
-                    >
-                      {isSaving ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Salvando...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="mr-2 h-4 w-4" />
-                          Salvar
-                        </>
-                      )}
-                    </Button>
-                    {hasNote && (
+                  
+                  {viewMode[tipo] && hasNote ? (
+                    // View mode: show markdown
+                    <div className="space-y-2">
+                      <MarkdownViewer content={editingNote[tipo] || ""} />
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                          const note = notes.find(n => n.pergunta_tipo === tipo);
-                          if (note) deleteNote(note.id);
-                        }}
+                        onClick={() => setViewMode({ ...viewMode, [tipo]: false })}
                       >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Remover
+                        <Edit className="mr-2 h-4 w-4" />
+                        Editar
                       </Button>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    // Edit mode
+                    <>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <ClipboardList className="h-3 w-3" />
+                          <span>Cole do Google Docs, Word ou Notion - a formatação será preservada</span>
+                        </div>
+                        <Textarea
+                          placeholder="Escreva sua reflexão aqui...&#10;&#10;Suporta: **negrito**, *itálico*, listas, links"
+                          value={editingNote[tipo] || ""}
+                          onChange={(e) => setEditingNote({ ...editingNote, [tipo]: e.target.value })}
+                          onPaste={pasteHandlers[tipo].handlePaste}
+                          rows={5}
+                          className="resize-none font-mono text-sm"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => {
+                            saveNote(tipo);
+                            setViewMode({ ...viewMode, [tipo]: true });
+                          }}
+                          disabled={isSaving || !editingNote[tipo]?.trim()}
+                          size="sm"
+                        >
+                          {isSaving ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Salvando...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="mr-2 h-4 w-4" />
+                              Salvar
+                            </>
+                          )}
+                        </Button>
+                        {hasNote && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const note = notes.find(n => n.pergunta_tipo === tipo);
+                              if (note) deleteNote(note.id);
+                            }}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Remover
+                          </Button>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </AccordionContent>
               </AccordionItem>
             );

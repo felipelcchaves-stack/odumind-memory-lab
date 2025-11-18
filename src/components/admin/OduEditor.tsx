@@ -14,6 +14,7 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import './quill-custom.css';
 import { z } from 'zod';
+import { sanitizeQuillHtml } from '@/lib/markdownUtils';
 
 const oduSchema = z.object({
   numero: z.number()
@@ -425,13 +426,19 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
             <ReactQuill
               theme="snow"
               value={formData.texto_principal}
-              onChange={(value) => setFormData({ ...formData, texto_principal: value })}
+              onChange={(value) => {
+                const sanitized = sanitizeQuillHtml(value);
+                setFormData({ ...formData, texto_principal: sanitized });
+              }}
               modules={{
                 toolbar: [
                   ['bold', 'italic', 'underline'],
                   [{ list: 'ordered' }, { list: 'bullet' }],
                   ['clean'],
                 ],
+                clipboard: {
+                  matchVisual: false, // Remove estilos inline ao colar
+                },
               }}
             />
           </div>
@@ -441,7 +448,13 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
             <ReactQuill
               theme="snow"
               value={formData.verso}
-              onChange={(value) => setFormData({ ...formData, verso: value })}
+              onChange={(value) => {
+                const sanitized = sanitizeQuillHtml(value);
+                setFormData({ ...formData, verso: sanitized });
+              }}
+              modules={{
+                clipboard: { matchVisual: false },
+              }}
             />
           </div>
 
@@ -469,7 +482,13 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
             <ReactQuill
               theme="snow"
               value={formData.significado}
-              onChange={(value) => setFormData({ ...formData, significado: value })}
+              onChange={(value) => {
+                const sanitized = sanitizeQuillHtml(value);
+                setFormData({ ...formData, significado: sanitized });
+              }}
+              modules={{
+                clipboard: { matchVisual: false },
+              }}
             />
           </div>
 
@@ -478,7 +497,13 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
             <ReactQuill
               theme="snow"
               value={formData.exemplos_praticos}
-              onChange={(value) => setFormData({ ...formData, exemplos_praticos: value })}
+              onChange={(value) => {
+                const sanitized = sanitizeQuillHtml(value);
+                setFormData({ ...formData, exemplos_praticos: sanitized });
+              }}
+              modules={{
+                clipboard: { matchVisual: false },
+              }}
             />
           </div>
 
