@@ -103,11 +103,27 @@ export default function StudyPlanGenerator() {
   };
 
   const exportToCalendar = () => {
-    if (!plan || !plan.plano_completo.cronograma_semanal) return;
+    if (!plan || !plan.plano_completo.cronograma_semanal) {
+      toast.error('Nenhum cronograma disponível');
+      return;
+    }
+    
+    if (plan.plano_completo.cronograma_semanal.length === 0) {
+      toast.error('Cronograma vazio');
+      return;
+    }
+
+    console.log('📅 Gerando calendário:', {
+      dataInicio: plan.data_inicio,
+      dataFim: plan.data_fim_estimada,
+      cronograma: plan.plano_completo.cronograma_semanal
+    });
 
     const events = [];
-    const startDate = new Date(plan.data_inicio || new Date());
-    const endDate = new Date(plan.data_fim_estimada);
+    const startDate = plan.data_inicio ? new Date(plan.data_inicio) : new Date();
+    const endDate = plan.data_fim_estimada 
+      ? new Date(plan.data_fim_estimada) 
+      : addDays(startDate, plan.estimativa_dias);
     const weekDays = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
     // Generate events for each week until end date
@@ -115,7 +131,10 @@ export default function StudyPlanGenerator() {
     while (currentDate <= endDate) {
       plan.plano_completo.cronograma_semanal.forEach(item => {
         const dayIndex = weekDays.indexOf(item.dia);
-        if (dayIndex === -1) return;
+        if (dayIndex === -1) {
+          console.warn('Dia inválido:', item.dia);
+          return;
+        }
 
         const eventDate = new Date(currentDate);
         const daysToAdd = (dayIndex - currentDate.getDay() + 7) % 7;
@@ -124,8 +143,13 @@ export default function StudyPlanGenerator() {
         if (eventDate > endDate || eventDate < startDate) return;
 
         // Parse time (format: "HH:MM")
-        const [hours, minutes] = item.horario.split(':').map(Number);
-        const startTime = setMinutes(setHours(new Date(eventDate), hours), minutes);
+        const horarioMatch = item.horario.match(/(\d{1,2}):(\d{2})/);
+        if (!horarioMatch) {
+          console.error('Formato de horário inválido:', item.horario);
+          return;
+        }
+        const [_, hours, minutes] = horarioMatch;
+        const startTime = setMinutes(setHours(new Date(eventDate), parseInt(hours)), parseInt(minutes));
         const endTime = new Date(startTime.getTime() + item.duracao_minutos * 60000);
 
         events.push({
@@ -140,7 +164,18 @@ export default function StudyPlanGenerator() {
       currentDate = addDays(currentDate, 7);
     }
 
+    console.log('📅 Eventos gerados:', events.length);
+    if (events.length > 0) {
+      console.log('📅 Primeiro evento:', events[0]);
+    }
+
+    if (events.length === 0) {
+      toast.error('Nenhum evento foi gerado. Verifique o cronograma.');
+      return;
+    }
+
     const icalContent = generateICalendar(events, 'Plano de Estudos Odu Ifá');
+    console.log('📅 Conteúdo iCal gerado:', icalContent.substring(0, 200));
     downloadICalFile(icalContent, 'plano-estudos-odu-ifa.ics');
     toast.success('Calendário exportado! Importe o arquivo no Google Calendar ou Apple Calendar.');
   };
