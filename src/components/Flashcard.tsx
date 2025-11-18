@@ -14,10 +14,12 @@ interface FlashcardProps {
   texto: string;
   verso?: string | null;
   versoResumido?: string | null;
+  significado?: string | null;
   onRate: (difficulty: number) => void;
   currentRevisoes?: number;
   currentStrength?: number;
   status?: string;
+  hideNumber?: boolean;
 }
 
 const Flashcard = memo(function Flashcard({ 
@@ -26,10 +28,12 @@ const Flashcard = memo(function Flashcard({
   texto, 
   verso,
   versoResumido,
+  significado,
   onRate,
   currentRevisoes = 0,
   currentStrength = 0,
-  status = "nao_estudado"
+  status = "nao_estudado",
+  hideNumber = false
 }: FlashcardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -99,38 +103,49 @@ const Flashcard = memo(function Flashcard({
         }}
       >
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant="secondary" className="text-lg px-3 py-1">
+          <div className="flex items-center justify-between mb-4">
+            {!hideNumber && (
+              <Badge variant="outline" className="text-xs px-2 py-0.5 text-muted-foreground">
                 #{numero}
               </Badge>
-              <MemorizationStatusBadge 
-                status={status as 'nao_estudado' | 'estudando' | 'memorizado'} 
-                revisoes={currentRevisoes}
-                forcaMemoria={currentStrength}
-                showProgress
-              />
-              {currentRevisoes > 0 && !isMemorized && (
-                <Badge 
-                  variant="outline" 
-                  className={`${getStrengthBg(currentStrength)} ${getStrengthColor(currentStrength)}`}
-                >
-                  {currentStrength}% força
-                </Badge>
-              )}
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsFlipped(!isFlipped);
-              }}
-            >
-              <RotateCcw className="h-4 w-4" />
-            </Button>
+            )}
+            <MemorizationStatusBadge status={status as 'nao_estudado' | 'estudando' | 'memorizado'} />
           </div>
-          <CardTitle className="text-2xl mt-4">{nome}</CardTitle>
+          <CardTitle className="text-2xl font-bold mb-4">{nome}</CardTitle>
+          
+          <div className="flex items-center gap-2 flex-wrap justify-between">
+            <div className="flex items-center gap-2">
+              {currentRevisoes > 0 && !isMemorized && (
+                  <Badge 
+                    variant="outline" 
+                    className={`${getStrengthBg(currentStrength)} ${getStrengthColor(currentStrength)}`}
+                  >
+                    {currentStrength}% força
+                  </Badge>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsFlipped(!isFlipped);
+                }}
+              >
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+            </div>
+
+          <div className="text-sm text-muted-foreground mt-4">
+            Clique para revelar o conteúdo completo
+          </div>
+          
+          {significado && (
+            <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+              <p className="text-sm text-muted-foreground mb-1">💡 Significado:</p>
+              <p className="font-medium text-sm">{significado}</p>
+            </div>
+          )}
         </CardHeader>
 
         <CardContent className="space-y-6">

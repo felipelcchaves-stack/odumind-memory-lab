@@ -17,6 +17,7 @@ import BadgesDisplay from "@/components/BadgesDisplay";
 import DashboardHeader from "@/components/DashboardHeader";
 import { ProtectedContent } from "@/components/ProtectedContent";
 import { SessionControls } from "@/components/SessionControls";
+import { StoryModeToggle } from "@/components/StoryModeToggle";
 import {
   calculateLearningProfile,
   calculateAdaptiveInterval,
@@ -42,6 +43,12 @@ interface Odu {
   verso: string | null;
   verso_resumido: string | null;
   significado: string | null;
+  exemplos_praticos: string | null;
+  tags: string[] | null;
+  contexto_historico?: string | null;
+  personagens?: string | null;
+  tema_principal?: string | null;
+  tema_secundario?: string | null;
 }
 
 interface MemorizacaoRecord {
@@ -59,7 +66,7 @@ interface QuizQuestion {
   nome: string;
   correctAnswer: string;
   options: string[];
-  type: "nome" | "numero" | "verso_para_nome" | "nome_para_verso" | "verso_para_significado";
+  type: "nome" | "verso_para_nome" | "nome_para_verso" | "verso_para_significado" | "aplicacao_pratica";
   versoResumido?: string;
   significado?: string;
   context?: string;
@@ -110,6 +117,7 @@ export default function StudySession() {
     sessionStartTime: new Date()
   });
   const [cardStartTime, setCardStartTime] = useState<number>(0);
+  const [storyMode, setStoryMode] = useState(false);
   
   const [mode, setMode] = useState<StudyMode>("flashcard");
   const [loading, setLoading] = useState(true);
@@ -677,26 +685,30 @@ export default function StudySession() {
     // Determinar tipo de quiz baseado no progresso (número de revisões)
     const revisoes = currentMemorizationData.revisoes || 0;
     
-    // Nível 1 (0-3 revisões): Foco em significado e versos
-    // Nível 2 (4-6 revisões): Foco em versos e aplicação
-    // Nível 3 (7+ revisões): Foco em múltiplas características
-    
-    let availableTypes: Array<"verso_para_nome" | "nome_para_verso" | "verso_para_significado" | "nome" | "numero"> = [];
-    
-    if (currentOdu.verso_resumido) {
-      if (revisoes < 4) {
-        // Iniciante: Verso → Nome (50%), Nome → Verso (30%), Nome básico (20%)
-        availableTypes = ["verso_para_nome", "verso_para_nome", "verso_para_nome", "nome_para_verso", "nome_para_verso", "nome"];
-      } else if (revisoes < 7) {
-        // Intermediário: Nome → Verso (40%), Verso → Nome (30%), Verso → Significado (30%)
-        availableTypes = ["nome_para_verso", "nome_para_verso", "verso_para_nome", "verso_para_nome", "verso_para_significado", "verso_para_significado"];
-      } else {
-        // Avançado: Verso → Significado (50%), Verso → Nome (30%), Nome → Verso (20%)
-        availableTypes = ["verso_para_significado", "verso_para_significado", "verso_para_significado", "verso_para_nome", "verso_para_nome", "nome_para_verso"];
-      }
+    // Determine quiz types based on revision count - FOCO EM HISTÓRIA E APLICAÇÃO
+    let availableTypes: QuizQuestion["type"][];
+    if (revisoes < 4) {
+      // Iniciante: 40% verso→nome, 30% nome→verso, 30% aplicação
+      availableTypes = [
+        "verso_para_nome", "verso_para_nome", 
+        "nome_para_verso", "nome_para_verso",
+        "aplicacao_pratica", "aplicacao_pratica"
+      ];
+    } else if (revisoes < 7) {
+      // Intermediário: 30% cada tipo + 10% nome básico
+      availableTypes = [
+        "nome_para_verso", "nome_para_verso",
+        "verso_para_significado", "verso_para_significado",
+        "aplicacao_pratica", "aplicacao_pratica",
+        "nome"
+      ];
     } else {
-      // Fallback: usar quizzes simples se não há verso_resumido
-      availableTypes = ["nome", "numero"];
+      // Avançado: 40% verso→significado, 30% aplicação, 30% nome→verso
+      availableTypes = [
+        "verso_para_significado", "verso_para_significado", "verso_para_significado",
+        "aplicacao_pratica", "aplicacao_pratica",
+        "nome_para_verso", "nome_para_verso"
+      ];
     }
     
     const type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
@@ -735,6 +747,16 @@ export default function StudySession() {
         .slice(0, 3)
         .map((o) => o.significado || o.nome);
       explanation = `O Odu ${currentOdu.nome} representa este conceito`;
+    } else if (type === "aplicacao_pratica") {
+      // Novo tipo: Aplicação Prática
+      correctAnswer = currentOdu.nome;
+      wrongAnswers = otherOdus
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3)
+        .map((o) => o.nome);
+      context = currentOdu.exemplos_praticos || 
+                `Em uma situação que envolve: ${currentOdu.significado || 'este contexto'}`;
+      explanation = `${currentOdu.nome} é o Odu que rege esta situação pois representa ${currentOdu.significado}`;
     } else if (type === "nome") {
       correctAnswer = currentOdu.nome;
       wrongAnswers = otherOdus
@@ -950,6 +972,11 @@ export default function StudySession() {
         />
       
       <div className="container mx-auto px-4 py-8">
+        {/* Story Mode Toggle */}
+        <div className="mb-4 flex justify-center">
+          <StoryModeToggle enabled={storyMode} onChange={setStoryMode} />
+        </div>
+
         {/* Header with Session Stats */}
         <div className="mb-8">
           <Button variant="ghost" onClick={() => navigate("/dashboard")} className="mb-4">
@@ -1139,10 +1166,12 @@ export default function StudySession() {
             texto={currentOdu.texto_principal}
             verso={currentOdu.verso}
             versoResumido={currentOdu.verso_resumido}
+            significado={currentOdu.significado}
             onRate={handleFlashcardRate}
             currentRevisoes={currentMemorizationData.revisoes}
             currentStrength={currentMemorizationData.forca_memoria}
             status={currentMemorizationData.status}
+            hideNumber={storyMode}
           />
         ) : mode === "quiz" && generateQuizQuestion ? (
           <Quiz question={generateQuizQuestion} onAnswer={handleQuizAnswer} />

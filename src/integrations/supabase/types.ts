@@ -328,41 +328,85 @@ export type Database = {
           },
         ]
       }
+      narrative_tags: {
+        Row: {
+          created_at: string | null
+          id: string
+          odu_id: string | null
+          tag: string
+          tipo: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          odu_id?: string | null
+          tag: string
+          tipo: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          odu_id?: string | null
+          tag?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "narrative_tags_odu_id_fkey"
+            columns: ["odu_id"]
+            isOneToOne: false
+            referencedRelation: "odu"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       odu: {
         Row: {
+          contexto_historico: string | null
           created_at: string
           exemplos_praticos: string | null
           id: string
           nome: string
           numero: number
+          personagens: string | null
           significado: string | null
           tags: string[] | null
+          tema_principal: string | null
+          tema_secundario: string | null
           texto_principal: string
           updated_at: string
           verso: string | null
           verso_resumido: string | null
         }
         Insert: {
+          contexto_historico?: string | null
           created_at?: string
           exemplos_praticos?: string | null
           id?: string
           nome: string
           numero: number
+          personagens?: string | null
           significado?: string | null
           tags?: string[] | null
+          tema_principal?: string | null
+          tema_secundario?: string | null
           texto_principal: string
           updated_at?: string
           verso?: string | null
           verso_resumido?: string | null
         }
         Update: {
+          contexto_historico?: string | null
           created_at?: string
           exemplos_praticos?: string | null
           id?: string
           nome?: string
           numero?: number
+          personagens?: string | null
           significado?: string | null
           tags?: string[] | null
+          tema_principal?: string | null
+          tema_secundario?: string | null
           texto_principal?: string
           updated_at?: string
           verso?: string | null

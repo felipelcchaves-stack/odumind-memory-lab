@@ -10,7 +10,7 @@ interface QuizQuestion {
   nome: string;
   correctAnswer: string;
   options: string[];
-  type: "nome" | "numero" | "verso_para_nome" | "nome_para_verso" | "verso_para_significado";
+  type: "nome" | "verso_para_nome" | "nome_para_verso" | "verso_para_significado" | "aplicacao_pratica";
   versoResumido?: string;
   significado?: string;
   context?: string;
@@ -49,14 +49,14 @@ const Quiz = memo(function Quiz({ question, onAnswer }: QuizProps) {
           <div className="flex items-center justify-between mb-4">
             <Badge variant="secondary">Quiz</Badge>
             <Badge variant="outline">
-              {question.type === "nome" ? "Nome do Odu" : "Número do Odu"}
+              {question.type === "aplicacao_pratica" ? "Aplicação Prática" : 
+               question.type === "nome" ? "Nome do Odu" : 
+               "Associação"}
             </Badge>
           </div>
           <CardTitle className="text-2xl">
             {question.type === "nome" ? (
-              <>Qual é o nome do Odu #{question.numero}?</>
-            ) : question.type === "numero" ? (
-              <>Qual é o número do Odu {question.nome}?</>
+              <>Qual é o nome deste Odu?</>
             ) : question.type === "verso_para_nome" ? (
               <>
                 <div className="mb-2 text-base font-normal text-muted-foreground">Qual Odu diz:</div>

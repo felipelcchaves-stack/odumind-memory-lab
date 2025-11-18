@@ -82,6 +82,10 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
     significado: '',
     exemplos_praticos: '',
     tags: [] as string[],
+    contexto_historico: '',
+    personagens: '',
+    tema_principal: '',
+    tema_secundario: '',
   });
   const [tagInput, setTagInput] = useState('');
   
@@ -118,6 +122,10 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
         significado: data.significado || '',
         exemplos_praticos: data.exemplos_praticos || '',
         tags: data.tags || [],
+        contexto_historico: data.contexto_historico || '',
+        personagens: data.personagens || '',
+        tema_principal: data.tema_principal || '',
+        tema_secundario: data.tema_secundario || '',
       });
     } catch (error) {
       console.error('Error loading Odu:', error);
@@ -212,9 +220,14 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
         nome: validation.data.nome,
         texto_principal: validation.data.texto_principal,
         verso: validation.data.verso ?? null,
+        verso_resumido: formData.verso_resumido || null,
         significado: validation.data.significado ?? null,
         exemplos_praticos: validation.data.exemplos_praticos ?? null,
         tags: validation.data.tags ?? null,
+        contexto_historico: formData.contexto_historico || null,
+        personagens: formData.personagens || null,
+        tema_principal: formData.tema_principal || null,
+        tema_secundario: formData.tema_secundario || null,
       };
 
       if (oduId && oduId !== 'new') {
@@ -632,6 +645,90 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
                   />
                 </Badge>
               ))}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Campos Narrativos */}
+          <div className="space-y-4 p-4 border border-primary/20 rounded-lg bg-primary/5">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              📖 Elementos Narrativos
+              <span className="text-xs text-muted-foreground font-normal">(Novo - Foco em História)</span>
+            </h3>
+            
+            <div className="space-y-2">
+              <Label htmlFor="contexto_historico">Contexto Histórico</Label>
+              <Textarea
+                id="contexto_historico"
+                value={formData.contexto_historico}
+                onChange={(e) => setFormData({ ...formData, contexto_historico: e.target.value })}
+                placeholder="Em que contexto esta história acontece? Onde? Quando? Qual o cenário?"
+                rows={3}
+                className="resize-y"
+              />
+              <p className="text-xs text-muted-foreground">
+                Ex: "Durante a criação do mundo, quando os Orixás ainda caminhavam entre os homens..."
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="personagens">Personagens</Label>
+              <Input
+                id="personagens"
+                value={formData.personagens}
+                onChange={(e) => setFormData({ ...formData, personagens: e.target.value })}
+                placeholder="Ex: Orunmilá, Exu, guerreiro jovem"
+              />
+              <p className="text-xs text-muted-foreground">
+                Liste os personagens principais separados por vírgula
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="tema_principal">Tema Principal</Label>
+                <select
+                  id="tema_principal"
+                  value={formData.tema_principal}
+                  onChange={(e) => setFormData({ ...formData, tema_principal: e.target.value })}
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                >
+                  <option value="">Selecione o tema</option>
+                  <option value="sabedoria">Sabedoria</option>
+                  <option value="guerra">Guerra</option>
+                  <option value="amor">Amor</option>
+                  <option value="sacrificio">Sacrifício</option>
+                  <option value="transformacao">Transformação</option>
+                  <option value="justica">Justiça</option>
+                  <option value="prosperidade">Prosperidade</option>
+                  <option value="familia">Família</option>
+                  <option value="destino">Destino</option>
+                  <option value="traicao">Traição</option>
+                </select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="tema_secundario">Tema Secundário (opcional)</Label>
+                <select
+                  id="tema_secundario"
+                  value={formData.tema_secundario}
+                  onChange={(e) => setFormData({ ...formData, tema_secundario: e.target.value })}
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                >
+                  <option value="">Selecione o tema</option>
+                  <option value="sabedoria">Sabedoria</option>
+                  <option value="guerra">Guerra</option>
+                  <option value="amor">Amor</option>
+                  <option value="sacrificio">Sacrifício</option>
+                  <option value="transformacao">Transformação</option>
+                  <option value="justica">Justiça</option>
+                  <option value="prosperidade">Prosperidade</option>
+                  <option value="familia">Família</option>
+                  <option value="destino">Destino</option>
+                  <option value="traicao">Traição</option>
+                </select>
+              </div>
             </div>
           </div>
 
