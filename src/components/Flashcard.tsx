@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RotateCcw, Sparkles } from "lucide-react";
 import MemorizationStatusBadge from "@/components/MemorizationStatusBadge";
+import MilestoneCelebration from "@/components/MilestoneCelebration";
+import useMilestoneDetection from "@/hooks/useMilestoneDetection";
 
 interface FlashcardProps {
   numero: number;
@@ -29,6 +31,13 @@ const Flashcard = memo(function Flashcard({
 }: FlashcardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+
+  // Milestone detection
+  const { currentMilestone, clearMilestone } = useMilestoneDetection({
+    currentRevisoes,
+    currentStrength,
+    status
+  });
 
   // Calculate what the new values will be after this review
   const nextRevisoes = currentRevisoes + 1;
@@ -57,9 +66,18 @@ const Flashcard = memo(function Flashcard({
 
   return (
     <div className="w-full max-w-2xl mx-auto">
-      {showCelebration && (
-        <Alert className="mb-4 border-green-500 bg-green-50 dark:bg-green-900/20">
-          <Sparkles className="h-4 w-4 text-green-600 dark:text-green-400" />
+      {/* Milestone Celebration */}
+      {currentMilestone && (
+        <MilestoneCelebration 
+          milestone={currentMilestone}
+          oduName={`#${numero} ${nome}`}
+          onComplete={clearMilestone}
+        />
+      )}
+
+      {showCelebration && !currentMilestone && (
+        <Alert className="mb-4 border-green-500 bg-green-50 dark:bg-green-900/20 animate-fade-in">
+          <Sparkles className="h-4 w-4 text-green-600 dark:text-green-400 animate-pulse" />
           <AlertDescription className="text-green-700 dark:text-green-300 font-medium">
             🎉 Parabéns! Este Odu está memorizado!
           </AlertDescription>
@@ -67,7 +85,9 @@ const Flashcard = memo(function Flashcard({
       )}
 
       <Card 
-        className="min-h-[400px] cursor-pointer transition-all hover:shadow-lg"
+        className={`min-h-[400px] cursor-pointer transition-all hover:shadow-lg ${
+          currentMilestone ? 'animate-scale-in' : ''
+        }`}
         onClick={() => setIsFlipped(!isFlipped)}
         style={{
           userSelect: "none",
