@@ -22,6 +22,7 @@ import UpgradeBanner from '@/components/UpgradeBanner';
 import ForgettingRiskAlert from '@/components/ForgettingRiskAlert';
 import { useSubscription } from '@/hooks/useSubscription';
 import MemorizationStatusBadge from '@/components/MemorizationStatusBadge';
+import StudyPlanProgress from '@/components/StudyPlanProgress';
 
 interface ProfileData {
   xp: number;
@@ -607,6 +608,11 @@ export default function Dashboard() {
 
           {/* Weekly Ranking */}
           <WeeklyRanking currentUserId={user?.id || ''} />
+        </div>
+
+        {/* Study Plan Progress */}
+        <div className="mb-8">
+          <StudyPlanProgress />
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 mb-8" data-tour="badges">
