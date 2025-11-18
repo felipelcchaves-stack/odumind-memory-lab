@@ -10,6 +10,7 @@ import { ArrowLeft, BookOpen, Sparkles, Lightbulb, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { MnemonicsSection } from "@/components/MnemonicsSection";
 import { ElaborativeEncoding } from "@/components/ElaborativeEncoding";
+import { PersonalNotes } from "@/components/PersonalNotes";
 import { useSubscription } from "@/hooks/useSubscription";
 import { ProtectedContent } from "@/components/ProtectedContent";
 
@@ -256,6 +257,9 @@ export default function OduStudy() {
             )}
           </CardContent>
         </Card>
+
+        {/* Personal Notes Section */}
+        <PersonalNotes odu={odu} />
 
         {/* Mnemonics Section */}
         <MnemonicsSection odu={odu} />
