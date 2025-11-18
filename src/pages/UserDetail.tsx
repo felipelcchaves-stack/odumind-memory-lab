@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import DashboardHeader from '@/components/DashboardHeader';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import MemorizationStatusBadge from '@/components/MemorizationStatusBadge';
 
 interface UserProfile {
   user_id: string;
@@ -178,13 +179,11 @@ export default function UserDetail() {
   }
 
   const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "success" }> = {
-      nao_estudado: { label: 'Não Estudado', variant: 'default' },
-      estudando: { label: 'Estudando', variant: 'secondary' },
-      memorizado: { label: 'Memorizado', variant: 'success' },
-    };
-    const config = statusMap[status] || statusMap.nao_estudado;
-    return <Badge variant={config.variant as any}>{config.label}</Badge>;
+    return (
+      <MemorizationStatusBadge 
+        status={status as 'nao_estudado' | 'estudando' | 'memorizado'} 
+      />
+    );
   };
 
   const getEventTypeLabel = (tipo: string) => {

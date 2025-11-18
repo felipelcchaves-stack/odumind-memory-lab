@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RotateCcw, Sparkles } from "lucide-react";
+import MemorizationStatusBadge from "@/components/MemorizationStatusBadge";
 
 interface FlashcardProps {
   numero: number;
@@ -77,22 +78,22 @@ const Flashcard = memo(function Flashcard({
       >
         <CardHeader>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Badge variant="secondary" className="text-lg px-3 py-1">
                 #{numero}
               </Badge>
-              {currentRevisoes > 0 && (
+              <MemorizationStatusBadge 
+                status={status as 'nao_estudado' | 'estudando' | 'memorizado'} 
+                revisoes={currentRevisoes}
+                forcaMemoria={currentStrength}
+                showProgress
+              />
+              {currentRevisoes > 0 && !isMemorized && (
                 <Badge 
                   variant="outline" 
                   className={`${getStrengthBg(currentStrength)} ${getStrengthColor(currentStrength)}`}
                 >
-                  Revisão {nextRevisoes}/3 • {currentStrength}%
-                </Badge>
-              )}
-              {isMemorized && (
-                <Badge variant="success" className="gap-1">
-                  <Sparkles className="h-3 w-3" />
-                  Memorizado
+                  {currentStrength}% força
                 </Badge>
               )}
             </div>
