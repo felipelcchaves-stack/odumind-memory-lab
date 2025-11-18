@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ import 'react-quill/dist/quill.snow.css';
 import './quill-custom.css';
 import { z } from 'zod';
 import { sanitizeQuillHtml } from '@/lib/markdownUtils';
+import ImageUploader from './ImageUploader';
 
 const oduSchema = z.object({
   numero: z.number()
@@ -82,6 +83,12 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
     tags: [] as string[],
   });
   const [tagInput, setTagInput] = useState('');
+  
+  // Refs for ReactQuill editors to insert images
+  const textoQuillRef = useRef<ReactQuill>(null);
+  const versoQuillRef = useRef<ReactQuill>(null);
+  const significadoQuillRef = useRef<ReactQuill>(null);
+  const exemplosQuillRef = useRef<ReactQuill>(null);
 
   useEffect(() => {
     if (oduId && oduId !== 'new') {
@@ -339,6 +346,16 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
     toast.success('Formatação removida com sucesso');
   };
 
+  const insertImageToEditor = (quillRef: React.RefObject<ReactQuill>, imageUrl: string) => {
+    const editor = quillRef.current?.getEditor();
+    if (editor) {
+      const range = editor.getSelection(true);
+      editor.insertEmbed(range.index, 'image', imageUrl);
+      editor.setSelection(range.index + 1, 0);
+      toast.success('Imagem inserida!');
+    }
+  };
+
   return (
     <div>
       {showHistory ? (
@@ -459,18 +476,22 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="texto_principal">Texto Principal *</Label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => clearFieldFormatting('texto_principal')}
-                className="h-8 text-xs"
-              >
-                <Eraser className="h-3 w-3 mr-1" />
-                Limpar Formatação
-              </Button>
+              <div className="flex items-center gap-2">
+                <ImageUploader onImageUploaded={(url) => insertImageToEditor(textoQuillRef, url)} />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => clearFieldFormatting('texto_principal')}
+                  className="h-8 text-xs"
+                >
+                  <Eraser className="h-3 w-3 mr-1" />
+                  Limpar Formatação
+                </Button>
+              </div>
             </div>
             <ReactQuill
+              ref={textoQuillRef}
               theme="snow"
               value={formData.texto_principal}
               onChange={(value) => {
@@ -493,18 +514,22 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="verso">Verso Completo</Label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => clearFieldFormatting('verso')}
-                className="h-8 text-xs"
-              >
-                <Eraser className="h-3 w-3 mr-1" />
-                Limpar Formatação
-              </Button>
+              <div className="flex items-center gap-2">
+                <ImageUploader onImageUploaded={(url) => insertImageToEditor(versoQuillRef, url)} />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => clearFieldFormatting('verso')}
+                  className="h-8 text-xs"
+                >
+                  <Eraser className="h-3 w-3 mr-1" />
+                  Limpar Formatação
+                </Button>
+              </div>
             </div>
             <ReactQuill
+              ref={versoQuillRef}
               theme="snow"
               value={formData.verso}
               onChange={(value) => {
@@ -539,18 +564,22 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="significado">Significado</Label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => clearFieldFormatting('significado')}
-                className="h-8 text-xs"
-              >
-                <Eraser className="h-3 w-3 mr-1" />
-                Limpar Formatação
-              </Button>
+              <div className="flex items-center gap-2">
+                <ImageUploader onImageUploaded={(url) => insertImageToEditor(significadoQuillRef, url)} />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => clearFieldFormatting('significado')}
+                  className="h-8 text-xs"
+                >
+                  <Eraser className="h-3 w-3 mr-1" />
+                  Limpar Formatação
+                </Button>
+              </div>
             </div>
             <ReactQuill
+              ref={significadoQuillRef}
               theme="snow"
               value={formData.significado}
               onChange={(value) => {
@@ -566,18 +595,22 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="exemplos_praticos">Exemplos Práticos</Label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => clearFieldFormatting('exemplos_praticos')}
-                className="h-8 text-xs"
-              >
-                <Eraser className="h-3 w-3 mr-1" />
-                Limpar Formatação
-              </Button>
+              <div className="flex items-center gap-2">
+                <ImageUploader onImageUploaded={(url) => insertImageToEditor(exemplosQuillRef, url)} />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => clearFieldFormatting('exemplos_praticos')}
+                  className="h-8 text-xs"
+                >
+                  <Eraser className="h-3 w-3 mr-1" />
+                  Limpar Formatação
+                </Button>
+              </div>
             </div>
             <ReactQuill
+              ref={exemplosQuillRef}
               theme="snow"
               value={formData.exemplos_praticos}
               onChange={(value) => {
