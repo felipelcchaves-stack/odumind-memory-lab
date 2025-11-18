@@ -160,9 +160,16 @@ export default function OduLibrary() {
                       💬 "{odu.verso_resumido}"
                     </CardDescription>
                   )}
-                  <CardDescription className="line-clamp-2">
-                    {isLocked ? 'Conteúdo bloqueado. Faça upgrade para acessar.' : odu.texto_principal}
-                  </CardDescription>
+                  {isLocked ? (
+                    <CardDescription className="line-clamp-2">
+                      Conteúdo bloqueado. Faça upgrade para acessar.
+                    </CardDescription>
+                  ) : (
+                    <div 
+                      className="text-sm text-muted-foreground line-clamp-2 prose prose-sm dark:prose-invert max-w-none"
+                      dangerouslySetInnerHTML={{ __html: odu.texto_principal }}
+                    />
+                  )}
                 </CardHeader>
                 <CardContent>
                   {!isLocked && (
@@ -177,9 +184,10 @@ export default function OduLibrary() {
                         </div>
                       )}
                       {odu.verso && (
-                        <blockquote className="border-l-4 border-primary pl-4 italic text-sm text-muted-foreground mb-4">
-                          {odu.verso}
-                        </blockquote>
+                        <blockquote 
+                          className="border-l-4 border-primary pl-4 italic text-sm text-muted-foreground mb-4 prose prose-sm dark:prose-invert max-w-none"
+                          dangerouslySetInnerHTML={{ __html: odu.verso }}
+                        />
                       )}
                     </>
                   )}
