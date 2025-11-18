@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Home, MapPin, Plus, Loader2, ArrowLeft, Lightbulb, GraduationCap, Briefcase } from "lucide-react";
 import { ProtectedContent } from "@/components/ProtectedContent";
 import { getAllTemplates, getTemplateById, type PalaceTemplate } from "@/lib/memoryPalaceTemplates";
+import DashboardHeader from "@/components/DashboardHeader";
 
 interface PalacePosition {
   id: string;
@@ -189,7 +190,9 @@ export default function MemoryPalace() {
 
   return (
     <ProtectedContent>
-      <div className="min-h-screen bg-background p-4 md:p-8">
+      <div className="min-h-screen bg-background">
+        <DashboardHeader />
+        <div className="p-4 md:p-8">
         <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -378,6 +381,7 @@ export default function MemoryPalace() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
         </div>
       </div>
     </ProtectedContent>
