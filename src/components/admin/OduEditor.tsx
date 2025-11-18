@@ -505,7 +505,19 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
                   ['clean'],
                 ],
                 clipboard: {
-                  matchVisual: false, // Remove estilos inline ao colar
+                  matchVisual: false,
+                  matchers: [
+                    // Limpa HTML do Google Docs automaticamente ao colar
+                    ['*', (node: any, delta: any) => {
+                      if (node.outerHTML) {
+                        const cleanedHtml = sanitizeQuillHtml(node.outerHTML);
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = cleanedHtml;
+                        return delta;
+                      }
+                      return delta;
+                    }]
+                  ]
                 },
               }}
             />
@@ -537,7 +549,17 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
                 setFormData({ ...formData, verso: sanitized });
               }}
               modules={{
-                clipboard: { matchVisual: false },
+                clipboard: {
+                  matchVisual: false,
+                  matchers: [
+                    ['*', (node: any, delta: any) => {
+                      if (node.outerHTML) {
+                        sanitizeQuillHtml(node.outerHTML);
+                      }
+                      return delta;
+                    }]
+                  ]
+                },
               }}
             />
           </div>
@@ -587,7 +609,17 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
                 setFormData({ ...formData, significado: sanitized });
               }}
               modules={{
-                clipboard: { matchVisual: false },
+                clipboard: {
+                  matchVisual: false,
+                  matchers: [
+                    ['*', (node: any, delta: any) => {
+                      if (node.outerHTML) {
+                        sanitizeQuillHtml(node.outerHTML);
+                      }
+                      return delta;
+                    }]
+                  ]
+                },
               }}
             />
           </div>
@@ -618,7 +650,17 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
                 setFormData({ ...formData, exemplos_praticos: sanitized });
               }}
               modules={{
-                clipboard: { matchVisual: false },
+                clipboard: {
+                  matchVisual: false,
+                  matchers: [
+                    ['*', (node: any, delta: any) => {
+                      if (node.outerHTML) {
+                        sanitizeQuillHtml(node.outerHTML);
+                      }
+                      return delta;
+                    }]
+                  ]
+                },
               }}
             />
           </div>
