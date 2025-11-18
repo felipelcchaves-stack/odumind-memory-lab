@@ -187,9 +187,10 @@ export default function OduStudy() {
                 <BookOpen className="h-5 w-5 text-primary" />
                 <h3 className="text-lg font-semibold">Texto Principal</h3>
               </div>
-              <p className="text-foreground leading-relaxed text-lg">
-                {odu.texto_principal}
-              </p>
+              <div 
+                className="text-foreground leading-relaxed text-lg prose prose-sm dark:prose-invert max-w-none"
+                dangerouslySetInnerHTML={{ __html: odu.texto_principal }}
+              />
             </div>
 
             {odu.verso && (
@@ -200,9 +201,10 @@ export default function OduStudy() {
                     <Sparkles className="h-5 w-5 text-primary" />
                     <h3 className="text-lg font-semibold">Verso</h3>
                   </div>
-                  <blockquote className="border-l-4 border-primary pl-4 italic text-muted-foreground text-lg">
-                    {odu.verso}
-                  </blockquote>
+                  <blockquote 
+                    className="border-l-4 border-primary pl-4 italic text-muted-foreground text-lg prose prose-sm dark:prose-invert"
+                    dangerouslySetInnerHTML={{ __html: odu.verso }}
+                  />
                 </div>
               </>
             )}
@@ -215,9 +217,10 @@ export default function OduStudy() {
                     <Lightbulb className="h-5 w-5 text-primary" />
                     <h3 className="text-lg font-semibold">Significado</h3>
                   </div>
-                  <p className="text-foreground leading-relaxed text-lg">
-                    {odu.significado}
-                  </p>
+                  <div 
+                    className="text-foreground leading-relaxed text-lg prose prose-sm dark:prose-invert max-w-none"
+                    dangerouslySetInnerHTML={{ __html: odu.significado }}
+                  />
                 </div>
               </>
             )}
@@ -230,9 +233,10 @@ export default function OduStudy() {
                     <BookOpen className="h-5 w-5 text-primary" />
                     <h3 className="text-lg font-semibold">Exemplos Práticos</h3>
                   </div>
-                  <p className="text-foreground leading-relaxed text-lg">
-                    {odu.exemplos_praticos}
-                  </p>
+                  <div 
+                    className="text-foreground leading-relaxed text-lg prose prose-sm dark:prose-invert max-w-none"
+                    dangerouslySetInnerHTML={{ __html: odu.exemplos_praticos }}
+                  />
                 </div>
               </>
             )}
