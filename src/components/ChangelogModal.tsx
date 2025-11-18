@@ -68,7 +68,12 @@ export default function ChangelogModal({
 }: ChangelogModalProps) {
   const navigate = useNavigate();
 
-  if (!changelog) return null;
+  console.log('[ChangelogModal] Renderizando com:', { open, hasChangelog: !!changelog });
+
+  if (!changelog) {
+    console.log('[ChangelogModal] Sem changelog para exibir');
+    return null;
+  }
 
   const handleViewAll = () => {
     onMarkAsViewed();
@@ -87,7 +92,13 @@ export default function ChangelogModal({
   );
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog 
+      open={open} 
+      onOpenChange={(isOpen) => {
+        console.log('[ChangelogModal] Estado do modal mudou:', isOpen);
+        if (!isOpen) onClose();
+      }}
+    >
       <DialogContent className="max-w-2xl max-h-[90vh] animate-scale-in">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold flex items-center gap-2">
