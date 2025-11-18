@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
-import { X, Save, History, AlertTriangle } from 'lucide-react';
+import { X, Save, History, AlertTriangle, Eraser } from 'lucide-react';
 import { toast } from 'sonner';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -304,6 +304,41 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
     });
   };
 
+  const stripHtmlFormatting = (html: string): string => {
+    // Remove all HTML tags but preserve text content and line breaks
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    return temp.textContent || temp.innerText || '';
+  };
+
+  const clearFieldFormatting = (fieldName: 'texto_principal' | 'verso' | 'significado' | 'exemplos_praticos') => {
+    const currentValue = formData[fieldName];
+    if (!currentValue || currentValue === '<p><br></p>') {
+      toast.error('Campo vazio, nada para limpar');
+      return;
+    }
+
+    const confirmClear = window.confirm(
+      `Tem certeza que deseja remover toda a formatação do campo "${
+        fieldName === 'texto_principal' ? 'Texto Principal' :
+        fieldName === 'verso' ? 'Verso' :
+        fieldName === 'significado' ? 'Significado' :
+        'Exemplos Práticos'
+      }"?\n\nO texto será mantido, mas toda formatação (negrito, itálico, listas) será removida.`
+    );
+
+    if (!confirmClear) return;
+
+    const plainText = stripHtmlFormatting(currentValue);
+    
+    setFormData({
+      ...formData,
+      [fieldName]: plainText,
+    });
+
+    toast.success('Formatação removida com sucesso');
+  };
+
   return (
     <div>
       {showHistory ? (
@@ -422,7 +457,19 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="texto_principal">Texto Principal *</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="texto_principal">Texto Principal *</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => clearFieldFormatting('texto_principal')}
+                className="h-8 text-xs"
+              >
+                <Eraser className="h-3 w-3 mr-1" />
+                Limpar Formatação
+              </Button>
+            </div>
             <ReactQuill
               theme="snow"
               value={formData.texto_principal}
@@ -444,7 +491,19 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="verso">Verso Completo</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="verso">Verso Completo</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => clearFieldFormatting('verso')}
+                className="h-8 text-xs"
+              >
+                <Eraser className="h-3 w-3 mr-1" />
+                Limpar Formatação
+              </Button>
+            </div>
             <ReactQuill
               theme="snow"
               value={formData.verso}
@@ -478,7 +537,19 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="significado">Significado</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="significado">Significado</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => clearFieldFormatting('significado')}
+                className="h-8 text-xs"
+              >
+                <Eraser className="h-3 w-3 mr-1" />
+                Limpar Formatação
+              </Button>
+            </div>
             <ReactQuill
               theme="snow"
               value={formData.significado}
@@ -493,7 +564,19 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="exemplos_praticos">Exemplos Práticos</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="exemplos_praticos">Exemplos Práticos</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => clearFieldFormatting('exemplos_praticos')}
+                className="h-8 text-xs"
+              >
+                <Eraser className="h-3 w-3 mr-1" />
+                Limpar Formatação
+              </Button>
+            </div>
             <ReactQuill
               theme="snow"
               value={formData.exemplos_praticos}
