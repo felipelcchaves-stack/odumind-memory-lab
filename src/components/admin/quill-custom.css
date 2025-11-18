@@ -1,11 +1,13 @@
 /* Custom styles for ReactQuill editor */
 .ql-container {
   font-size: 14px;
-  min-height: 150px;
+  min-height: 200px;
+  border: 1px solid hsl(var(--border)) !important;
 }
 
 .ql-editor {
-  min-height: 150px;
+  min-height: 200px;
+  background: hsl(var(--background));
 }
 
 .ql-toolbar {

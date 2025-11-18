@@ -493,6 +493,7 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
             <ReactQuill
               ref={textoQuillRef}
               theme="snow"
+              className="min-h-[200px] border border-input rounded-md"
               value={formData.texto_principal}
               onChange={(value) => {
                 const sanitized = sanitizeQuillHtml(value);
@@ -543,18 +544,27 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
             <ReactQuill
               ref={versoQuillRef}
               theme="snow"
+              className="min-h-[200px] border border-input rounded-md"
               value={formData.verso}
               onChange={(value) => {
                 const sanitized = sanitizeQuillHtml(value);
                 setFormData({ ...formData, verso: sanitized });
               }}
               modules={{
+                toolbar: [
+                  ['bold', 'italic', 'underline'],
+                  [{ list: 'ordered' }, { list: 'bullet' }],
+                  ['clean'],
+                ],
                 clipboard: {
                   matchVisual: false,
                   matchers: [
                     ['*', (node: any, delta: any) => {
                       if (node.outerHTML) {
-                        sanitizeQuillHtml(node.outerHTML);
+                        const cleanedHtml = sanitizeQuillHtml(node.outerHTML);
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = cleanedHtml;
+                        return delta;
                       }
                       return delta;
                     }]
