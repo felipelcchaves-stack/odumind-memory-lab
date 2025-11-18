@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -38,7 +39,7 @@ const oduSchema = z.object({
   verso_resumido: z.string()
     .trim()
     .min(10, { message: "Verso resumido deve ter pelo menos 10 caracteres" })
-    .max(150, { message: "Verso resumido deve ter no máximo 150 caracteres" })
+    .max(1000, { message: "Verso resumido deve ter no máximo 1000 caracteres" })
     .nullable()
     .optional()
     .transform(val => val === "" ? null : val),
@@ -557,18 +558,20 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
             <Label htmlFor="verso_resumido">
               Verso Resumido (para Quiz e Memorização) *
               <span className="text-xs text-muted-foreground ml-2">
-                {formData.verso_resumido.length}/150 caracteres
+                {formData.verso_resumido.length}/1000 caracteres
               </span>
             </Label>
-            <Input
+            <Textarea
               id="verso_resumido"
               value={formData.verso_resumido}
               onChange={(e) => setFormData({ ...formData, verso_resumido: e.target.value })}
               placeholder='Ex: "A luz purifica o que estava sujo"'
-              maxLength={150}
+              maxLength={1000}
+              rows={4}
+              className="resize-y"
             />
             <p className="text-xs text-muted-foreground">
-              💡 Verso curto e memorável usado em flashcards e quizzes (10-150 caracteres)
+              💡 Verso memorável usado em flashcards e quizzes (10-1000 caracteres)
             </p>
           </div>
 
