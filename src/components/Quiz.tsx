@@ -70,6 +70,12 @@ const Quiz = memo(function Quiz({ question, onAnswer }: QuizProps) {
                 <div className="text-lg italic mb-3">"{question.versoResumido}"</div>
                 <div className="text-base font-normal">representa qual significado?</div>
               </>
+            ) : question.type === "aplicacao_pratica" ? (
+              <>
+                <div className="mb-2 text-base font-normal text-muted-foreground">Situação:</div>
+                <div className="text-lg mb-3">{question.context}</div>
+                <div className="text-base font-normal">Qual Odu se aplica nesta situação?</div>
+              </>
             ) : null}
           </CardTitle>
         </CardHeader>
