@@ -13,6 +13,7 @@ interface FlashcardProps {
   nome: string;
   texto: string;
   verso?: string | null;
+  versoResumido?: string | null;
   onRate: (difficulty: number) => void;
   currentRevisoes?: number;
   currentStrength?: number;
@@ -23,7 +24,8 @@ const Flashcard = memo(function Flashcard({
   numero, 
   nome, 
   texto, 
-  verso, 
+  verso,
+  versoResumido,
   onRate,
   currentRevisoes = 0,
   currentStrength = 0,
@@ -143,6 +145,16 @@ const Flashcard = memo(function Flashcard({
             </div>
           ) : (
             <div className="space-y-4">
+              {versoResumido && (
+                <div className="bg-primary/10 dark:bg-primary/5 rounded-lg p-4 border-l-4 border-primary mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+                    <h4 className="font-semibold text-sm">Verso para Memorização:</h4>
+                  </div>
+                  <p className="text-base italic font-medium">"{versoResumido}"</p>
+                </div>
+              )}
+
               <div>
                 <h4 className="font-semibold mb-2">Texto Principal:</h4>
                 <p className="text-foreground leading-relaxed">{texto}</p>
@@ -150,7 +162,7 @@ const Flashcard = memo(function Flashcard({
 
               {verso && (
                 <div>
-                  <h4 className="font-semibold mb-2">Verso:</h4>
+                  <h4 className="font-semibold mb-2">Verso Completo:</h4>
                   <blockquote className="border-l-4 border-primary pl-4 italic text-muted-foreground">
                     {verso}
                   </blockquote>

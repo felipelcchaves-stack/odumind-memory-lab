@@ -33,6 +33,13 @@ const oduSchema = z.object({
     .nullable()
     .optional()
     .transform(val => val === "" ? null : val),
+  verso_resumido: z.string()
+    .trim()
+    .min(10, { message: "Verso resumido deve ter pelo menos 10 caracteres" })
+    .max(150, { message: "Verso resumido deve ter no máximo 150 caracteres" })
+    .nullable()
+    .optional()
+    .transform(val => val === "" ? null : val),
   significado: z.string()
     .max(5000, { message: "Significado deve ter no máximo 5.000 caracteres" })
     .nullable()
@@ -68,6 +75,7 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
     nome: '',
     texto_principal: '',
     verso: '',
+    verso_resumido: '',
     significado: '',
     exemplos_praticos: '',
     tags: [] as string[],
@@ -97,6 +105,7 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
         nome: data.nome,
         texto_principal: data.texto_principal,
         verso: data.verso || '',
+        verso_resumido: data.verso_resumido || '',
         significado: data.significado || '',
         exemplos_praticos: data.exemplos_praticos || '',
         tags: data.tags || [],
@@ -428,12 +437,31 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="verso">Verso</Label>
+            <Label htmlFor="verso">Verso Completo</Label>
             <ReactQuill
               theme="snow"
               value={formData.verso}
               onChange={(value) => setFormData({ ...formData, verso: value })}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="verso_resumido">
+              Verso Resumido (para Quiz e Memorização) *
+              <span className="text-xs text-muted-foreground ml-2">
+                {formData.verso_resumido.length}/150 caracteres
+              </span>
+            </Label>
+            <Input
+              id="verso_resumido"
+              value={formData.verso_resumido}
+              onChange={(e) => setFormData({ ...formData, verso_resumido: e.target.value })}
+              placeholder='Ex: "A luz purifica o que estava sujo"'
+              maxLength={150}
+            />
+            <p className="text-xs text-muted-foreground">
+              💡 Verso curto e memorável usado em flashcards e quizzes (10-150 caracteres)
+            </p>
           </div>
 
           <div className="space-y-2">

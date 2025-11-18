@@ -340,6 +340,7 @@ export type Database = {
           texto_principal: string
           updated_at: string
           verso: string | null
+          verso_resumido: string | null
         }
         Insert: {
           created_at?: string
@@ -352,6 +353,7 @@ export type Database = {
           texto_principal: string
           updated_at?: string
           verso?: string | null
+          verso_resumido?: string | null
         }
         Update: {
           created_at?: string
@@ -364,6 +366,7 @@ export type Database = {
           texto_principal?: string
           updated_at?: string
           verso?: string | null
+          verso_resumido?: string | null
         }
         Relationships: []
       }

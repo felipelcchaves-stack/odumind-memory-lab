@@ -19,6 +19,7 @@ interface Odu {
   nome: string;
   texto_principal: string;
   verso: string | null;
+  verso_resumido: string | null;
   significado: string | null;
   exemplos_praticos: string | null;
   tags: string[] | null;
@@ -139,13 +140,34 @@ export default function OduDetailDialog({ odu, open, onOpenChange }: OduDetailDi
 
               <Separator />
 
+              {/* Verso Resumido */}
+              {odu.verso_resumido && (
+                <>
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+                      <h3 className="text-lg font-semibold">Verso Resumido (Memorização)</h3>
+                    </div>
+                    <div className="bg-primary/10 dark:bg-primary/5 rounded-lg p-4 border-l-4 border-primary">
+                      <p className="text-lg italic font-medium text-foreground">
+                        "{odu.verso_resumido}"
+                      </p>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      💡 Use este verso curto para memorizar o Odu rapidamente
+                    </p>
+                  </div>
+                  <Separator />
+                </>
+              )}
+
               {/* Verso */}
               {odu.verso && (
                 <>
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       <Sparkles className="h-5 w-5 text-primary" />
-                      <h3 className="text-lg font-semibold">Verso</h3>
+                      <h3 className="text-lg font-semibold">Verso Completo</h3>
                     </div>
                     <blockquote className="border-l-4 border-primary pl-4 italic text-muted-foreground">
                       {odu.verso}
