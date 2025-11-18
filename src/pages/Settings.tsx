@@ -6,6 +6,8 @@ import DashboardHeader from '@/components/DashboardHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useProductTour } from '@/hooks/useProductTour';
 import { ResetProgressDialog } from '@/components/ResetProgressDialog';
+import StudyCalendar from '@/components/StudyCalendar';
+import StudyPlanGenerator from '@/components/StudyPlanGenerator';
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -31,6 +33,10 @@ export default function Settings() {
         </div>
 
         <div className="space-y-6">
+          <StudyCalendar />
+          
+          <StudyPlanGenerator />
+          
           <Card>
             <CardHeader>
               <CardTitle>Tour da Plataforma</CardTitle>

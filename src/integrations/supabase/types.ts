@@ -500,6 +500,78 @@ export type Database = {
         }
         Relationships: []
       }
+      study_plan: {
+        Row: {
+          ativo: boolean
+          atualizado_em: string
+          criado_em: string
+          data_fim_estimada: string | null
+          data_inicio: string | null
+          estimativa_dias: number
+          id: string
+          plano_completo: Json
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          atualizado_em?: string
+          criado_em?: string
+          data_fim_estimada?: string | null
+          data_inicio?: string | null
+          estimativa_dias: number
+          id?: string
+          plano_completo: Json
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          atualizado_em?: string
+          criado_em?: string
+          data_fim_estimada?: string | null
+          data_inicio?: string | null
+          estimativa_dias?: number
+          id?: string
+          plano_completo?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
+      study_schedule: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          dia_semana: number
+          duracao_minutos: number | null
+          hora_fim: string
+          hora_inicio: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          dia_semana: number
+          duracao_minutos?: number | null
+          hora_fim: string
+          hora_inicio: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          dia_semana?: number
+          duracao_minutos?: number | null
+          hora_fim?: string
+          hora_inicio?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       study_sessions: {
         Row: {
           average_response_time: number | null
