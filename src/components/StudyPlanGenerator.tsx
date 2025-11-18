@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { Sparkles, Calendar, Clock, Target, TrendingUp, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { Sparkles, Calendar, Clock, Target, TrendingUp, AlertCircle, CheckCircle2, Download } from 'lucide-react';
+import { format, addDays, setHours, setMinutes, parse } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { generateICalendar, downloadICalFile } from '@/lib/icalGenerator';
 
 interface StudyPlan {
   id: string;
@@ -99,6 +100,49 @@ export default function StudyPlanGenerator() {
     } finally {
       setGenerating(false);
     }
+  };
+
+  const exportToCalendar = () => {
+    if (!plan || !plan.plano_completo.cronograma_semanal) return;
+
+    const events = [];
+    const startDate = new Date(plan.data_inicio || new Date());
+    const endDate = new Date(plan.data_fim_estimada);
+    const weekDays = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+
+    // Generate events for each week until end date
+    let currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      plan.plano_completo.cronograma_semanal.forEach(item => {
+        const dayIndex = weekDays.indexOf(item.dia);
+        if (dayIndex === -1) return;
+
+        const eventDate = new Date(currentDate);
+        const daysToAdd = (dayIndex - currentDate.getDay() + 7) % 7;
+        eventDate.setDate(currentDate.getDate() + daysToAdd);
+
+        if (eventDate > endDate || eventDate < startDate) return;
+
+        // Parse time (format: "HH:MM")
+        const [hours, minutes] = item.horario.split(':').map(Number);
+        const startTime = setMinutes(setHours(new Date(eventDate), hours), minutes);
+        const endTime = new Date(startTime.getTime() + item.duracao_minutos * 60000);
+
+        events.push({
+          title: `📚 ${item.atividade}`,
+          description: `Plano de Estudos Odu Ifá\n${item.atividade}\nDuração: ${item.duracao_minutos} minutos`,
+          start: startTime,
+          end: endTime,
+          location: 'Estudo Odu Ifá'
+        });
+      });
+
+      currentDate = addDays(currentDate, 7);
+    }
+
+    const icalContent = generateICalendar(events, 'Plano de Estudos Odu Ifá');
+    downloadICalFile(icalContent, 'plano-estudos-odu-ifa.ics');
+    toast.success('Calendário exportado! Importe o arquivo no Google Calendar ou Apple Calendar.');
   };
 
   if (loading) {
@@ -249,7 +293,15 @@ export default function StudyPlanGenerator() {
         )}
 
         {/* Actions */}
-        <div className="flex gap-2 pt-4 border-t">
+        <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t">
+          <Button 
+            onClick={exportToCalendar}
+            variant="default"
+            className="flex-1"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Exportar para Calendário
+          </Button>
           <Button 
             onClick={generatePlan} 
             disabled={generating}
