@@ -8,9 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Home, MapPin, Plus, Loader2, ArrowLeft } from "lucide-react";
+import { Home, MapPin, Plus, Loader2, ArrowLeft, Lightbulb } from "lucide-react";
 import { ProtectedContent } from "@/components/ProtectedContent";
+import { getAllTemplates, getTemplateById, type PalaceTemplate } from "@/lib/memoryPalaceTemplates";
 
 interface PalacePosition {
   id: string;
@@ -40,6 +42,10 @@ export default function MemoryPalace() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<{ sala: number; posicao: number } | null>(null);
   const [formData, setFormData] = useState({ odu_id: "", nota_visual: "" });
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("casa");
+  
+  const templates = getAllTemplates();
+  const currentTemplate = getTemplateById(selectedTemplate);
 
   useEffect(() => {
     if (!user) {
@@ -47,7 +53,19 @@ export default function MemoryPalace() {
       return;
     }
     fetchData();
+    
+    // Carregar template salvo do localStorage
+    const savedTemplate = localStorage.getItem("memoryPalaceTemplate");
+    if (savedTemplate) {
+      setSelectedTemplate(savedTemplate);
+    }
   }, [user, navigate]);
+  
+  const handleTemplateChange = (templateId: string) => {
+    setSelectedTemplate(templateId);
+    localStorage.setItem("memoryPalaceTemplate", templateId);
+    toast.success("Template alterado!");
+  };
 
   const fetchData = async () => {
     try {
