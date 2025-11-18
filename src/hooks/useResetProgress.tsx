@@ -32,12 +32,24 @@ export function useResetProgress() {
 
       if (error) throw error;
 
-      toast.success('Progresso zerado com sucesso! 🔄', { id: 'reset-progress' });
-      
-      // Recarregar a página após 1 segundo
-      setTimeout(() => {
-        window.location.href = '/dashboard';
-      }, 1000);
+      console.log('Reset progress result:', data);
+
+      if (data?.success) {
+        toast.success('Progresso zerado com sucesso! 🔄', { id: 'reset-progress' });
+        
+        // Forçar reload completo após 1.5 segundos
+        setTimeout(() => {
+          window.location.href = '/dashboard?t=' + Date.now();
+        }, 1500);
+      } else {
+        toast.warning('Progresso parcialmente zerado. Verifique os logs.', { id: 'reset-progress' });
+        console.warn('Reset details:', data?.details);
+        
+        // Ainda assim recarregar
+        setTimeout(() => {
+          window.location.href = '/dashboard?t=' + Date.now();
+        }, 2000);
+      }
 
       return true;
     } catch (error: any) {
