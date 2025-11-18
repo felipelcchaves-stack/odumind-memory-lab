@@ -13,6 +13,7 @@ serve(async (req) => {
   }
 
   try {
+    // Cliente para autenticação do usuário
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -39,6 +40,12 @@ serve(async (req) => {
 
     console.log(`Resetting progress for user: ${user.id}`);
 
+    // Cliente admin para deletar dados (bypass RLS)
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    );
+
     // Deletar todos os dados de progresso do usuário
     const tables = [
       'memorizacao',
@@ -53,22 +60,28 @@ serve(async (req) => {
       'user_learning_profile',
     ];
 
+    const deletionResults = [];
+    
     for (const table of tables) {
       console.log(`Deleting from table: ${table}`);
-      const { error } = await supabaseClient
+      const { data, error, count } = await supabaseAdmin
         .from(table)
         .delete()
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .select();
       
       if (error) {
         console.error(`Error deleting from ${table}:`, error);
-        throw error;
+        deletionResults.push({ table, success: false, error: error.message });
+      } else {
+        console.log(`Deleted ${data?.length || 0} rows from ${table}`);
+        deletionResults.push({ table, success: true, deletedRows: data?.length || 0 });
       }
     }
 
     // Resetar campos do perfil
     console.log('Resetting profile fields');
-    const { error: profileError } = await supabaseClient
+    const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .update({
         xp: 0,
@@ -79,14 +92,21 @@ serve(async (req) => {
 
     if (profileError) {
       console.error('Error resetting profile:', profileError);
-      throw profileError;
+      deletionResults.push({ table: 'profiles', success: false, error: profileError.message });
+    } else {
+      console.log('Profile reset successfully');
+      deletionResults.push({ table: 'profiles', success: true, action: 'updated' });
     }
 
-    console.log('Progress reset successfully');
+    console.log('Progress reset completed with results:', deletionResults);
+    
+    const hasErrors = deletionResults.some(r => !r.success);
+    
     return new Response(
       JSON.stringify({ 
-        success: true, 
-        message: 'Progresso zerado com sucesso' 
+        success: !hasErrors, 
+        message: hasErrors ? 'Progresso parcialmente zerado (alguns erros ocorreram)' : 'Progresso zerado com sucesso',
+        details: deletionResults
       }),
       { 
         status: 200,
