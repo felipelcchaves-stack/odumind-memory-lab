@@ -40,20 +40,21 @@ serve(async (req) => {
       });
     }
 
-    // Create Supabase client with proper config
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+    // Cliente para validar usuário (usa ANON_KEY com token)
+    const supabaseUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: {
+        headers: {
+          Authorization: authHeader
         }
       }
-    );
+    });
 
     logStep("Validating token");
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
+    const { data: userData, error: userError } = await supabaseUser.auth.getUser();
     if (userError) {
       logStep("ERROR: Authentication failed", { error: userError.message });
       throw new Error(`Authentication error: ${userError.message}`);
@@ -66,6 +67,14 @@ serve(async (req) => {
     
     logStep("User authenticated", { userId: user.id, email: user.email });
 
+    // Cliente admin para operações no banco (usa SERVICE_ROLE_KEY)
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", { 
       apiVersion: "2025-08-27.basil" 
     });
@@ -77,14 +86,14 @@ serve(async (req) => {
       logStep("No customer found, updating to free status");
       
       // Update subscription in database to free - use update first, then insert if not found
-      const { data: existingData } = await supabaseClient
+      const { data: existingData } = await supabaseAdmin
         .from('subscriptions')
         .select('id')
         .eq('user_id', user.id)
         .maybeSingle();
 
       if (existingData) {
-        await supabaseClient
+        await supabaseAdmin
           .from('subscriptions')
           .update({
             status: 'free',
@@ -96,7 +105,7 @@ serve(async (req) => {
           })
           .eq('user_id', user.id);
       } else {
-        await supabaseClient
+        await supabaseAdmin
           .from('subscriptions')
           .insert({
             user_id: user.id,
@@ -132,14 +141,14 @@ serve(async (req) => {
     if (subscriptions.data.length === 0) {
       logStep("No subscription found");
       
-      const { data: existingData2 } = await supabaseClient
+      const { data: existingData2 } = await supabaseAdmin
         .from('subscriptions')
         .select('id')
         .eq('user_id', user.id)
         .maybeSingle();
 
       if (existingData2) {
-        const { error: updateError } = await supabaseClient
+        const { error: updateError } = await supabaseAdmin
           .from('subscriptions')
           .update({
             status: 'free',
@@ -157,7 +166,7 @@ serve(async (req) => {
           logStep("Successfully updated to free subscription");
         }
       } else {
-        const { error: insertError } = await supabaseClient
+        const { error: insertError } = await supabaseAdmin
           .from('subscriptions')
           .insert({
             user_id: user.id,
@@ -238,7 +247,7 @@ serve(async (req) => {
     logStep("Subscription data to upsert", subscriptionData);
 
     // Check if subscription exists, then update or insert
-    const { data: existingSubscription } = await supabaseClient
+    const { data: existingSubscription } = await supabaseAdmin
       .from('subscriptions')
       .select('id')
       .eq('user_id', user.id)
@@ -246,7 +255,7 @@ serve(async (req) => {
 
     if (existingSubscription) {
       // Update existing subscription
-      const { data: updatedData, error: updateError } = await supabaseClient
+      const { data: updatedData, error: updateError } = await supabaseAdmin
         .from('subscriptions')
         .update(subscriptionData)
         .eq('user_id', user.id)
@@ -260,7 +269,7 @@ serve(async (req) => {
       logStep("Successfully updated subscription", { data: updatedData });
     } else {
       // Insert new subscription
-      const { data: insertedData, error: insertError } = await supabaseClient
+      const { data: insertedData, error: insertError } = await supabaseAdmin
         .from('subscriptions')
         .insert(subscriptionData)
         .select();
