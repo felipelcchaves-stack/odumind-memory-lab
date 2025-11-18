@@ -491,11 +491,11 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
               </div>
             </div>
             <ReactQuill
-              key={`texto-${oduId}`}
+              key={`texto-${oduId || 'new'}`}
               ref={textoQuillRef}
               theme="snow"
               className="min-h-[200px] border border-input rounded-md"
-              value={formData.texto_principal}
+              value={formData.texto_principal || ''}
               onChange={(value) => {
                 const sanitized = sanitizeQuillHtml(value);
                 setFormData({ ...formData, texto_principal: sanitized });
@@ -543,11 +543,11 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
               </div>
             </div>
             <ReactQuill
-              key={`verso-${oduId}`}
+              key={`verso-${oduId || 'new'}`}
               ref={versoQuillRef}
               theme="snow"
               className="min-h-[200px] border border-input rounded-md"
-              value={formData.verso}
+              value={formData.verso || ''}
               onChange={(value) => {
                 const sanitized = sanitizeQuillHtml(value);
                 setFormData({ ...formData, verso: sanitized });
@@ -613,10 +613,10 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
               </div>
             </div>
             <ReactQuill
-              key={`significado-${oduId}`}
+              key={`significado-${oduId || 'new'}`}
               ref={significadoQuillRef}
               theme="snow"
-              value={formData.significado}
+              value={formData.significado || ''}
               onChange={(value) => {
                 const sanitized = sanitizeQuillHtml(value);
                 setFormData({ ...formData, significado: sanitized });
@@ -655,10 +655,10 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
               </div>
             </div>
             <ReactQuill
-              key={`exemplos-${oduId}`}
+              key={`exemplos-${oduId || 'new'}`}
               ref={exemplosQuillRef}
               theme="snow"
-              value={formData.exemplos_praticos}
+              value={formData.exemplos_praticos || ''}
               onChange={(value) => {
                 const sanitized = sanitizeQuillHtml(value);
                 setFormData({ ...formData, exemplos_praticos: sanitized });
