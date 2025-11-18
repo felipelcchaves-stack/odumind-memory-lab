@@ -14,31 +14,33 @@ serve(async (req) => {
   try {
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (!LOVABLE_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    if (!LOVABLE_API_KEY || !SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
       throw new Error('Missing required environment variables');
     }
 
-    // Criar cliente Supabase com service role
-    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    });
-
-    // Validar JWT do usuário
+    // Validar JWT do usuário com ANON_KEY
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('No authorization header');
       return new Response(JSON.stringify({ error: 'No authorization header' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+    // Cliente para validar o usuário (usa ANON_KEY com o token do usuário)
+    const supabaseUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: {
+        headers: {
+          Authorization: authHeader
+        }
+      }
+    });
+
+    const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
 
     if (authError || !user) {
       console.error('Auth error:', authError);
@@ -48,8 +50,16 @@ serve(async (req) => {
       });
     }
 
+    // Cliente admin para operações no banco (usa SERVICE_ROLE_KEY)
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+
     // Verificar se usuário é admin ou colaborador
-    const { data: hasPermission } = await supabaseClient.rpc('has_colaborador_role', {
+    const { data: hasPermission } = await supabaseAdmin.rpc('has_colaborador_role', {
       _user_id: user.id
     });
 
@@ -69,7 +79,7 @@ serve(async (req) => {
 
     if (batchMode) {
       // Buscar todos os Odus sem verso_resumido
-      const { data: odus, error: fetchError } = await supabaseClient
+      const { data: odus, error: fetchError } = await supabaseAdmin
         .from('odu')
         .select('id, numero, nome, texto_principal, verso, significado')
         .or('verso_resumido.is.null,verso_resumido.eq.')
@@ -84,7 +94,7 @@ serve(async (req) => {
       console.log(`Found ${odusToProcess.length} odus to process`);
     } else {
       // Processar apenas um Odu específico
-      const { data: odu, error: fetchError } = await supabaseClient
+      const { data: odu, error: fetchError } = await supabaseAdmin
         .from('odu')
         .select('id, numero, nome, texto_principal, verso, significado')
         .eq('id', oduId)
@@ -203,7 +213,7 @@ Retorne APENAS o verso resumido, sem aspas, sem explicações adicionais.`;
         console.log(`Generated verse for #${odu.numero}: "${versoResumido}"`);
 
         // Atualizar o Odu
-        const { error: updateError } = await supabaseClient
+        const { error: updateError } = await supabaseAdmin
           .from('odu')
           .update({ verso_resumido: versoResumido })
           .eq('id', odu.id);
