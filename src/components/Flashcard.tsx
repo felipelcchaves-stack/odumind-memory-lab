@@ -7,6 +7,7 @@ import { RotateCcw, Sparkles } from "lucide-react";
 import MemorizationStatusBadge from "@/components/MemorizationStatusBadge";
 import MilestoneCelebration from "@/components/MilestoneCelebration";
 import useMilestoneDetection from "@/hooks/useMilestoneDetection";
+import { SafeHtmlRenderer } from "@/components/SafeHtmlRenderer";
 
 interface FlashcardProps {
   numero: number;
@@ -172,19 +173,19 @@ const Flashcard = memo(function Flashcard({
 
               <div>
                 <h4 className="font-semibold mb-2">Texto Principal:</h4>
-                <div 
-                  className="text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ __html: texto }}
-                />
+              <SafeHtmlRenderer
+                html={texto}
+                className="text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none"
+              />
               </div>
 
               {verso && (
                 <div>
                   <h4 className="font-semibold mb-2">Verso Completo:</h4>
-                  <blockquote 
-                    className="border-l-4 border-primary pl-4 italic text-muted-foreground prose prose-sm dark:prose-invert"
-                    dangerouslySetInnerHTML={{ __html: verso }}
-                  />
+              <SafeHtmlRenderer
+                html={verso}
+                className="border-l-4 border-primary pl-4 italic text-muted-foreground prose prose-sm dark:prose-invert"
+              />
                 </div>
               )}
 
