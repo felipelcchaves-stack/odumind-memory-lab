@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Home, MapPin, Plus, Loader2, ArrowLeft, Lightbulb } from "lucide-react";
+import { Home, MapPin, Plus, Loader2, ArrowLeft, Lightbulb, GraduationCap, Briefcase } from "lucide-react";
 import { ProtectedContent } from "@/components/ProtectedContent";
 import { getAllTemplates, getTemplateById, type PalaceTemplate } from "@/lib/memoryPalaceTemplates";
 
@@ -154,6 +154,28 @@ export default function MemoryPalace() {
     return palaceData.find(p => p.sala === sala && p.posicao === posicao);
   };
 
+  const getSalaName = (sala: number): string => {
+    if (!currentTemplate) return `Sala ${sala}`;
+    const salaConfig = currentTemplate.salas[sala];
+    return salaConfig ? salaConfig.nome : `Sala ${sala}`;
+  };
+
+  const getPositionName = (sala: number, posicao: number): string => {
+    if (!currentTemplate) return `Posição ${posicao}`;
+    const salaConfig = currentTemplate.salas[sala];
+    if (!salaConfig) return `Posição ${posicao}`;
+    const posConfig = salaConfig.posicoes[posicao];
+    return posConfig ? posConfig.nome : `Posição ${posicao}`;
+  };
+
+  const getPositionHint = (sala: number, posicao: number): string => {
+    if (!currentTemplate) return "";
+    const salaConfig = currentTemplate.salas[sala];
+    if (!salaConfig) return "";
+    const posConfig = salaConfig.posicoes[posicao];
+    return posConfig ? posConfig.dica : "";
+  };
+
   const usedOduIds = palaceData.map(p => p.odu_id);
   const availableOdus = allOdus.filter(odu => !usedOduIds.includes(odu.id));
 
@@ -186,6 +208,44 @@ export default function MemoryPalace() {
           </div>
         </div>
 
+        {/* Template Selector */}
+        <Card>
+          <CardContent className="pt-6">
+            <Label className="text-lg font-semibold mb-4 block">Escolha seu Template de Palácio</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {templates.map(template => {
+                const iconMap: Record<string, typeof Home> = {
+                  Home: Home,
+                  MapPin: MapPin,
+                  GraduationCap: GraduationCap,
+                  Briefcase: Briefcase
+                };
+                const Icon = iconMap[template.icon] || Home;
+                return (
+                  <Card
+                    key={template.id} 
+                    className={`cursor-pointer transition-all hover:shadow-md ${
+                      selectedTemplate === template.id ? "border-primary border-2 bg-primary/5" : "hover:border-primary/50"
+                    }`}
+                    onClick={() => handleTemplateChange(template.id)}
+                  >
+                    <CardContent className="pt-6 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Icon className="h-5 w-5 text-primary" />
+                        <h3 className="font-semibold">{template.nome}</h3>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{template.descricao}</p>
+                      {selectedTemplate === template.id && (
+                        <Badge className="w-full justify-center">Selecionado</Badge>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Room selector */}
         <Card>
           <CardContent className="pt-6">
@@ -198,7 +258,7 @@ export default function MemoryPalace() {
                 <SelectContent>
                   {Array.from({ length: 16 }, (_, i) => i + 1).map(num => (
                     <SelectItem key={num} value={String(num)}>
-                      Sala {num}
+                      {getSalaName(num)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -226,7 +286,7 @@ export default function MemoryPalace() {
                   <div className="flex items-center justify-between">
                     <Badge variant="outline">
                       <MapPin className="h-3 w-3 mr-1" />
-                      Posição {posicao}
+                      {getPositionName(selectedSala, posicao)}
                     </Badge>
                     {posData && (
                       <Button
@@ -252,8 +312,16 @@ export default function MemoryPalace() {
                       )}
                     </div>
                   ) : (
-                    <div className="flex items-center justify-center h-20 text-muted-foreground">
-                      <Plus className="h-8 w-8" />
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-center h-12 text-muted-foreground">
+                        <Plus className="h-8 w-8" />
+                      </div>
+                      {getPositionHint(selectedSala, posicao) && (
+                        <div className="flex items-start gap-1 p-2 bg-muted/50 rounded text-xs">
+                          <Lightbulb className="h-3 w-3 mt-0.5 flex-shrink-0 text-amber-500" />
+                          <span className="text-muted-foreground">{getPositionHint(selectedSala, posicao)}</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </CardContent>
@@ -267,8 +335,17 @@ export default function MemoryPalace() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                Adicionar Odu - Sala {selectedPosition?.sala}, Posição {selectedPosition?.posicao}
+                Adicionar Odu - {getSalaName(selectedPosition?.sala || 1)}
               </DialogTitle>
+              <p className="text-sm text-muted-foreground pt-2">
+                <strong>{getPositionName(selectedPosition?.sala || 1, selectedPosition?.posicao || 1)}</strong>
+                {getPositionHint(selectedPosition?.sala || 1, selectedPosition?.posicao || 1) && (
+                  <span className="flex items-center gap-1 mt-1 text-amber-600">
+                    <Lightbulb className="h-3 w-3" />
+                    {getPositionHint(selectedPosition?.sala || 1, selectedPosition?.posicao || 1)}
+                  </span>
+                )}
+              </p>
             </DialogHeader>
             <div className="space-y-4">
               <div>

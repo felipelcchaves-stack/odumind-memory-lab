@@ -22,7 +22,7 @@ export const PALACE_TEMPLATES: Record<string, PalaceTemplate> = {
     id: "casa",
     nome: "Casa",
     descricao: "Use os cômodos da sua casa para organizar os Odus",
-    icon: "🏠",
+    icon: "Home",
     salas: {
       1: {
         nome: "Sala de Estar",
@@ -118,7 +118,7 @@ export const PALACE_TEMPLATES: Record<string, PalaceTemplate> = {
     id: "rua",
     nome: "Rua",
     descricao: "Use o caminho que você percorre diariamente",
-    icon: "🛣️",
+    icon: "MapPin",
     salas: {
       1: {
         nome: "Início da Rua",
@@ -214,7 +214,7 @@ export const PALACE_TEMPLATES: Record<string, PalaceTemplate> = {
     id: "escola",
     nome: "Escola",
     descricao: "Use os ambientes da escola para memorizar",
-    icon: "🎓",
+    icon: "GraduationCap",
     salas: {
       1: {
         nome: "Sala de Aula",
@@ -310,7 +310,7 @@ export const PALACE_TEMPLATES: Record<string, PalaceTemplate> = {
     id: "trabalho",
     nome: "Trabalho",
     descricao: "Use seu ambiente profissional",
-    icon: "💼",
+    icon: "Briefcase",
     salas: {
       1: {
         nome: "Recepção",
