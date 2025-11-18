@@ -101,6 +101,18 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
     }
   }, [oduId]);
 
+  // Previne HTML escapado ao carregar do banco
+  const unescapeHtml = (html: string): string => {
+    if (!html) return html;
+    
+    return html
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#039;/g, "'");
+  };
+
   async function loadOdu() {
     if (!oduId || oduId === 'new') return;
 
@@ -116,13 +128,13 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
       setFormData({
         numero: data.numero.toString(),
         nome: data.nome,
-        texto_principal: data.texto_principal,
-        verso: data.verso || '',
+        texto_principal: unescapeHtml(data.texto_principal || ''),
+        verso: unescapeHtml(data.verso || ''),
         verso_resumido: data.verso_resumido || '',
-        significado: data.significado || '',
-        exemplos_praticos: data.exemplos_praticos || '',
+        significado: unescapeHtml(data.significado || ''),
+        exemplos_praticos: unescapeHtml(data.exemplos_praticos || ''),
         tags: data.tags || [],
-        contexto_historico: data.contexto_historico || '',
+        contexto_historico: unescapeHtml(data.contexto_historico || ''),
         personagens: data.personagens || '',
         tema_principal: data.tema_principal || '',
         tema_secundario: data.tema_secundario || '',
