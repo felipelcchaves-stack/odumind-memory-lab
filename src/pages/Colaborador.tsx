@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import OduEditor from '@/components/admin/OduEditor';
 import OduList from '@/components/admin/OduList';
 import BulkUpload from '@/components/admin/BulkUpload';
+import VersoResumidoGenerator from '@/components/admin/VersoResumidoGenerator';
 import DashboardHeader from '@/components/DashboardHeader';
 
 export default function Colaborador() {
@@ -145,20 +146,26 @@ export default function Colaborador() {
             </CardContent>
           </Card>
         ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>Lista de Odu</CardTitle>
-              <CardDescription>
-                Visualize e edite os Odu cadastrados
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <OduList
-                onEdit={handleEditOdu}
-                refreshTrigger={refreshTrigger}
-              />
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            {/* Gerador de Versos com IA */}
+            <VersoResumidoGenerator />
+            
+            {/* Lista de Odus */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Lista de Odu</CardTitle>
+                <CardDescription>
+                  Visualize e edite os Odu cadastrados
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <OduList
+                  onEdit={handleEditOdu}
+                  refreshTrigger={refreshTrigger}
+                />
+              </CardContent>
+            </Card>
+          </div>
         )}
       </main>
     </div>
