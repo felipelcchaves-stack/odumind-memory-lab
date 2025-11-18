@@ -84,8 +84,8 @@ export default function DashboardHeader() {
             </Button>
           )}
 
-          {/* Colaborador Link - Only show for colaboradores who are not admins */}
-          {isColaborador && !isAdmin && (
+          {/* Colaborador Link - Show for colaboradores AND admins */}
+          {isColaborador && (
             <Button
               variant={isActive('/colaborador') ? 'default' : 'ghost'}
               size="sm"
@@ -174,7 +174,7 @@ export default function DashboardHeader() {
                   </DropdownMenuItem>
                 </>
               )}
-              {isColaborador && !isAdmin && (
+              {isColaborador && (
                 <DropdownMenuItem onClick={() => navigate('/colaborador')}>
                   <Edit className="mr-2 h-4 w-4" />
                   Editar Odu
