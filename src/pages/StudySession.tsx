@@ -40,6 +40,7 @@ interface Odu {
   nome: string;
   texto_principal: string;
   verso: string | null;
+  verso_resumido: string | null;
   significado: string | null;
 }
 
@@ -58,7 +59,11 @@ interface QuizQuestion {
   nome: string;
   correctAnswer: string;
   options: string[];
-  type: "nome" | "numero";
+  type: "nome" | "numero" | "verso_para_nome" | "nome_para_verso" | "verso_para_significado";
+  versoResumido?: string;
+  significado?: string;
+  context?: string;
+  explanation?: string;
 }
 
 interface SessionStats {
@@ -669,16 +674,81 @@ export default function StudySession() {
       return null;
     }
     
-    const type: "nome" | "numero" = Math.random() > 0.5 ? "nome" : "numero";
+    // Determinar tipo de quiz baseado no progresso (número de revisões)
+    const revisoes = currentMemorizationData.revisoes || 0;
+    
+    // Nível 1 (0-3 revisões): Foco em significado e versos
+    // Nível 2 (4-6 revisões): Foco em versos e aplicação
+    // Nível 3 (7+ revisões): Foco em múltiplas características
+    
+    let availableTypes: Array<"verso_para_nome" | "nome_para_verso" | "verso_para_significado" | "nome" | "numero"> = [];
+    
+    if (currentOdu.verso_resumido) {
+      if (revisoes < 4) {
+        // Iniciante: Verso → Nome (50%), Nome → Verso (30%), Nome básico (20%)
+        availableTypes = ["verso_para_nome", "verso_para_nome", "verso_para_nome", "nome_para_verso", "nome_para_verso", "nome"];
+      } else if (revisoes < 7) {
+        // Intermediário: Nome → Verso (40%), Verso → Nome (30%), Verso → Significado (30%)
+        availableTypes = ["nome_para_verso", "nome_para_verso", "verso_para_nome", "verso_para_nome", "verso_para_significado", "verso_para_significado"];
+      } else {
+        // Avançado: Verso → Significado (50%), Verso → Nome (30%), Nome → Verso (20%)
+        availableTypes = ["verso_para_significado", "verso_para_significado", "verso_para_significado", "verso_para_nome", "verso_para_nome", "nome_para_verso"];
+      }
+    } else {
+      // Fallback: usar quizzes simples se não há verso_resumido
+      availableTypes = ["nome", "numero"];
+    }
+    
+    const type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
     
     // Get wrong answers
     const otherOdus = availableOdus.filter((o) => o.id !== currentOdu.id);
-    const wrongAnswers = otherOdus
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 3)
-      .map((o) => (type === "nome" ? o.nome : `#${o.numero}`));
+    
+    let correctAnswer = "";
+    let wrongAnswers: string[] = [];
+    let context = "";
+    let explanation = "";
+    
+    if (type === "verso_para_nome") {
+      // Pergunta: Dado o verso, qual é o nome do Odu?
+      correctAnswer = currentOdu.nome;
+      wrongAnswers = otherOdus
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3)
+        .map((o) => o.nome);
+      explanation = `${currentOdu.nome} representa: ${currentOdu.significado || 'este conceito'}`;
+    } else if (type === "nome_para_verso") {
+      // Pergunta: Dado o nome, qual é o verso?
+      correctAnswer = currentOdu.verso_resumido || "";
+      wrongAnswers = otherOdus
+        .filter(o => o.verso_resumido)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3)
+        .map((o) => o.verso_resumido || "");
+      explanation = `Este verso representa a essência de ${currentOdu.nome}`;
+    } else if (type === "verso_para_significado") {
+      // Pergunta: Dado o verso, qual é o significado?
+      correctAnswer = currentOdu.significado || currentOdu.nome;
+      wrongAnswers = otherOdus
+        .filter(o => o.significado)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3)
+        .map((o) => o.significado || o.nome);
+      explanation = `O Odu ${currentOdu.nome} representa este conceito`;
+    } else if (type === "nome") {
+      correctAnswer = currentOdu.nome;
+      wrongAnswers = otherOdus
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3)
+        .map((o) => o.nome);
+    } else {
+      correctAnswer = `#${currentOdu.numero}`;
+      wrongAnswers = otherOdus
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3)
+        .map((o) => `#${o.numero}`);
+    }
 
-    const correctAnswer = type === "nome" ? currentOdu.nome : `#${currentOdu.numero}`;
     const options = [correctAnswer, ...wrongAnswers].sort(() => Math.random() - 0.5);
 
     return {
@@ -688,8 +758,12 @@ export default function StudySession() {
       correctAnswer,
       options,
       type,
+      versoResumido: currentOdu.verso_resumido || undefined,
+      significado: currentOdu.significado || undefined,
+      context,
+      explanation,
     };
-  }, [availableOdus, currentOdu, mode]);
+  }, [availableOdus, currentOdu, mode, currentMemorizationData]);
 
   // Format duration
   const formatDuration = (ms: number) => {
@@ -1064,6 +1138,7 @@ export default function StudySession() {
             nome={currentOdu.nome}
             texto={currentOdu.texto_principal}
             verso={currentOdu.verso}
+            versoResumido={currentOdu.verso_resumido}
             onRate={handleFlashcardRate}
             currentRevisoes={currentMemorizationData.revisoes}
             currentStrength={currentMemorizationData.forca_memoria}

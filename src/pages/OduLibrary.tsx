@@ -17,6 +17,7 @@ interface Odu {
   nome: string;
   texto_principal: string;
   verso: string | null;
+  verso_resumido: string | null;
   significado: string | null;
   exemplos_praticos: string | null;
   tags: string[] | null;
@@ -154,6 +155,11 @@ export default function OduLibrary() {
                     {odu.nome}
                     {isLocked && <Lock className="h-5 w-5 text-muted-foreground" />}
                   </CardTitle>
+                  {odu.verso_resumido && !isLocked && (
+                    <CardDescription className="italic text-sm mb-2">
+                      💬 "{odu.verso_resumido}"
+                    </CardDescription>
+                  )}
                   <CardDescription className="line-clamp-2">
                     {isLocked ? 'Conteúdo bloqueado. Faça upgrade para acessar.' : odu.texto_principal}
                   </CardDescription>

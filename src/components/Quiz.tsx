@@ -10,7 +10,11 @@ interface QuizQuestion {
   nome: string;
   correctAnswer: string;
   options: string[];
-  type: "nome" | "numero";
+  type: "nome" | "numero" | "verso_para_nome" | "nome_para_verso" | "verso_para_significado";
+  versoResumido?: string;
+  significado?: string;
+  context?: string;
+  explanation?: string;
 }
 
 interface QuizProps {
@@ -51,9 +55,22 @@ const Quiz = memo(function Quiz({ question, onAnswer }: QuizProps) {
           <CardTitle className="text-2xl">
             {question.type === "nome" ? (
               <>Qual é o nome do Odu #{question.numero}?</>
-            ) : (
+            ) : question.type === "numero" ? (
               <>Qual é o número do Odu {question.nome}?</>
-            )}
+            ) : question.type === "verso_para_nome" ? (
+              <>
+                <div className="mb-2 text-base font-normal text-muted-foreground">Qual Odu diz:</div>
+                <div className="text-lg italic">"{question.versoResumido}"</div>
+              </>
+            ) : question.type === "nome_para_verso" ? (
+              <>Qual é o verso de {question.nome}?</>
+            ) : question.type === "verso_para_significado" ? (
+              <>
+                <div className="mb-2 text-base font-normal text-muted-foreground">O verso:</div>
+                <div className="text-lg italic mb-3">"{question.versoResumido}"</div>
+                <div className="text-base font-normal">representa qual significado?</div>
+              </>
+            ) : null}
           </CardTitle>
         </CardHeader>
 
@@ -108,6 +125,11 @@ const Quiz = memo(function Quiz({ question, onAnswer }: QuizProps) {
                   </span>
                 )}
               </p>
+              {question.explanation && (
+                <p className="text-center text-xs mt-2 text-muted-foreground">
+                  {question.explanation}
+                </p>
+              )}
             </div>
           )}
         </CardContent>
