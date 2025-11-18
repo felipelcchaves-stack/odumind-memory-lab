@@ -157,15 +157,19 @@ const Flashcard = memo(function Flashcard({
 
               <div>
                 <h4 className="font-semibold mb-2">Texto Principal:</h4>
-                <p className="text-foreground leading-relaxed">{texto}</p>
+                <div 
+                  className="text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none"
+                  dangerouslySetInnerHTML={{ __html: texto }}
+                />
               </div>
 
               {verso && (
                 <div>
                   <h4 className="font-semibold mb-2">Verso Completo:</h4>
-                  <blockquote className="border-l-4 border-primary pl-4 italic text-muted-foreground">
-                    {verso}
-                  </blockquote>
+                  <blockquote 
+                    className="border-l-4 border-primary pl-4 italic text-muted-foreground prose prose-sm dark:prose-invert"
+                    dangerouslySetInnerHTML={{ __html: verso }}
+                  />
                 </div>
               )}
 
