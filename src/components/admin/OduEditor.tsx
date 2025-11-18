@@ -507,19 +507,7 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
                   ['clean'],
                 ],
                 clipboard: {
-                  matchVisual: false,
-                  matchers: [
-                    // Limpa HTML do Google Docs automaticamente ao colar
-                    ['*', (node: any, delta: any) => {
-                      if (node.outerHTML) {
-                        const cleanedHtml = sanitizeQuillHtml(node.outerHTML);
-                        const tempDiv = document.createElement('div');
-                        tempDiv.innerHTML = cleanedHtml;
-                        return delta;
-                      }
-                      return delta;
-                    }]
-                  ]
+                  matchVisual: false
                 },
               }}
             />
@@ -559,18 +547,7 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
                   ['clean'],
                 ],
                 clipboard: {
-                  matchVisual: false,
-                  matchers: [
-                    ['*', (node: any, delta: any) => {
-                      if (node.outerHTML) {
-                        const cleanedHtml = sanitizeQuillHtml(node.outerHTML);
-                        const tempDiv = document.createElement('div');
-                        tempDiv.innerHTML = cleanedHtml;
-                        return delta;
-                      }
-                      return delta;
-                    }]
-                  ]
+                  matchVisual: false
                 },
               }}
             />
@@ -623,57 +600,7 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
               }}
               modules={{
                 clipboard: {
-                  matchVisual: false,
-                  matchers: [
-                    ['*', (node: any, delta: any) => {
-                      if (node.outerHTML) {
-                        sanitizeQuillHtml(node.outerHTML);
-                      }
-                      return delta;
-                    }]
-                  ]
-                },
-              }}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="exemplos_praticos">Exemplos Práticos</Label>
-              <div className="flex items-center gap-2">
-                <ImageUploader onImageUploaded={(url) => insertImageToEditor(exemplosQuillRef, url)} />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => clearFieldFormatting('exemplos_praticos')}
-                  className="h-8 text-xs"
-                >
-                  <Eraser className="h-3 w-3 mr-1" />
-                  Limpar Formatação
-                </Button>
-              </div>
-            </div>
-            <ReactQuill
-              key={`exemplos-${oduId || 'new'}`}
-              ref={exemplosQuillRef}
-              theme="snow"
-              value={formData.exemplos_praticos || ''}
-              onChange={(value) => {
-                const sanitized = sanitizeQuillHtml(value);
-                setFormData({ ...formData, exemplos_praticos: sanitized });
-              }}
-              modules={{
-                clipboard: {
-                  matchVisual: false,
-                  matchers: [
-                    ['*', (node: any, delta: any) => {
-                      if (node.outerHTML) {
-                        sanitizeQuillHtml(node.outerHTML);
-                      }
-                      return delta;
-                    }]
-                  ]
+                  matchVisual: false
                 },
               }}
             />
