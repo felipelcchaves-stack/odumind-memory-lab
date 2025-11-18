@@ -62,6 +62,7 @@ serve(async (req) => {
     // Calculate total weekly study time
     const totalMinutosSemanais = schedule.reduce((acc, s) => acc + s.duracao_minutos, 0);
     const sessoesSemanais = schedule.length;
+    const duracaoMediaSessao = Math.round(totalMinutosSemanais / sessoesSemanais);
 
     // Build AI prompt
     const systemPrompt = `Você é um especialista em planejamento de estudos e memorização, especializado no método de repetição espaçada para os 256 Odu de Ifá.
@@ -76,6 +77,8 @@ REGRAS IMPORTANTES:
 5. Seja realista: não sobrecarregue o aluno
 6. Priorize consistência sobre intensidade
 7. Reserve tempo para revisões de Odus já memorizados
+8. Use as durações EXATAS dos horários configurados pelo usuário
+9. Não reduza as sessões para menos tempo do que o usuário disponibilizou
 
 FORMATO DE RESPOSTA (JSON):
 {
@@ -103,9 +106,9 @@ PERFIL DE APRENDIZAGEM:
 - Aprendiz rápido: ${profile?.fast_learner ? 'Sim' : 'Não'}
 - Precisa de reforço: ${profile?.needs_reinforcement ? 'Sim' : 'Não'}
 - Acurácia média: ${profile?.average_accuracy || 0}%
-- Tempo ideal de sessão: ${profile?.optimal_session_time || 20} minutos
 
 DISPONIBILIDADE SEMANAL:
+Duração média das sessões: ${duracaoMediaSessao} minutos
 Total de minutos por semana: ${totalMinutosSemanais}
 Sessões por semana: ${sessoesSemanais}
 Horários disponíveis:
