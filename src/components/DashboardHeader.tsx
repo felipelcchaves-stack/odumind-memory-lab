@@ -67,38 +67,6 @@ export default function DashboardHeader() {
           )}
         </Button>
       ))}
-
-          {/* Admin Link */}
-          {isAdmin && (
-            <Button
-              variant={isActive('/admin') ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => navigate('/admin')}
-              className="gap-2"
-            >
-              <Shield className="h-4 w-4" />
-              <span className="hidden sm:inline">Admin</span>
-              <Badge variant="secondary" className="ml-1 hidden lg:inline-flex">
-                Admin
-              </Badge>
-            </Button>
-          )}
-
-          {/* Colaborador Link - Show for colaboradores AND admins */}
-          {isColaborador && (
-            <Button
-              variant={isActive('/colaborador') ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => navigate('/colaborador')}
-              className="gap-2"
-            >
-              <Edit className="h-4 w-4" />
-              <span className="hidden sm:inline">Editar Odu</span>
-              <Badge variant="secondary" className="ml-1 hidden lg:inline-flex">
-                Colaborador
-              </Badge>
-            </Button>
-          )}
         </nav>
 
         {/* User Menu */}

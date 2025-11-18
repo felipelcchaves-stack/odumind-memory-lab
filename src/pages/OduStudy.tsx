@@ -13,6 +13,7 @@ import { ElaborativeEncoding } from "@/components/ElaborativeEncoding";
 import { PersonalNotes } from "@/components/PersonalNotes";
 import { useSubscription } from "@/hooks/useSubscription";
 import { ProtectedContent } from "@/components/ProtectedContent";
+import DashboardHeader from "@/components/DashboardHeader";
 
 interface Odu {
   id: string;
@@ -158,6 +159,7 @@ export default function OduStudy() {
   return (
     <ProtectedContent>
       <div className="min-h-screen bg-background">
+        <DashboardHeader />
         <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Header */}
         <div className="mb-8">
