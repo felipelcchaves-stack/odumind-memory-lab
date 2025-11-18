@@ -67,6 +67,15 @@ export default function Dashboard() {
   const hasScheduledNotifications = useRef(false);
   const { showModal, latestChangelog, markAsViewed, setShowModal } = useChangelog();
 
+  // Debug log para changelog
+  useEffect(() => {
+    console.log('[Dashboard] Estado do changelog:', { 
+      showModal, 
+      hasChangelog: !!latestChangelog,
+      version: latestChangelog?.version
+    });
+  }, [showModal, latestChangelog]);
+
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');

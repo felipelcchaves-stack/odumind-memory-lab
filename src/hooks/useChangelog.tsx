@@ -25,15 +25,18 @@ export const useChangelog = () => {
   const { user, session } = useAuth();
 
   useEffect(() => {
-    if (user && session) {
+    if (user) {
+      console.log('[Changelog] Usuário detectado, verificando novidades...');
       checkForNewChangelog();
     }
-  }, [user, session?.access_token]);
+  }, [user]);
 
   const checkForNewChangelog = async () => {
     if (!user) return;
 
     try {
+      console.log('[Changelog] Buscando última versão...');
+      
       // 1. Buscar última versão do changelog em destaque
       const { data: latestVersion, error: changelogError } = await supabase
         .from('changelog')
@@ -44,9 +47,11 @@ export const useChangelog = () => {
         .single();
 
       if (changelogError || !latestVersion) {
-        console.log('No changelog found or error:', changelogError);
+        console.log('[Changelog] Nenhum changelog encontrado ou erro:', changelogError);
         return;
       }
+
+      console.log('[Changelog] Versão encontrada:', latestVersion.version);
 
       // 2. Verificar se usuário já viu essa versão
       const { data: profile, error: profileError } = await supabase
@@ -56,21 +61,26 @@ export const useChangelog = () => {
         .single();
 
       if (profileError) {
-        console.error('Error fetching profile:', profileError);
+        console.error('[Changelog] Erro ao buscar perfil:', profileError);
         return;
       }
 
+      console.log('[Changelog] Última versão vista pelo usuário:', profile?.last_viewed_changelog);
+
       // 3. Se não viu, mostrar modal e marcar como não lido
       if (profile?.last_viewed_changelog !== latestVersion.version) {
+        console.log('[Changelog] Nova versão detectada! Abrindo modal...');
         setLatestChangelog({
           ...latestVersion,
           items: latestVersion.items as unknown as ChangelogItem[]
         } as ChangelogVersion);
         setShowModal(true);
         setHasUnreadChangelog(true);
+      } else {
+        console.log('[Changelog] Usuário já viu esta versão.');
       }
     } catch (error) {
-      console.error('Error checking changelog:', error);
+      console.error('[Changelog] Erro ao verificar changelog:', error);
     }
   };
 

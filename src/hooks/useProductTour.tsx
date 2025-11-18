@@ -198,6 +198,7 @@ export function useProductTour() {
     }
     
     try {
+      console.log('[ProductTour] Resetando tour...');
       toast.loading('Reiniciando tour...', { id: 'reset-tour' });
       
       const { error } = await supabase
@@ -208,17 +209,25 @@ export function useProductTour() {
 
       if (error) throw error;
 
+      console.log('[ProductTour] Tour resetado, atualizando estado local...');
       toast.success('Tour reiniciado! Começando...', { id: 'reset-tour' });
       
-      // Dar um pequeno delay para o toast aparecer
+      // Atualizar estado local imediatamente
+      setTourCompleted(false);
+      setStepIndex(0);
+      setRun(false); // Primeiro false
+      
+      // Dar tempo para o estado atualizar, depois ativar
       setTimeout(() => {
-        startTour();
+        console.log('[ProductTour] Iniciando tour...');
+        setRun(true);
+        navigate('/dashboard');
       }, 500);
     } catch (error) {
-      console.error('Error resetting tour:', error);
+      console.error('[ProductTour] Erro ao resetar tour:', error);
       toast.error('Erro ao reiniciar tour', { id: 'reset-tour' });
     }
-  }, [user, startTour]);
+  }, [user, navigate]);
 
   // Skip tour
   const skipTour = useCallback(() => {
