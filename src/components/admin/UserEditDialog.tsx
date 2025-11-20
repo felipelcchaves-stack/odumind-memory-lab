@@ -315,7 +315,7 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isCreate ? 'Criar Novo Usuário' : 'Editar Perfil do Usuário'}</DialogTitle>
           <DialogDescription>
@@ -331,7 +331,7 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="space-y-6 py-4">
+          <div className="space-y-4 py-4 px-1">
             {/* Avatar Section */}
             <div className="flex flex-col items-center gap-4">
               <Avatar className="h-24 w-24">
