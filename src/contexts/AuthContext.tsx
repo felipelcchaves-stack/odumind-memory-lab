@@ -80,6 +80,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data: sessionData, error: sessionError } = await supabase.functions.invoke(
           'enforce-single-session',
           {
+            headers: {
+              Authorization: `Bearer ${data.session.access_token}`,
+            },
             body: {
               device_info: deviceInfo,
               ip_address: null, // Will be detected server-side
