@@ -168,6 +168,12 @@ serve(async (req) => {
         const oneYearFromNow = new Date();
         oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
 
+        logStep("Attempting upsert to subscriptions table", { 
+          userId, 
+          planName: newPlan, 
+          type: 'complimentary' 
+        });
+
         const { error: updateError } = await supabaseClient
           .from('subscriptions')
           .upsert({
@@ -180,6 +186,8 @@ serve(async (req) => {
             current_period_start: new Date().toISOString(),
             current_period_end: oneYearFromNow.toISOString(),
             cancel_at_period_end: false
+          }, {
+            onConflict: 'user_id'
           });
 
         if (updateError) throw updateError;
@@ -216,6 +224,13 @@ serve(async (req) => {
           priceId: priceId
         };
 
+        logStep("Attempting upsert to subscriptions table", { 
+          userId, 
+          planName: newPlan, 
+          stripeSubscriptionId: newStripeSubId,
+          type: 'paid' 
+        });
+
         // Atualizar tabela subscriptions
         const { error: updateError } = await supabaseClient
           .from('subscriptions')
@@ -229,6 +244,8 @@ serve(async (req) => {
             current_period_start: new Date(newSubscription.current_period_start * 1000).toISOString(),
             current_period_end: new Date(newSubscription.current_period_end * 1000).toISOString(),
             cancel_at_period_end: false
+          }, {
+            onConflict: 'user_id'
           });
 
         if (updateError) throw updateError;
@@ -236,6 +253,12 @@ serve(async (req) => {
       }
     } else {
       // Downgrade para Free
+      logStep("Attempting upsert to subscriptions table", { 
+        userId, 
+        planName: 'Gratuito', 
+        type: 'downgrade' 
+      });
+
       const { error: updateError } = await supabaseClient
         .from('subscriptions')
         .upsert({
@@ -248,6 +271,8 @@ serve(async (req) => {
           current_period_start: null,
           current_period_end: null,
           cancel_at_period_end: false
+        }, {
+          onConflict: 'user_id'
         });
 
       if (updateError) throw updateError;
@@ -295,12 +320,31 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR", { message: errorMessage });
+    let errorMessage: string;
+    
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (error && typeof error === 'object' && 'message' in error) {
+      // PostgrestError do Supabase
+      errorMessage = String(error.message);
+    } else if (error && typeof error === 'object' && 'error' in error) {
+      // Alguns erros do Supabase usam a propriedade 'error'
+      errorMessage = String((error as any).error);
+    } else {
+      errorMessage = JSON.stringify(error);
+    }
+    
+    logStep("ERROR", { 
+      message: errorMessage,
+      errorType: error?.constructor?.name,
+      fullError: error 
+    });
+    
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: errorMessage 
+        error: errorMessage,
+        details: error
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
