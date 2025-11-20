@@ -112,6 +112,17 @@ serve(async (req) => {
       logStep("No current subscription found, will create new one");
     } else {
       logStep("Current subscription", { plan: currentSub.plan_name, status: currentSub.status });
+      
+      // ✅ NOVO: Detectar tentativa de mudar para o mesmo plano
+      const normalizedCurrent = normalizePlanName(currentSub.plan_name);
+      const normalizedNew = normalizePlanName(newPlan);
+      
+      if (normalizedCurrent === normalizedNew && currentSub.status === 'active') {
+        logStep("WARNING: Attempting to change to the same plan", { 
+          current: normalizedCurrent, 
+          new: normalizedNew 
+        });
+      }
     }
 
     // Inicializar Stripe
