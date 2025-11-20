@@ -45,14 +45,14 @@ function AppContent() {
     <>
       <Toaster />
       <Sonner />
-      <ReferralWelcomeModal />
-      <ChangelogModal 
-        open={showModal}
-        onClose={markAsViewed}
-        changelog={latestChangelog}
-        onMarkAsViewed={markAsViewed}
-      />
       <BrowserRouter>
+        <ReferralWelcomeModal />
+        <ChangelogModal 
+          open={showModal}
+          onClose={markAsViewed}
+          changelog={latestChangelog}
+          onMarkAsViewed={markAsViewed}
+        />
         <SessionValidator />
         <Routes>
           <Route path="/" element={<Index />} />
