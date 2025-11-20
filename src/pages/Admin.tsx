@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Upload, Users, BarChart3 } from 'lucide-react';
+import { Plus, Upload, Users, BarChart3, History } from 'lucide-react';
 import { toast } from 'sonner';
 import OduEditor from '@/components/admin/OduEditor';
 import OduList from '@/components/admin/OduList';
@@ -17,6 +17,7 @@ import HtmlCleanupTool from '@/components/admin/HtmlCleanupTool';
 import { SettingsManager } from '@/components/admin/SettingsManager';
 import SessionAnalytics from '@/components/admin/SessionAnalytics';
 import { SubscriptionChangesLog } from '@/components/admin/SubscriptionChangesLog';
+import SubscriptionRestore from '@/components/admin/SubscriptionRestore';
 import DashboardHeader from '@/components/DashboardHeader';
 
 export default function Admin() {
@@ -137,7 +138,7 @@ export default function Admin() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-8' : 'grid-cols-5'}`}>
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-9' : 'grid-cols-5'}`}>
             <TabsTrigger value="list">Lista de Odu</TabsTrigger>
             <TabsTrigger value="editor">Editor</TabsTrigger>
             <TabsTrigger value="upload">Upload em Massa</TabsTrigger>
@@ -153,6 +154,10 @@ export default function Admin() {
                 <TabsTrigger value="users">
                   <Users className="h-4 w-4 mr-2" />
                   Usuários
+                </TabsTrigger>
+                <TabsTrigger value="restore">
+                  <History className="h-4 w-4 mr-2" />
+                  Restaurar
                 </TabsTrigger>
               </>
             )}
@@ -298,6 +303,20 @@ export default function Admin() {
                 <CardContent className="py-12 text-center">
                   <p className="text-muted-foreground">
                     Apenas administradores podem gerenciar usuários
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="restore">
+            {isAdmin ? (
+              <SubscriptionRestore />
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-muted-foreground">
+                    Apenas administradores podem restaurar planos
                   </p>
                 </CardContent>
               </Card>
