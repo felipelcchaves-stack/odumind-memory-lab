@@ -41,10 +41,19 @@ export default function UserManagement() {
   const [roleChangeUserId, setRoleChangeUserId] = useState<string>('');
   const [roleChangeUserName, setRoleChangeUserName] = useState<string>('');
   const [roleChangeCurrentRole, setRoleChangeCurrentRole] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     loadUsers();
   }, []);
+
+  // Refresh automático quando dialog fecha (após edição)
+  useEffect(() => {
+    if (!editDialogOpen && !isCreating && editingUserId) {
+      console.log('🔄 Dialog fechou após edição, fazendo refresh...');
+      loadUsers();
+    }
+  }, [editDialogOpen, isCreating, editingUserId]);
 
   async function loadUsers(): Promise<UserProfile[]> {
     try {
@@ -263,52 +272,35 @@ export default function UserManagement() {
 
   const handleDialogSave = async () => {
     try {
-      console.log('🔄 Iniciando verificação pós-atualização...');
+      setIsSaving(true);
+      console.log('🔄 Iniciando processamento da atualização...');
       
-      // Capturar plano ANTES
-      const userBefore = users.find(u => u.user_id === editingUserId);
-      const planBefore = userBefore?.plan_name;
-      console.log(`📊 Plano anterior: ${planBefore}`);
-      
-      // Retry com dados retornados (não estado)
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        console.log(`🔄 Tentativa ${attempt}/3 - Aguardando ${attempt}s...`);
-        await new Promise(resolve => setTimeout(resolve, attempt * 1000));
-        
-        console.log(`🔄 Buscando dados atualizados do banco...`);
-        const freshUsers = await loadUsers(); // ✅ Usar dados retornados
-        
-        const userAfter = freshUsers.find(u => u.user_id === editingUserId);
-        const planAfter = userAfter?.plan_name;
-        
-        console.log(`📊 Comparação - Antes: "${planBefore}" | Depois: "${planAfter}"`);
-        
-        // Verificar se houve mudança REAL
-        if (planAfter && planAfter !== planBefore) {
-          console.log('✅ Mudança detectada!');
-          toast.success(`✅ Plano atualizado: ${planBefore} → ${planAfter}`, { duration: 5000 });
-          return;
-        }
-        
-        // Se os planos são iguais desde o início, não é erro
-        if (planBefore === planAfter && attempt === 1) {
-          console.log('ℹ️ Plano já estava correto ou sem mudança necessária');
-          toast.info('Dados atualizados com sucesso');
-          return;
-        }
-        
-        if (attempt < 3) {
-          console.log(`⚠️ Mudança não detectada, tentando novamente...`);
-        }
+      // Capturar user_id antes de qualquer operação
+      const targetUserId = editingUserId;
+      if (!targetUserId) {
+        console.log('⚠️ Nenhum usuário sendo editado');
+        return;
       }
       
-      // Falha após 3 tentativas
-      console.error('❌ Não foi possível confirmar a mudança após 3 tentativas');
-      toast.error('⚠️ Atualização pode não ter sido aplicada. Recarregue a página.', { duration: 8000 });
+      // Aguardar um momento para o backend processar
+      console.log('⏳ Aguardando 1.5s para propagação no backend...');
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Fazer refresh final DOS DADOS
+      console.log('🔄 Recarregando lista completa...');
+      await loadUsers();
+      
+      // Fechar dialog DEPOIS de carregar
+      console.log('✅ Fechando dialog...');
+      setEditDialogOpen(false);
+      
+      toast.success('✅ Usuário atualizado com sucesso', { duration: 3000 });
       
     } catch (error) {
-      console.error('❌ Erro ao verificar atualização:', error);
-      toast.error('Erro ao validar mudanças');
+      console.error('❌ Erro ao atualizar:', error);
+      toast.error('Erro ao atualizar usuário');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -551,13 +543,14 @@ export default function UserManagement() {
       </CardContent>
     </Card>
     
-    <UserEditDialog
-      open={editDialogOpen}
-      onOpenChange={setEditDialogOpen}
-      userId={editingUserId}
-      onSave={handleDialogSave}
-      isCreate={isCreating}
-    />
+      <UserEditDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        userId={editingUserId}
+        onSave={handleDialogSave}
+        isCreate={isCreating}
+        isSaving={isSaving}
+      />
     
     <UserRoleDialog
       open={roleDialogOpen}

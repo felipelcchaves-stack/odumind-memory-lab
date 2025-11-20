@@ -38,9 +38,10 @@ interface UserEditDialogProps {
   userId?: string;
   onSave: () => void;
   isCreate?: boolean;
+  isSaving?: boolean;
 }
 
-export default function UserEditDialog({ open, onOpenChange, userId, onSave, isCreate = false }: UserEditDialogProps) {
+export default function UserEditDialog({ open, onOpenChange, userId, onSave, isCreate = false, isSaving = false }: UserEditDialogProps) {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [nome, setNome] = useState('');
@@ -288,8 +289,7 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
           if (normalizedNew === normalizedOld) {
             console.log('⚠️ Plano selecionado é o mesmo (considerando aliases)');
             toast.info('Usuário já está neste plano');
-            onSave();
-            onOpenChange(false);
+            onSave(); // Chama callback, deixa o pai controlar fechamento
             return;
           }
           
@@ -320,8 +320,7 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
         }
       }
 
-      onSave();
-      onOpenChange(false);
+      onSave(); // Apenas chama o callback, deixa o pai fechar o dialog
     } catch (error: any) {
       console.error('Error saving user:', error);
       toast.error(error.message || 'Erro ao salvar dados do usuário');
@@ -550,15 +549,15 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={loading || uploading}
+            disabled={loading || uploading || isSaving}
           >
             Cancelar
           </Button>
           <Button
             onClick={handleSave}
-            disabled={loading || uploading}
+            disabled={loading || uploading || isSaving}
           >
-            {loading ? (
+            {(loading || isSaving) ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Salvando...
