@@ -86,11 +86,18 @@ const plans = [
 export default function Subscription() {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, isColaborador } = useAdmin();
-  const { subscription, loading: subLoading, loadSubscription, createCheckout, createFamilyCheckout, openCustomerPortal } = useSubscription();
+  const { subscription, loading: subLoading, loadSubscription, createCheckout, createFamilyCheckout, openCustomerPortal, changeOwnSubscription } = useSubscription();
   const navigate = useNavigate();
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
   const [managingSubscription, setManagingSubscription] = useState(false);
   const { trackInitiateCheckout } = usePixelTracking();
+
+  // Plan hierarchy for determining if downgrade is allowed
+  const planHierarchy = ['Gratuito', 'Akapo', 'Awo', 'Egbe'];
+  const getCurrentPlanIndex = () => {
+    const currentPlanName = subscription?.plan_name || 'Gratuito';
+    return planHierarchy.indexOf(currentPlanName);
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -151,6 +158,22 @@ export default function Subscription() {
       </div>
     );
   }
+
+  const handleDowngrade = async (planName: string) => {
+    setProcessingPlan(planName);
+    
+    try {
+      const success = await changeOwnSubscription(planName);
+      if (!success) {
+        toast.error('Não foi possível realizar o downgrade');
+      }
+    } catch (error) {
+      console.error('Error downgrading:', error);
+      toast.error('Erro ao processar downgrade');
+    } finally {
+      setProcessingPlan(null);
+    }
+  };
 
   const handleSubscribe = async (planId: string, stripeId?: string) => {
     if (planId === 'free') {
@@ -308,6 +331,10 @@ export default function Subscription() {
         <div className="grid md:grid-cols-4 gap-6">
           {plans.map((plan, index) => {
             const isCurrentPlan = plan.name === currentPlanName;
+            const currentPlanIdx = getCurrentPlanIndex();
+            const thisPlanIdx = planHierarchy.indexOf(plan.name);
+            const canDowngrade = thisPlanIdx < currentPlanIdx && !isCurrentPlan;
+            const isUpgrade = thisPlanIdx > currentPlanIdx;
             
             return (
               <Card
@@ -338,23 +365,37 @@ export default function Subscription() {
                 </CardHeader>
 
                 <CardContent className="space-y-6">
-                  <Button
-                    className="w-full"
-                    size="lg"
-                    disabled={isCurrentPlan || processingPlan === plan.planId}
-                    onClick={() => handleSubscribe(plan.planId, plan.stripeId)}
-                    variant={isCurrentPlan ? "secondary" : "default"}
-                  >
-                    {processingPlan === plan.planId ? (
-                      'Processando...'
-                    ) : isCurrentPlan ? (
-                      'Plano Atual'
-                    ) : plan.planId === 'free' ? (
-                      'Plano Gratuito'
-                    ) : (
-                      `Assinar ${plan.name}`
-                    )}
-                  </Button>
+                  {canDowngrade ? (
+                    <Button
+                      className="w-full"
+                      size="lg"
+                      variant="outline"
+                      disabled={processingPlan === plan.name}
+                      onClick={() => handleDowngrade(plan.name)}
+                    >
+                      {processingPlan === plan.name ? 'Processando...' : 'Fazer Downgrade'}
+                    </Button>
+                  ) : (
+                    <Button
+                      className="w-full"
+                      size="lg"
+                      disabled={isCurrentPlan || processingPlan === plan.planId}
+                      onClick={() => handleSubscribe(plan.planId, plan.stripeId)}
+                      variant={isCurrentPlan ? "secondary" : "default"}
+                    >
+                      {processingPlan === plan.planId ? (
+                        'Processando...'
+                      ) : isCurrentPlan ? (
+                        'Plano Atual'
+                      ) : plan.planId === 'free' ? (
+                        'Plano Gratuito'
+                      ) : isUpgrade ? (
+                        `Fazer Upgrade`
+                      ) : (
+                        `Assinar ${plan.name}`
+                      )}
+                    </Button>
+                  )}
 
                   <div className="space-y-3">
                     {plan.features.map((feature, featureIndex) => (
