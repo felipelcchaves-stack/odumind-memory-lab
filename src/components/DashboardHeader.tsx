@@ -138,6 +138,10 @@ export default function DashboardHeader() {
                 <Crown className="mr-2 h-4 w-4" />
                 Minha Assinatura
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/familia')}>
+                <Users className="mr-2 h-4 w-4" />
+                Plano Família
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate('/settings')}>
                 <Settings className="mr-2 h-4 w-4" />
                 Configurações
