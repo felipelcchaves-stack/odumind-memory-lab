@@ -30,6 +30,20 @@ export function useSessionValidation() {
       isValidatingRef.current = true;
 
       try {
+        // First, get the current session (this will auto-refresh the token if needed)
+        const { data: sessionData } = await supabase.auth.getSession();
+        
+        if (!sessionData.session) {
+          console.log('[SESSION-VALIDATION] No active session, forcing logout');
+          clearInterval(intervalRef.current!);
+          localStorage.removeItem('session_id');
+          await signOut();
+          navigate('/auth', { replace: true });
+          isValidatingRef.current = false;
+          return;
+        }
+
+        // Now call validate-session with the fresh token
         const { data, error } = await supabase.functions.invoke('validate-session', {
           body: { session_id: sessionId }
         });
@@ -38,13 +52,11 @@ export function useSessionValidation() {
         if (error) {
           console.error('[SESSION-VALIDATION] Error calling function:', error);
           
-          // Se for erro de autenticação (401) ou session_id inválido, fazer logout silencioso
-          if (error.message?.includes('autenticado') || error.message?.includes('401')) {
+          // Se for erro de autenticação ou token inválido, fazer logout silencioso
+          if (error.message?.includes('autenticado') || error.message?.includes('inválido') || error.message?.includes('expirado')) {
             console.log('[SESSION-VALIDATION] Authentication error, forcing silent logout');
             clearInterval(intervalRef.current!);
             localStorage.removeItem('session_id');
-            
-            // Fazer logout silencioso sem mostrar toast (evita poluir UX)
             await signOut();
             navigate('/auth', { replace: true });
           }
