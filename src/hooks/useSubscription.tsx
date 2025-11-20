@@ -258,6 +258,75 @@ export const useSubscription = () => {
     }
   };
 
+  const createRetentionOffer = async (currentPlan: string) => {
+    if (!user) {
+      toast.error('Faça login para continuar');
+      return null;
+    }
+
+    try {
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+      
+      if (!accessToken) {
+        toast.error('Sessão inválida. Faça login novamente.');
+        return null;
+      }
+
+      const { data, error } = await supabase.functions.invoke('create-retention-offer', {
+        body: { 
+          currentPlan,
+          discountPercent: 30,
+          durationMonths: 3,
+        },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      
+      if (error) {
+        console.error('Error creating retention offer:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error creating retention offer:', error);
+      return null;
+    }
+  };
+
+  const createCheckoutWithCoupon = async (priceId: string, couponCode?: string) => {
+    if (!user) {
+      toast.error('Faça login para continuar');
+      return null;
+    }
+
+    try {
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+      
+      if (!accessToken) {
+        toast.error('Sessão inválida. Faça login novamente.');
+        return null;
+      }
+
+      const { data, error } = await supabase.functions.invoke('create-checkout-with-coupon', {
+        body: { priceId, couponCode },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (error) throw error;
+      return data.url;
+    } catch (error) {
+      console.error('Error creating checkout with coupon:', error);
+      toast.error('Erro ao criar sessão de checkout');
+      return null;
+    }
+  };
+
   const changeOwnSubscription = async (newPlan: string): Promise<boolean> => {
     if (!user) {
       toast.error('Faça login para continuar');
@@ -360,7 +429,9 @@ export const useSubscription = () => {
     isFree,
     createCheckout,
     createFamilyCheckout,
+    createCheckoutWithCoupon,
     openCustomerPortal,
     changeOwnSubscription,
+    createRetentionOffer,
   };
 };
