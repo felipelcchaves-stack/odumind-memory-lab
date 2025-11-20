@@ -86,7 +86,7 @@ const plans = [
 export default function Subscription() {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, isColaborador } = useAdmin();
-  const { subscription, loading: subLoading, loadSubscription, createCheckout, openCustomerPortal } = useSubscription();
+  const { subscription, loading: subLoading, loadSubscription, createCheckout, createFamilyCheckout, openCustomerPortal } = useSubscription();
   const navigate = useNavigate();
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
   const [managingSubscription, setManagingSubscription] = useState(false);
@@ -173,7 +173,14 @@ export default function Subscription() {
         trackInitiateCheckout(plan.name, price);
       }
       
-      const url = await createCheckout(stripeId);
+      // Use special checkout for family plan
+      let url;
+      if (planId === 'family') {
+        url = await createFamilyCheckout(stripeId);
+      } else {
+        url = await createCheckout(stripeId);
+      }
+      
       if (url) {
         window.open(url, '_blank');
       }
