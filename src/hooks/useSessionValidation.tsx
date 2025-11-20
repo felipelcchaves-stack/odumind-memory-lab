@@ -41,21 +41,33 @@ export function useSessionValidation() {
           return;
         }
 
-        // Extract session_id from the JWT token payload
-        const accessToken = sessionData.session.access_token;
-        const tokenPayload = JSON.parse(atob(accessToken.split('.')[1]));
-        const currentSessionId = tokenPayload.session_id;
-
-        // Update localStorage with the correct session_id if different
+        // Get session_id from localStorage (created by enforce-single-session)
         const storedSessionId = localStorage.getItem('session_id');
-        if (storedSessionId !== currentSessionId) {
-          console.log('[SESSION-VALIDATION] Updating session_id in localStorage');
-          localStorage.setItem('session_id', currentSessionId);
+        
+        if (!storedSessionId) {
+          console.log('[SESSION-VALIDATION] No session_id in localStorage, forcing logout');
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+          await signOut();
+          navigate('/auth', { replace: true });
+          isValidatingRef.current = false;
+          return;
         }
 
-        // Now call validate-session with the correct session_id
+        // Extract token expiration for logging
+        const accessToken = sessionData.session.access_token;
+        const tokenPayload = JSON.parse(atob(accessToken.split('.')[1]));
+        const tokenExp = tokenPayload.exp;
+
+        console.log('[SESSION-VALIDATION] Validating session...');
+        console.log('[SESSION-VALIDATION] session_id from localStorage:', storedSessionId);
+        console.log('[SESSION-VALIDATION] Token expires at:', new Date(tokenExp * 1000));
+
+        // Call validate-session with the correct session_id from localStorage
         const { data, error } = await supabase.functions.invoke('validate-session', {
-          body: { session_id: currentSessionId }
+          body: { session_id: storedSessionId }
         });
 
         // Se houver erro na chamada da função (500, 401, etc)
