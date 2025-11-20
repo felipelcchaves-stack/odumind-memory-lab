@@ -7,6 +7,11 @@ import Features from "@/components/Features";
 import LearningPath from "@/components/LearningPath";
 import Pricing from "@/components/Pricing";
 import Footer from "@/components/Footer";
+import { TestimonialsSection } from "@/components/TestimonialsSection";
+import { ComparisonSection } from "@/components/ComparisonSection";
+import { FAQSection } from "@/components/FAQSection";
+import { UrgencySection } from "@/components/UrgencySection";
+import { ExitIntentPopup } from "@/components/ExitIntentPopup";
 
 const Index = () => {
   const { user } = useAuth();
@@ -21,17 +26,24 @@ const Index = () => {
   return (
     <div className="min-h-screen">
       <Header />
+      <ExitIntentPopup />
       <main>
         <Hero />
+        <TestimonialsSection />
         <div id="features">
           <Features />
         </div>
+        <ComparisonSection />
         <div id="learning">
           <LearningPath />
+        </div>
+        <div id="faq">
+          <FAQSection />
         </div>
         <div id="pricing">
           <Pricing />
         </div>
+        <UrgencySection />
       </main>
       <Footer />
     </div>

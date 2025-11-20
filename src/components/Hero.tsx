@@ -32,16 +32,16 @@ const Hero = () => {
 
           {/* Main Heading */}
           <h1 className="text-5xl md:text-7xl font-bold leading-tight">
-            Domine os{" "}
+            Memorize os{" "}
             <span className="bg-gradient-hero bg-clip-text text-transparent">
-              Odu Ifá
+              256 Odu Ifá
             </span>
-            {" "}com Ciência
+            {" "}em 14 Dias (Ou Menos)
           </h1>
 
           {/* Subheading */}
           <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto">
-            Sistema educacional completo que combina sabedoria ancestral com técnicas científicas de memorização: repetição espaçada, storytelling e gamificação.
+            Método aprovado por +2.500 babalaôs e estudantes. Combine sabedoria ancestral com ciência moderna.
           </p>
 
           {/* Feature Pills */}
@@ -62,11 +62,13 @@ const Hero = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
-            <Button size="lg" variant="hero" className="text-lg" onClick={() => navigate('/auth')}>
-              Começar Gratuitamente
+            <Button size="lg" variant="hero" className="text-lg px-8" onClick={() => navigate('/auth')}>
+              Começar Grátis Agora
             </Button>
-            <Button size="lg" variant="outline" className="text-lg" onClick={() => navigate('#pricing')}>
-              Ver Planos Premium
+            <Button size="lg" variant="outline" className="text-lg px-8">
+              <a href="#demo" className="flex items-center gap-2">
+                Ver Vídeo Demo
+              </a>
             </Button>
           </div>
 
