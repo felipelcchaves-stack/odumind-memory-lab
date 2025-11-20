@@ -90,7 +90,79 @@ serve(async (req) => {
       });
 
     if (rewardError) {
-      console.error('Error creating reward:', rewardError);
+      console.error('[CHECK-CONVERSION] Error creating reward:', rewardError);
+    }
+
+    // Apply benefits directly to referrer's subscription
+    console.log('[CHECK-CONVERSION] Applying 30 days Premium to referrer:', referralUsage.referrer_id);
+    
+    try {
+      const { data: referrerSub, error: subError } = await supabaseClient
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', referralUsage.referrer_id)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (subError && subError.code !== 'PGRST116') {
+        console.error('[CHECK-CONVERSION] Error fetching referrer subscription:', subError);
+      } else {
+        const now = new Date();
+        const daysToAdd = 30;
+        let newPeriodEnd: Date;
+
+        if (!referrerSub || referrerSub.plan_name === 'Gratuito' || referrerSub.status === 'free') {
+          // Referrer is on free plan - upgrade to Premium
+          newPeriodEnd = new Date(now.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
+          
+          console.log('[CHECK-CONVERSION] Upgrading referrer to Premium until:', newPeriodEnd);
+
+          await supabaseClient
+            .from('subscriptions')
+            .upsert({
+              user_id: referralUsage.referrer_id,
+              plan_name: 'Premium',
+              status: 'active',
+              current_period_start: now.toISOString(),
+              current_period_end: newPeriodEnd.toISOString(),
+              stripe_subscription_id: null,
+              stripe_customer_id: referrerSub?.stripe_customer_id || null,
+              stripe_price_id: null,
+              updated_at: now.toISOString()
+            });
+        } else {
+          // Referrer has paid plan - extend current_period_end
+          const currentEnd = referrerSub.current_period_end 
+            ? new Date(referrerSub.current_period_end)
+            : now;
+          
+          newPeriodEnd = new Date(currentEnd.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
+          
+          console.log('[CHECK-CONVERSION] Extending referrer subscription from', currentEnd, 'to', newPeriodEnd);
+
+          await supabaseClient
+            .from('subscriptions')
+            .update({
+              current_period_end: newPeriodEnd.toISOString(),
+              updated_at: now.toISOString()
+            })
+            .eq('id', referrerSub.id);
+        }
+
+        // Mark reward as claimed
+        await supabaseClient
+          .from('referral_rewards')
+          .update({ claimed: true })
+          .eq('user_id', referralUsage.referrer_id)
+          .eq('reward_type', 'premium_days_conversion')
+          .eq('claimed', false);
+
+        console.log('[CHECK-CONVERSION] Successfully applied 30 days Premium to referrer');
+      }
+    } catch (benefitError) {
+      console.error('[CHECK-CONVERSION] Error applying benefits to referrer:', benefitError);
+      // Don't fail the request, reward is saved and can be claimed manually
     }
 
     // Award badge "Embaixador do Ifá" (if exists)
