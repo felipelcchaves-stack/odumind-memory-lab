@@ -12,19 +12,31 @@ const logStep = (step: string, details?: any) => {
   console.log(`[ADMIN-CHANGE-SUBSCRIPTION] ${step}${detailsStr}`);
 };
 
-// Mapping de planos para price IDs
+// Mapping de planos para price IDs (valores corretos do Stripe)
 const PRICE_IDS = {
   'Premium': {
-    monthly: 'price_1QqvTYLHoh71qD8NRLFwQ0W5',
-    annual: 'price_1QqvU8LHoh71qD8NnvwZGQkC'
+    monthly: 'price_1SUQd7Do1RHWW8lpaKCqKH8g',  // R$ 49,90/mês
+    annual: 'price_1SVYC4Do1RHWW8lprTS45LGC'   // R$ 499,90/ano
+  },
+  'Akapo': {
+    monthly: 'price_1SUQd7Do1RHWW8lpaKCqKH8g',  // R$ 49,90/mês
+    annual: 'price_1SVYC4Do1RHWW8lprTS45LGC'   // R$ 499,90/ano
   },
   'Profissional': {
-    monthly: 'price_1QqvUWLHoh71qD8Nu5Rt06dT',
-    annual: 'price_1QqvV7LHoh71qD8NCMh1WY3k'
+    monthly: 'price_1SUQe8Do1RHWW8lpTManIdtD',  // R$ 99,90/mês
+    annual: 'price_1SVYDGDo1RHWW8lpDluZOrfK'   // R$ 999,90/ano
+  },
+  'Awo': {
+    monthly: 'price_1SUQe8Do1RHWW8lpTManIdtD',  // R$ 99,90/mês
+    annual: 'price_1SVYDGDo1RHWW8lpDluZOrfK'   // R$ 999,90/ano
   },
   'Família': {
-    monthly: 'price_1Qs8a7LHoh71qD8N9xRrfF9k',
-    annual: 'price_1Qs8bELHoh71qD8Ng9cCHQfH'
+    monthly: 'price_1SVYDfDo1RHWW8lpGhLjNjoV',  // R$ 129,90/mês
+    annual: null  // Não tem plano anual ainda
+  },
+  'Egbe': {
+    monthly: 'price_1SVYDfDo1RHWW8lpGhLjNjoV',  // R$ 129,90/mês (Família)
+    annual: null  // Não tem plano anual ainda
   }
 };
 
@@ -135,10 +147,10 @@ serve(async (req) => {
       const priceId = PRICE_IDS[newPlan as keyof typeof PRICE_IDS]?.[billingCycle as 'monthly' | 'annual'];
       
       if (!priceId) {
-        throw new Error(`Invalid plan: ${newPlan}. Available plans: Premium, Profissional, Família`);
+        throw new Error(`Invalid plan or billing cycle: ${newPlan} (${billingCycle}). Available plans: Premium/Akapo, Profissional/Awo, Família/Egbe`);
       }
 
-      logStep("Creating new Stripe subscription", { priceId });
+      logStep("Creating new Stripe subscription", { priceId, plan: newPlan, cycle: billingCycle });
 
       const newSubscription = await stripe.subscriptions.create({
         customer: customerId,
