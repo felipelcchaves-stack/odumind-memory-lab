@@ -12,6 +12,37 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
 };
 
+// Helper para verificar se usuário é membro de família ativa
+const checkFamilyMembership = async (supabaseAdmin: any, userId: string) => {
+  try {
+    const { data: memberData, error } = await supabaseAdmin
+      .from('family_members')
+      .select(`
+        family_group_id,
+        family_groups (
+          stripe_subscription_id,
+          group_name
+        )
+      `)
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .single();
+
+    if (error || !memberData) {
+      return null;
+    }
+
+    return {
+      family_group_id: memberData.family_group_id,
+      stripe_subscription_id: memberData.family_groups?.stripe_subscription_id,
+      group_name: memberData.family_groups?.group_name,
+    };
+  } catch (err) {
+    console.error('[CHECK-FAMILY] Erro ao verificar família:', err);
+    return null;
+  }
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -83,7 +114,72 @@ serve(async (req) => {
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     
     if (customers.data.length === 0) {
-      logStep("No customer found, updating to free status");
+      logStep("No Stripe customer found, checking family membership");
+      
+      // Verificar se é membro de família antes de retornar 'free'
+      const familyMembership = await checkFamilyMembership(supabaseAdmin, user.id);
+      
+      if (familyMembership && familyMembership.stripe_subscription_id) {
+        logStep("User is family member", { 
+          group: familyMembership.group_name,
+          subscription_id: familyMembership.stripe_subscription_id 
+        });
+        
+        // Buscar detalhes da subscription do grupo no Stripe
+        try {
+          const familySubscription = await stripe.subscriptions.retrieve(
+            familyMembership.stripe_subscription_id
+          );
+          
+          if (familySubscription.status === 'active' || familySubscription.status === 'trialing') {
+            const planName = 'Premium (Família)';
+            const subscriptionEnd = new Date(familySubscription.current_period_end * 1000).toISOString();
+            
+            // Atualizar/inserir na tabela subscriptions
+            const { data: existingData } = await supabaseAdmin
+              .from('subscriptions')
+              .select('id')
+              .eq('user_id', user.id)
+              .maybeSingle();
+
+            if (existingData) {
+              await supabaseAdmin
+                .from('subscriptions')
+                .update({
+                  status: 'active',
+                  plan_name: planName,
+                  current_period_end: subscriptionEnd,
+                })
+                .eq('user_id', user.id);
+            } else {
+              await supabaseAdmin
+                .from('subscriptions')
+                .insert({
+                  user_id: user.id,
+                  status: 'active',
+                  plan_name: planName,
+                  current_period_end: subscriptionEnd,
+                });
+            }
+
+            return new Response(JSON.stringify({
+              subscribed: true,
+              status: 'active',
+              plan_name: planName,
+              subscription_end: subscriptionEnd,
+              is_family_member: true,
+              family_group_name: familyMembership.group_name,
+            }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 200,
+            });
+          }
+        } catch (stripeError) {
+          console.error('[CHECK-FAMILY] Erro ao buscar subscription do grupo:', stripeError);
+        }
+      }
+      
+      logStep("No customer and not family member, updating to free status");
       
       // Update subscription in database to free - use update first, then insert if not found
       const { data: existingData } = await supabaseAdmin

@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ReferralWelcomeModal } from "@/components/ReferralWelcomeModal";
+import { useSessionValidation } from "@/hooks/useSessionValidation";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -25,41 +26,55 @@ import Success from "./pages/Success";
 import NotFound from "./pages/NotFound";
 import Changelog from "./pages/Changelog";
 import Referral from "./pages/Referral";
+import Familia from "./pages/Familia";
+import FamiliaAceitar from "./pages/FamiliaAceitar";
 
 const queryClient = new QueryClient();
+
+function AppContent() {
+  useSessionValidation();
+  
+  return (
+    <>
+      <Toaster />
+      <Sonner />
+      <ReferralWelcomeModal />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/odu" element={<OduLibrary />} />
+          <Route path="/odu/:id" element={<OduStudy />} />
+          <Route path="/study" element={<StudySession />} />
+          <Route path="/memory-palace" element={<MemoryPalace />} />
+          <Route path="/tecnicas" element={<Tecnicas />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/colaborador" element={<Colaborador />} />
+          <Route path="/admin/analytics" element={<Analytics />} />
+          <Route path="/admin/user/:userId" element={<UserDetail />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/subscription" element={<Subscription />} />
+          <Route path="/success" element={<Success />} />
+          <Route path="/novidades" element={<Changelog />} />
+          <Route path="/indicar" element={<Referral />} />
+          <Route path="/familia" element={<Familia />} />
+          <Route path="/familia/aceitar/:token" element={<FamiliaAceitar />} />
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </>
+  );
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <AuthProvider>
         <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <ReferralWelcomeModal />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/odu" element={<OduLibrary />} />
-              <Route path="/odu/:id" element={<OduStudy />} />
-              <Route path="/study" element={<StudySession />} />
-              <Route path="/memory-palace" element={<MemoryPalace />} />
-              <Route path="/tecnicas" element={<Tecnicas />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="/colaborador" element={<Colaborador />} />
-              <Route path="/admin/analytics" element={<Analytics />} />
-              <Route path="/admin/user/:userId" element={<UserDetail />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/subscription" element={<Subscription />} />
-              <Route path="/success" element={<Success />} />
-              <Route path="/novidades" element={<Changelog />} />
-              <Route path="/indicar" element={<Referral />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
+          <AppContent />
         </TooltipProvider>
       </AuthProvider>
     </ThemeProvider>

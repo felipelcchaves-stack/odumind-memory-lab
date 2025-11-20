@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface AuthContextType {
   user: User | null;
@@ -60,15 +61,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error, data } = await supabase.auth.signInWithPassword({
       email,
       password
     });
+    
+    if (!error && data.session) {
+      // Enforce single session
+      try {
+        const deviceInfo = {
+          userAgent: navigator.userAgent,
+          platform: navigator.platform,
+          language: navigator.language,
+        };
+        
+        const { data: sessionData, error: sessionError } = await supabase.functions.invoke(
+          'enforce-single-session',
+          {
+            body: {
+              device_info: deviceInfo,
+              ip_address: null, // Server will handle this
+            }
+          }
+        );
+        
+        if (!sessionError && sessionData) {
+          localStorage.setItem('session_id', sessionData.session_id);
+        }
+      } catch (sessionError) {
+        console.error('Erro ao enforçar sessão única:', sessionError);
+      }
+    }
     
     return { error };
   };
 
   const signOut = async () => {
+    localStorage.removeItem('session_id');
     await supabase.auth.signOut();
   };
 
