@@ -327,44 +327,57 @@ export const useSubscription = () => {
     }
   };
 
+  const normalizePlanName = (planName: string): string => {
+    const aliases: { [key: string]: string } = {
+      'Egbe (Família)': 'Egbe',
+      'Família': 'Egbe',
+      'Profissional': 'Awo',
+      'Premium': 'Akapo',
+    };
+    return aliases[planName] || planName;
+  };
+
   const changeOwnSubscription = async (newPlan: string): Promise<boolean> => {
     if (!user) {
-      toast.error('Faça login para continuar');
+      toast.error('Você precisa estar autenticado');
       return false;
     }
 
+    const normalizedPlan = normalizePlanName(newPlan);
+    
     try {
-      const session = await supabase.auth.getSession();
-      const accessToken = session.data.session?.access_token;
+      const { data: sessionData } = await supabase.auth.getSession();
       
-      if (!accessToken) {
-        toast.error('Sessão inválida. Faça login novamente.');
-        return false;
-      }
-
       const { data, error } = await supabase.functions.invoke('change-own-subscription', {
-        body: { newPlan },
+        body: { newPlan: normalizedPlan },
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${sessionData.session?.access_token}`,
         },
       });
-      
+
       if (error) {
         console.error('Error changing subscription:', error);
-        toast.error(error.message || 'Erro ao mudar plano');
+        toast.error(error.message || 'Erro ao alterar plano');
         return false;
       }
 
-      if (data?.success) {
+      if (data.success) {
         toast.success(data.message || 'Plano alterado com sucesso!');
         await loadSubscription();
         return true;
       }
 
       return false;
-    } catch (error) {
-      console.error('Error changing subscription:', error);
-      toast.error('Erro ao processar mudança de plano');
+    } catch (error: any) {
+      console.error('Exception changing subscription:', error);
+      
+      // Tratamento específico para erro de membros ativos
+      if (error.message?.includes('membros ativos')) {
+        toast.error(error.message, { duration: 6000 });
+      } else {
+        toast.error('Erro ao processar mudança de plano');
+      }
+      
       return false;
     }
   };
