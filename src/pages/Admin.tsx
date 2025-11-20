@@ -13,6 +13,7 @@ import OduList from '@/components/admin/OduList';
 import BulkUpload from '@/components/admin/BulkUpload';
 import UserManagement from '@/components/admin/UserManagement';
 import ChangelogManager from '@/components/admin/ChangelogManager';
+import HtmlCleanupTool from '@/components/admin/HtmlCleanupTool';
 import DashboardHeader from '@/components/DashboardHeader';
 
 export default function Admin() {
@@ -133,10 +134,11 @@ export default function Admin() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'}`}>
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-6' : 'grid-cols-5'}`}>
             <TabsTrigger value="list">Lista de Odu</TabsTrigger>
             <TabsTrigger value="editor">Editor</TabsTrigger>
             <TabsTrigger value="upload">Upload em Massa</TabsTrigger>
+            <TabsTrigger value="tools">🔧 Ferramentas</TabsTrigger>
             <TabsTrigger value="changelog">Novidades</TabsTrigger>
             {isAdmin && (
               <TabsTrigger value="users">
@@ -222,6 +224,16 @@ export default function Admin() {
 
           <TabsContent value="changelog" className="space-y-4">
             <ChangelogManager />
+          </TabsContent>
+
+          <TabsContent value="tools" className="space-y-4">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">🔧 Ferramentas Administrativas</h2>
+              <p className="text-muted-foreground mb-6">
+                Utilitários para manutenção e correção do sistema
+              </p>
+            </div>
+            <HtmlCleanupTool />
           </TabsContent>
 
           <TabsContent value="users">

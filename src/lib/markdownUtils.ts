@@ -60,7 +60,21 @@ export function extractClipboardContent(event: ClipboardEvent): string {
 export function sanitizeQuillHtml(html: string): string {
   if (!html || html === '<p><br></p>') return html;
   
+  // 1. PRIMEIRO: Decodificar caracteres HTML escapados (pode estar duplo/triplo)
   let clean = html;
+  let previousClean = '';
+  
+  // Loop para decodificar múltiplas vezes até não haver mais mudanças
+  while (clean !== previousClean) {
+    previousClean = clean;
+    clean = clean
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#039;/g, "'")
+      .replace(/&nbsp;/g, ' ');
+  }
   
   // 1. Remove IDs do Google Docs (deve vir primeiro)
   clean = clean.replace(/id="docs-internal-guid-[^"]*"/g, '');

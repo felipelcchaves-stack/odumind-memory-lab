@@ -94,6 +94,7 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
   const versoQuillRef = useRef<ReactQuill>(null);
   const significadoQuillRef = useRef<ReactQuill>(null);
   const exemplosQuillRef = useRef<ReactQuill>(null);
+  const contextoQuillRef = useRef<ReactQuill>(null);
 
   useEffect(() => {
     if (oduId && oduId !== 'new') {
@@ -344,7 +345,7 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
     return temp.textContent || temp.innerText || '';
   };
 
-  const clearFieldFormatting = (fieldName: 'texto_principal' | 'verso' | 'significado' | 'exemplos_praticos') => {
+  const clearFieldFormatting = (fieldName: 'texto_principal' | 'verso' | 'significado' | 'exemplos_praticos' | 'contexto_historico') => {
     const currentValue = formData[fieldName];
     if (!currentValue || currentValue === '<p><br></p>') {
       toast.error('Campo vazio, nada para limpar');
@@ -628,7 +629,28 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
               }}
               modules={{
                 clipboard: {
-                  matchVisual: false
+                  matchVisual: false,
+                  matchers: [
+                    ['*', (node: any, delta: any) => {
+                      if (delta.ops) {
+                        delta.ops = delta.ops.map((op: any) => {
+                          if (op.insert && typeof op.insert === 'string') {
+                            let text = op.insert;
+                            text = text
+                              .replace(/&lt;/g, '<')
+                              .replace(/&gt;/g, '>')
+                              .replace(/&amp;/g, '&')
+                              .replace(/&quot;/g, '"')
+                              .replace(/&#039;/g, "'")
+                              .replace(/&nbsp;/g, ' ');
+                            return { ...op, insert: text };
+                          }
+                          return op;
+                        });
+                      }
+                      return delta;
+                    }]
+                  ]
                 },
               }}
             />
@@ -660,6 +682,64 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
             </div>
           </div>
 
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="exemplos_praticos">Exemplos Práticos</Label>
+              <div className="flex items-center gap-2">
+                <ImageUploader onImageUploaded={(url) => insertImageToEditor(exemplosQuillRef, url)} />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => clearFieldFormatting('exemplos_praticos')}
+                  className="h-8 text-xs"
+                >
+                  <Eraser className="h-3 w-3 mr-1" />
+                  Limpar Formatação
+                </Button>
+              </div>
+            </div>
+            <ReactQuill
+              key={`exemplos-${oduId || 'new'}`}
+              ref={exemplosQuillRef}
+              theme="snow"
+              value={formData.exemplos_praticos || ''}
+              onChange={(value) => {
+                const sanitized = sanitizeQuillHtml(value);
+                setFormData({ ...formData, exemplos_praticos: sanitized });
+              }}
+              modules={{
+                clipboard: {
+                  matchVisual: false,
+                  matchers: [
+                    ['*', (node: any, delta: any) => {
+                      if (delta.ops) {
+                        delta.ops = delta.ops.map((op: any) => {
+                          if (op.insert && typeof op.insert === 'string') {
+                            let text = op.insert;
+                            text = text
+                              .replace(/&lt;/g, '<')
+                              .replace(/&gt;/g, '>')
+                              .replace(/&amp;/g, '&')
+                              .replace(/&quot;/g, '"')
+                              .replace(/&#039;/g, "'")
+                              .replace(/&nbsp;/g, ' ');
+                            return { ...op, insert: text };
+                          }
+                          return op;
+                        });
+                      }
+                      return delta;
+                    }]
+                  ]
+                },
+              }}
+            />
+            <p className="text-xs text-muted-foreground">
+              Situações reais onde este Odu se aplica, conselhos práticos, etc.
+            </p>
+          </div>
+
           <Separator />
 
           {/* Campos Narrativos */}
@@ -670,14 +750,57 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
             </h3>
             
             <div className="space-y-2">
-              <Label htmlFor="contexto_historico">Contexto Histórico</Label>
-              <Textarea
-                id="contexto_historico"
-                value={formData.contexto_historico}
-                onChange={(e) => setFormData({ ...formData, contexto_historico: e.target.value })}
-                placeholder="Em que contexto esta história acontece? Onde? Quando? Qual o cenário?"
-                rows={3}
-                className="resize-y"
+              <div className="flex items-center justify-between">
+                <Label htmlFor="contexto_historico">Contexto Histórico</Label>
+                <div className="flex items-center gap-2">
+                  <ImageUploader onImageUploaded={(url) => insertImageToEditor(contextoQuillRef, url)} />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => clearFieldFormatting('contexto_historico')}
+                    className="h-8 text-xs"
+                  >
+                    <Eraser className="h-3 w-3 mr-1" />
+                    Limpar Formatação
+                  </Button>
+                </div>
+              </div>
+              <ReactQuill
+                key={`contexto-${oduId || 'new'}`}
+                ref={contextoQuillRef}
+                theme="snow"
+                value={formData.contexto_historico || ''}
+                onChange={(value) => {
+                  const sanitized = sanitizeQuillHtml(value);
+                  setFormData({ ...formData, contexto_historico: sanitized });
+                }}
+                modules={{
+                  clipboard: {
+                    matchVisual: false,
+                    matchers: [
+                      ['*', (node: any, delta: any) => {
+                        if (delta.ops) {
+                          delta.ops = delta.ops.map((op: any) => {
+                            if (op.insert && typeof op.insert === 'string') {
+                              let text = op.insert;
+                              text = text
+                                .replace(/&lt;/g, '<')
+                                .replace(/&gt;/g, '>')
+                                .replace(/&amp;/g, '&')
+                                .replace(/&quot;/g, '"')
+                                .replace(/&#039;/g, "'")
+                                .replace(/&nbsp;/g, ' ');
+                              return { ...op, insert: text };
+                            }
+                            return op;
+                          });
+                        }
+                        return delta;
+                      }]
+                    ]
+                  },
+                }}
               />
               <p className="text-xs text-muted-foreground">
                 Ex: "Durante a criação do mundo, quando os Orixás ainda caminhavam entre os homens..."
