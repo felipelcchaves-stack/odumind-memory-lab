@@ -235,7 +235,58 @@ serve(async (req) => {
     });
 
     if (subscriptions.data.length === 0) {
-      logStep("No subscription found");
+      logStep("No Stripe subscription found, checking local database");
+      
+      // Verificar se há subscription complimentary ativa no banco local
+      const { data: localSub, error: localError } = await supabaseAdmin
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (localError) {
+        logStep("ERROR checking local subscription", { error: localError });
+      }
+      
+      // Se encontrou subscription local ativa E sem stripe_subscription_id = é complimentary
+      if (localSub && 
+          localSub.status === 'active' && 
+          !localSub.stripe_subscription_id &&
+          localSub.current_period_end) {
+        
+        const validUntil = new Date(localSub.current_period_end);
+        const now = new Date();
+        
+        // Verificar se ainda está dentro do período válido
+        if (validUntil > now) {
+          const daysRemaining = Math.ceil((validUntil.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          logStep("Found valid complimentary subscription", {
+            plan: localSub.plan_name,
+            validUntil: localSub.current_period_end,
+            daysRemaining
+          });
+          
+          return new Response(JSON.stringify({
+            subscribed: true,
+            status: 'active',
+            plan_name: localSub.plan_name,
+            current_period_end: localSub.current_period_end,
+            is_complimentary: true
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          });
+        } else {
+          logStep("Complimentary subscription expired, updating to free", {
+            plan: localSub.plan_name,
+            expiredAt: localSub.current_period_end,
+            daysAgo: Math.abs(Math.ceil((validUntil.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+          });
+        }
+      }
+      
+      // Só atualiza para 'free' se realmente não tem nada válido
+      logStep("No valid subscription found, updating to free status");
       
       const { data: existingData2 } = await supabaseAdmin
         .from('subscriptions')
@@ -310,9 +361,17 @@ serve(async (req) => {
     let planName = 'Gratuito';
     if (priceId === 'price_1SUQd7Do1RHWW8lpaKCqKH8g') {
       planName = 'Premium';
+    } else if (priceId === 'price_1SVYC4Do1RHWW8lprTS45LGC') {
+      planName = 'Premium'; // Annual
     } else if (priceId === 'price_1SUQe8Do1RHWW8lpTManIdtD') {
       planName = 'Profissional';
+    } else if (priceId === 'price_1SVYDGDo1RHWW8lpDluZOrfK') {
+      planName = 'Profissional'; // Annual
+    } else if (priceId === 'price_1SVYDfDo1RHWW8lpGhLjNjoV') {
+      planName = 'Família';
     }
+    
+    logStep("Plan mapped from price_id", { priceId, planName });
 
     // Convert timestamps to ISO strings
     let currentPeriodStart = null;

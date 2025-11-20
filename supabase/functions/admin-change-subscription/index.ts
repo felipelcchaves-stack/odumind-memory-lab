@@ -40,6 +40,20 @@ const PRICE_IDS = {
   }
 };
 
+// Aliases de planos (nomes alternativos que mapeiam para nomes canônicos)
+const PLAN_ALIASES: Record<string, string> = {
+  'Egbe': 'Família',
+  'Akapo': 'Premium',
+  'Awo': 'Profissional'
+};
+
+// Helper para normalizar nome do plano
+const normalizePlanName = (plan: string): string => {
+  const normalized = PLAN_ALIASES[plan] || plan;
+  logStep("Plan name normalized", { original: plan, normalized });
+  return normalized;
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -144,11 +158,20 @@ serve(async (req) => {
 
     // Criar nova assinatura (se não for downgrade para Free)
     if (newPlan !== 'Gratuito' && newPlan !== 'free') {
-      const priceId = PRICE_IDS[newPlan as keyof typeof PRICE_IDS]?.[billingCycle as 'monthly' | 'annual'];
+      const normalizedPlan = normalizePlanName(newPlan);
+      const priceId = PRICE_IDS[normalizedPlan as keyof typeof PRICE_IDS]?.[billingCycle as 'monthly' | 'annual'];
       
       if (!priceId) {
+        logStep("ERROR: Invalid plan configuration", { 
+          originalPlan: newPlan, 
+          normalizedPlan, 
+          billingCycle,
+          availablePlans: Object.keys(PRICE_IDS)
+        });
         throw new Error(`Invalid plan or billing cycle: ${newPlan} (${billingCycle}). Available plans: Premium/Akapo, Profissional/Awo, Família/Egbe`);
       }
+      
+      logStep("Price ID found for plan", { normalizedPlan, billingCycle, priceId });
 
       // Verificar se o customer tem payment method
       const paymentMethods = await stripe.paymentMethods.list({
@@ -170,7 +193,7 @@ serve(async (req) => {
 
         logStep("Attempting upsert to subscriptions table", { 
           userId, 
-          planName: newPlan, 
+          planName: normalizedPlan, 
           type: 'complimentary' 
         });
 
@@ -181,7 +204,7 @@ serve(async (req) => {
             stripe_customer_id: customerId,
             stripe_subscription_id: null, // NULL indica que é complimentary
             stripe_price_id: priceId,
-            plan_name: newPlan,
+            plan_name: normalizedPlan,
             status: 'active',
             current_period_start: new Date().toISOString(),
             current_period_end: oneYearFromNow.toISOString(),
@@ -192,7 +215,11 @@ serve(async (req) => {
 
         if (updateError) throw updateError;
         
-        logStep("Complimentary subscription created", { validUntil: oneYearFromNow });
+        logStep("Complimentary subscription created", { 
+          plan: normalizedPlan,
+          validUntil: oneYearFromNow,
+          daysGranted: 365 
+        });
         stripeResponse.complimentaryGrant = {
           granted: true,
           validUntil: oneYearFromNow.toISOString(),
@@ -226,7 +253,7 @@ serve(async (req) => {
 
         logStep("Attempting upsert to subscriptions table", { 
           userId, 
-          planName: newPlan, 
+          planName: normalizedPlan, 
           stripeSubscriptionId: newStripeSubId,
           type: 'paid' 
         });
@@ -239,7 +266,7 @@ serve(async (req) => {
             stripe_customer_id: customerId,
             stripe_subscription_id: newStripeSubId,
             stripe_price_id: priceId,
-            plan_name: newPlan,
+            plan_name: normalizedPlan,
             status: newSubscription.status,
             current_period_start: new Date(newSubscription.current_period_start * 1000).toISOString(),
             current_period_end: new Date(newSubscription.current_period_end * 1000).toISOString(),
@@ -249,7 +276,7 @@ serve(async (req) => {
           });
 
         if (updateError) throw updateError;
-        logStep("Updated subscriptions table");
+        logStep("Updated subscriptions table with normalized plan name", { plan: normalizedPlan });
       }
     } else {
       // Downgrade para Free
