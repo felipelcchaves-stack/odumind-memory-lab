@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.cleanup-old-sessions]
 verify_jwt = false
+
+[functions.claim-referral-rewards]
+verify_jwt = true

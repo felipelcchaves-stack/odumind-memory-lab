@@ -133,10 +133,30 @@ serve(async (req) => {
 
     console.log('Referral code applied:', referral_code, 'by user:', user.id);
 
+    // Automatically claim the reward to apply benefits
+    try {
+      console.log('[APPLY-REFERRAL] Auto-claiming reward for user:', user.id);
+      const claimResponse = await supabaseClient.functions.invoke('claim-referral-rewards', {
+        headers: {
+          Authorization: req.headers.get('Authorization')!
+        }
+      });
+
+      if (claimResponse.error) {
+        console.error('[APPLY-REFERRAL] Error auto-claiming reward:', claimResponse.error);
+        // Don't fail the request, reward is saved and can be claimed later
+      } else {
+        console.log('[APPLY-REFERRAL] Reward auto-claimed successfully:', claimResponse.data);
+      }
+    } catch (claimError) {
+      console.error('[APPLY-REFERRAL] Exception auto-claiming reward:', claimError);
+      // Don't fail the request
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: 'Código aplicado com sucesso! Você ganhou 7 dias Premium grátis.',
+        message: 'Código aplicado com sucesso! 7 dias Premium foram adicionados à sua conta.',
         reward: {
           type: 'premium_days',
           value: 7,
