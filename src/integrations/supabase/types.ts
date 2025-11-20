@@ -1015,6 +1015,48 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_changes: {
+        Row: {
+          billing_cycle: string
+          changed_by: string
+          created_at: string
+          id: string
+          new_plan: string
+          new_stripe_subscription_id: string | null
+          old_plan: string
+          old_stripe_subscription_id: string | null
+          reason: string | null
+          stripe_response: Json | null
+          user_id: string
+        }
+        Insert: {
+          billing_cycle: string
+          changed_by: string
+          created_at?: string
+          id?: string
+          new_plan: string
+          new_stripe_subscription_id?: string | null
+          old_plan: string
+          old_stripe_subscription_id?: string | null
+          reason?: string | null
+          stripe_response?: Json | null
+          user_id: string
+        }
+        Update: {
+          billing_cycle?: string
+          changed_by?: string
+          created_at?: string
+          id?: string
+          new_plan?: string
+          new_stripe_subscription_id?: string | null
+          old_plan?: string
+          old_stripe_subscription_id?: string | null
+          reason?: string | null
+          stripe_response?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null

@@ -16,6 +16,7 @@ import ChangelogManager from '@/components/admin/ChangelogManager';
 import HtmlCleanupTool from '@/components/admin/HtmlCleanupTool';
 import { SettingsManager } from '@/components/admin/SettingsManager';
 import SessionAnalytics from '@/components/admin/SessionAnalytics';
+import { SubscriptionChangesLog } from '@/components/admin/SubscriptionChangesLog';
 import DashboardHeader from '@/components/DashboardHeader';
 
 export default function Admin() {

@@ -52,6 +52,8 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
   const [selectedPlan, setSelectedPlan] = useState<string>('Gratuito');
   const [currentSubscriptionStatus, setCurrentSubscriptionStatus] = useState<string>('free');
   const [originalPlan, setOriginalPlan] = useState<string>('Gratuito');
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+  const [subscriptionChangeReason, setSubscriptionChangeReason] = useState('');
 
   useEffect(() => {
     if (open && userId && !isCreate) {
@@ -272,26 +274,33 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
           throw roleError;
         }
 
-        // Update subscription
-        const newStatus = selectedPlan === 'Gratuito' ? 'free' : 'active';
+        // Update subscription via edge function if changed
+        if (selectedPlan !== originalPlan) {
+          const { data: changeResult, error: changeError } = await supabase.functions.invoke(
+            'admin-change-subscription',
+            {
+              body: {
+                userId: userId,
+                newPlan: selectedPlan,
+                billingCycle: billingCycle,
+                reason: subscriptionChangeReason || null,
+              },
+            }
+          );
 
-        const { error: subscriptionError } = await supabase
-          .from('subscriptions')
-          .upsert({
-            user_id: userId,
-            plan_name: selectedPlan,
-            status: newStatus,
-            updated_at: new Date().toISOString(),
-          }, { 
-            onConflict: 'user_id' 
-          });
+          if (changeError) throw changeError;
 
-        if (subscriptionError) {
-          console.error('Error updating subscription:', subscriptionError);
-          throw subscriptionError;
+          if (!changeResult?.success) {
+            throw new Error(changeResult?.error || 'Erro ao alterar assinatura no Stripe');
+          }
+
+          toast.success(
+            `Assinatura alterada com sucesso! ${changeResult.message}`,
+            { duration: 5000 }
+          );
+        } else {
+          toast.success('Usuário atualizado com sucesso');
         }
-
-        toast.success(`Usuário atualizado com sucesso${selectedPlan !== originalPlan ? ` - Plano alterado para ${selectedPlan}` : ''}`);
       }
 
       onSave();
@@ -454,20 +463,53 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Alterar o plano manualmente sobrescreve o status da assinatura no Stripe.
+                  Alterar o plano cria/cancela assinaturas no Stripe automaticamente.
                 </p>
+              </div>
+            )}
+
+            {/* Billing Cycle - Only for editing and non-free plans */}
+            {!isCreate && selectedPlan !== 'Gratuito' && (
+              <div className="space-y-2">
+                <Label htmlFor="billing-cycle">Ciclo de Cobrança</Label>
+                <Select value={billingCycle} onValueChange={(value: 'monthly' | 'annual') => setBillingCycle(value)}>
+                  <SelectTrigger id="billing-cycle">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">Mensal</SelectItem>
+                    <SelectItem value="annual">Anual (desconto 16%)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Subscription Change Reason - Only when plan changed */}
+            {!isCreate && selectedPlan !== originalPlan && selectedPlan !== 'Gratuito' && (
+              <div className="space-y-2">
+                <Label htmlFor="reason">Motivo da Alteração (opcional)</Label>
+                <Input
+                  id="reason"
+                  value={subscriptionChangeReason}
+                  onChange={(e) => setSubscriptionChangeReason(e.target.value)}
+                  placeholder="Ex: Solicitação do cliente, upgrade premium..."
+                />
               </div>
             )}
 
             {/* Warning alert if plan changed */}
             {!isCreate && selectedPlan !== originalPlan && (
-              <Alert variant="destructive">
+              <Alert>
                 <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Atenção!</AlertTitle>
+                <AlertTitle>Alteração de Assinatura com Stripe</AlertTitle>
                 <AlertDescription>
-                  Você está alterando o plano de <strong>{originalPlan}</strong> para <strong>{selectedPlan}</strong>. 
-                  Isso pode causar inconsistências com o Stripe caso o usuário tenha uma assinatura ativa. 
-                  Certifique-se de que essa alteração é intencional.
+                  <strong>O que vai acontecer:</strong>
+                  <ul className="mt-2 space-y-1 text-sm list-disc list-inside">
+                    <li>Assinatura antiga será <strong>cancelada imediatamente</strong> no Stripe</li>
+                    <li>Nova assinatura será criada com o plano <strong>{selectedPlan}</strong></li>
+                    <li>Ciclo de cobrança: <strong>{billingCycle === 'monthly' ? 'Mensal' : 'Anual'}</strong></li>
+                    <li>Registro completo será salvo no histórico de auditoria</li>
+                  </ul>
                 </AlertDescription>
               </Alert>
             )}

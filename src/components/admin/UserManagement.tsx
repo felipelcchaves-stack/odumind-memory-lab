@@ -22,6 +22,8 @@ interface UserProfile {
   user_roles?: Array<{ role: string }>;
   plan_name?: string;
   subscription_status?: string;
+  stripe_customer_id?: string;
+  stripe_subscription_id?: string;
 }
 
 export default function UserManagement() {
@@ -80,25 +82,35 @@ export default function UserManagement() {
         .select('user_id, role')
         .in('user_id', userIds);
 
-      // Get subscriptions for all users
+      // Get subscriptions for all users (with Stripe IDs)
       const { data: subscriptions } = await supabase
         .from('subscriptions')
-        .select('user_id, plan_name, status')
+        .select('user_id, plan_name, status, stripe_customer_id, stripe_subscription_id')
         .in('user_id', userIds);
 
       // Create subscription map
       const subscriptionMap = new Map(
-        subscriptions?.map(s => [s.user_id, { plan_name: s.plan_name, status: s.status }]) || []
+        subscriptions?.map(s => [s.user_id, { 
+          plan_name: s.plan_name, 
+          status: s.status,
+          stripe_customer_id: s.stripe_customer_id,
+          stripe_subscription_id: s.stripe_subscription_id
+        }]) || []
       );
 
       // Combine profiles with emails, roles and subscriptions
-      const usersWithRoles = profiles?.map(profile => ({
-        ...profile,
-        email: emailMap.get(profile.user_id),
-        user_roles: roles?.filter(r => r.user_id === profile.user_id).map(r => ({ role: r.role })) || [],
-        plan_name: subscriptionMap.get(profile.user_id)?.plan_name || 'Gratuito',
-        subscription_status: subscriptionMap.get(profile.user_id)?.status || 'free'
-      })) || [];
+      const usersWithRoles = profiles?.map(profile => {
+        const subscription = subscriptionMap.get(profile.user_id);
+        return {
+          ...profile,
+          email: emailMap.get(profile.user_id),
+          user_roles: roles?.filter(r => r.user_id === profile.user_id).map(r => ({ role: r.role })) || [],
+          plan_name: subscription?.plan_name || 'Gratuito',
+          subscription_status: subscription?.status || 'free',
+          stripe_customer_id: subscription?.stripe_customer_id,
+          stripe_subscription_id: subscription?.stripe_subscription_id,
+        };
+      }) || [];
 
       setUsers(usersWithRoles);
     } catch (error) {
@@ -356,6 +368,8 @@ export default function UserManagement() {
             <TableRow>
               <TableHead>Usuário</TableHead>
               <TableHead>Plano</TableHead>
+              <TableHead>Stripe Customer</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead>XP</TableHead>
               <TableHead>Streak</TableHead>
               <TableHead>Função</TableHead>
@@ -396,6 +410,27 @@ export default function UserManagement() {
                       <Badge variant={
                         user.plan_name === 'Profissional' ? 'default' :
                         user.plan_name === 'Premium' ? 'secondary' :
+                        user.plan_name === 'Família' ? 'success' :
+                        'outline'
+                      }>
+                        {user.plan_name || 'Gratuito'}
+                      </Badge>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <code className="text-xs bg-muted px-2 py-1 rounded">
+                      {user.stripe_customer_id ? user.stripe_customer_id.substring(0, 15) + '...' : '-'}
+                    </code>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={
+                      user.subscription_status === 'active' ? 'success' :
+                      user.subscription_status === 'trialing' ? 'secondary' :
+                      'outline'
+                    }>
+                      {user.subscription_status || 'free'}
+                    </Badge>
+                  </TableCell>
                         user.plan_name === 'Família' ? 'outline' :
                         'outline'
                       }>
