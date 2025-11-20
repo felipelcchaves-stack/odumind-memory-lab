@@ -126,11 +126,17 @@ export function useSessionValidation() {
       }
     };
 
-    // Validate immediately
-    validateSession();
+    // Validate after a short delay to allow session_id to be saved
+    const initialValidationTimeout = setTimeout(() => {
+      validateSession();
+    }, 1000);
 
     // Then validate every 60 seconds (reduced frequency)
     intervalRef.current = setInterval(validateSession, 60000);
+
+    return () => {
+      clearTimeout(initialValidationTimeout);
+    };
 
     return () => {
       if (intervalRef.current) {
