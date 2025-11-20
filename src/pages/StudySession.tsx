@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Trophy, Lock, Clock, TrendingUp, Zap, Brain } from "lucide-react";
 import { toast } from "sonner";
+import confetti from 'canvas-confetti';
 import Flashcard from "@/components/Flashcard";
 import Quiz from "@/components/Quiz";
 import XPNotification from "@/components/XPNotification";
@@ -118,6 +119,7 @@ export default function StudySession() {
   });
   const [cardStartTime, setCardStartTime] = useState<number>(0);
   const [storyMode, setStoryMode] = useState(false);
+  const [hasShownFirstOduCelebration, setHasShownFirstOduCelebration] = useState(false);
   
   const [mode, setMode] = useState<StudyMode>("flashcard");
   const [loading, setLoading] = useState(true);
@@ -984,30 +986,45 @@ export default function StudySession() {
             Voltar ao Dashboard
           </Button>
 
+          {/* Progress Indicator */}
+          {availableOdus.length > 0 && (
+            <div className="mb-6 p-4 bg-card rounded-lg border">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Você está no Odu {sessionStats.cardsStudied + 1}</span>
+                <span className="text-sm text-muted-foreground">{sessionStats.cardsStudied} de {availableOdus.length} estudados</span>
+              </div>
+              <Progress value={(sessionStats.cardsStudied / availableOdus.length) * 100} className="h-2" />
+            </div>
+          )}
+
           <div className="space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-4">
-              <h1 className="text-3xl font-bold">Sessão de Memorização</h1>
+              <h1 className="text-3xl font-bold">Sessão de Estudo</h1>
             </div>
             
             {/* Session Stats */}
             <div className="flex flex-wrap gap-3">
               <Badge variant="secondary" className="text-base px-4 py-2">
-                📚 {sessionStats.cardsStudied} cards estudados
+                📚 {sessionStats.cardsStudied} Odu estudados
               </Badge>
               <Badge variant="secondary" className="text-base px-4 py-2">
-                🔄 Rodada {sessionRounds + 1}
-              </Badge>
-              <Badge variant="secondary" className="text-base px-4 py-2">
-                <Clock className="h-4 w-4 mr-1" />
-                {formatDuration(sessionDuration)}
-              </Badge>
-              <Badge variant="secondary" className="text-base px-4 py-2">
-                ⭐ {sessionStats.totalXP} XP ganho
+                ⭐ {sessionStats.totalXP} pontos ganhos
               </Badge>
             </div>
             
+            {sessionStats.cardsStudied === 1 && !hasShownFirstOduCelebration && (() => {
+              setHasShownFirstOduCelebration(true);
+              confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 }
+              });
+              toast.success('🎉 Parabéns! Você completou seu primeiro Odu!', { duration: 5000 });
+              return null;
+            })()}
+            
             <p className="text-sm text-muted-foreground text-center">
-              Continue estudando até se sentir confiante
+              💡 Dica: Continue até se sentir confiante com o conteúdo
             </p>
           </div>
         </div>

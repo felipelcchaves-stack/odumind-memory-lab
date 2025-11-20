@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, BookOpen, Lock, Crown } from "lucide-react";
+import { Search, BookOpen, Lock, Crown, CheckCircle, Clock, Circle } from "lucide-react";
 import { toast } from "sonner";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -29,6 +29,7 @@ export default function OduLibrary() {
   const [odus, setOdus] = useState<Odu[]>([]);
   const [filteredOdus, setFilteredOdus] = useState<Odu[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<'all' | 'not_studied' | 'studying' | 'memorized'>('all');
   const [loading, setLoading] = useState(true);
   const { subscription, loading: subLoading, hasActiveSubscription } = useSubscription();
 
@@ -114,8 +115,49 @@ export default function OduLibrary() {
           </p>
         </div>
 
-        {/* Search */}
-        <div className="mb-8">
+        {/* Search and Filters */}
+        <div className="mb-8 space-y-4">
+          {/* Status Filter Buttons */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            <Button
+              variant={statusFilter === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setStatusFilter('all')}
+              className="gap-2"
+            >
+              <BookOpen className="h-4 w-4" />
+              Todos
+            </Button>
+            <Button
+              variant={statusFilter === 'not_studied' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setStatusFilter('not_studied')}
+              className="gap-2"
+            >
+              <Circle className="h-4 w-4" />
+              Não Estudados
+            </Button>
+            <Button
+              variant={statusFilter === 'studying' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setStatusFilter('studying')}
+              className="gap-2"
+            >
+              <Clock className="h-4 w-4" />
+              Estudando
+            </Button>
+            <Button
+              variant={statusFilter === 'memorized' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setStatusFilter('memorized')}
+              className="gap-2"
+            >
+              <CheckCircle className="h-4 w-4" />
+              Memorizados
+            </Button>
+          </div>
+
+          {/* Search Bar */}
           <div className="relative max-w-md" data-tour="search-bar">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input

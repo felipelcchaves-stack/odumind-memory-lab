@@ -23,6 +23,9 @@ import ForgettingRiskAlert from '@/components/ForgettingRiskAlert';
 import { useSubscription } from '@/hooks/useSubscription';
 import MemorizationStatusBadge from '@/components/MemorizationStatusBadge';
 import StudyPlanProgress from '@/components/StudyPlanProgress';
+import { FirstStepsWidget } from '@/components/FirstStepsWidget';
+import { HelpTooltip } from '@/components/HelpTooltip';
+import { FloatingHelp } from '@/components/FloatingHelp';
 
 interface ProfileData {
   xp: number;
@@ -67,6 +70,7 @@ export default function Dashboard() {
   const [achievementsHistory, setAchievementsHistory] = useState<any[]>([]);
   const hasScheduledNotifications = useRef(false);
   const { showModal, latestChangelog, markAsViewed, setShowModal } = useChangelog();
+  const [hasCompletedFirstStudy, setHasCompletedFirstStudy] = useState(true);
 
   // Debug log para changelog
   useEffect(() => {
@@ -223,6 +227,15 @@ export default function Dashboard() {
 
       // Check and award new achievements
       await supabase.rpc("check_and_award_achievements", { _user_id: user.id });
+      
+      // Check if user has completed any study
+      const { count: studyCount } = await supabase
+        .from('memorizacao')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gt('revisoes', 0);
+      
+      setHasCompletedFirstStudy((studyCount || 0) > 0);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -378,6 +391,16 @@ export default function Dashboard() {
           </div>
         )}
         
+        {/* First Steps Widget for new users */}
+        {!hasCompletedFirstStudy && profile && (
+          <div className="mb-8">
+            <FirstStepsWidget 
+              hasCompletedFirstStudy={hasCompletedFirstStudy}
+              onStartStudy={() => navigate('/study')}
+            />
+          </div>
+        )}
+        
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-2">
             {getGreeting()}{profile?.nome ? `, ${profile.nome}` : ''}! 🌟
@@ -396,7 +419,10 @@ export default function Dashboard() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8" data-tour="stats-cards">
           <Card data-tour="progress-bar" className="md:col-span-2">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Status de Memorização</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-sm font-medium">Quanto Você Já Memorizou</CardTitle>
+                <HelpTooltip text="Esta porcentagem mostra quantos Odu você já memorizou completamente" />
+              </div>
               <BookOpen className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent className="space-y-4">
@@ -435,7 +461,10 @@ export default function Dashboard() {
 
           <Card data-tour="daily-reviews">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Revisões Hoje</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-sm font-medium">Para Revisar Hoje</CardTitle>
+                <HelpTooltip text="Estes são os Odu que você precisa revisar hoje para não esquecer!" />
+              </div>
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -450,14 +479,17 @@ export default function Dashboard() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Força Média</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-sm font-medium">Quanto Você Sabe</CardTitle>
+                <HelpTooltip text="Mostra o quanto você domina os Odu que está estudando" />
+              </div>
               <Brain className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">{stats?.averageMemoryStrength || 0}%</div>
               <Progress value={stats?.averageMemoryStrength || 0} className="mt-2" />
               <p className="text-xs text-muted-foreground mt-2">
-                Força de memória geral
+                Seu conhecimento médio
               </p>
             </CardContent>
           </Card>
@@ -730,6 +762,9 @@ export default function Dashboard() {
         changelog={latestChangelog}
         onMarkAsViewed={markAsViewed}
       />
+      
+      {/* Floating Help Button */}
+      <FloatingHelp />
     </div>
   );
 }

@@ -24,7 +24,7 @@ All colors MUST be HSL.
     --secondary-foreground: 30 15% 15%;
 
     --muted: 45 15% 92%;
-    --muted-foreground: 30 10% 45%;
+    --muted-foreground: 30 10% 50%;
 
     --accent: 35 85% 60%;
     --accent-foreground: 30 15% 15%;
@@ -32,8 +32,8 @@ All colors MUST be HSL.
     --destructive: 0 75% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 45 20% 88%;
-    --input: 45 20% 88%;
+    --border: 45 20% 85%;
+    --input: 45 20% 85%;
     --ring: 160 45% 35%;
 
     --radius: 0.75rem;
@@ -98,6 +98,31 @@ All colors MUST be HSL.
   
   h1, h2, h3, h4, h5, h6 {
     @apply font-bold;
+  }
+
+  /* Font size accessibility classes */
+  .font-size-small {
+    font-size: 14px;
+  }
+  
+  .font-size-normal {
+    font-size: 16px;
+  }
+  
+  .font-size-large {
+    font-size: 18px;
+  }
+  
+  .font-size-large h1 {
+    font-size: 2.5rem;
+  }
+  
+  .font-size-large h2 {
+    font-size: 2rem;
+  }
+  
+  .font-size-large h3 {
+    font-size: 1.75rem;
   }
 }
 

@@ -121,7 +121,7 @@ const Flashcard = memo(function Flashcard({
                     variant="outline" 
                     className={`${getStrengthBg(currentStrength)} ${getStrengthColor(currentStrength)}`}
                   >
-                    {currentStrength}% força
+                    Você sabe: {currentStrength}%
                   </Badge>
                 )}
               </div>
@@ -196,10 +196,10 @@ const Flashcard = memo(function Flashcard({
               <div className={`p-3 rounded-lg ${getStrengthBg(currentStrength)}`}>
                 <div className="flex items-center justify-between text-sm">
                   <span className={`font-medium ${getStrengthColor(currentStrength)}`}>
-                    {currentStrength >= 61 ? "🟢 Forte" : currentStrength >= 31 ? "🟡 Progredindo" : "🔴 Iniciante"}
+                    {currentStrength >= 61 ? "🟢 Você domina bem" : currentStrength >= 31 ? "🟡 Progredindo" : "🔴 Começando"}
                   </span>
                   <span className={`${getStrengthColor(currentStrength)}`}>
-                    {currentRevisoes > 0 ? `${currentRevisoes} revisões feitas` : "Primeira vez"}
+                    {currentRevisoes > 0 ? `Você sabe ${currentStrength}%` : "Primeira vez"}
                   </span>
                 </div>
               </div>
