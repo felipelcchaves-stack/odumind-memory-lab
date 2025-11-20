@@ -22,7 +22,7 @@ export default function Colaborador() {
 
   useEffect(() => {
     if (!adminLoading && !user) {
-      navigate('/auth');
+      navigate('/');
       return;
     }
 

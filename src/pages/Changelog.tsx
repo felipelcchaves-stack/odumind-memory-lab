@@ -62,7 +62,7 @@ export default function Changelog() {
 
   useEffect(() => {
     if (!user) {
-      navigate("/auth");
+      navigate("/");
       return;
     }
     loadChangelogs();
