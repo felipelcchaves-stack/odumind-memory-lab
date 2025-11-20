@@ -34,13 +34,27 @@ export function useSessionValidation() {
           body: { session_id: sessionId }
         });
 
+        // Se houver erro na chamada da função (500, 401, etc)
         if (error) {
-          console.error('[SESSION-VALIDATION] Error:', error);
+          console.error('[SESSION-VALIDATION] Error calling function:', error);
+          
+          // Se for erro de autenticação (401) ou session_id inválido, fazer logout silencioso
+          if (error.message?.includes('autenticado') || error.message?.includes('401')) {
+            console.log('[SESSION-VALIDATION] Authentication error, forcing silent logout');
+            clearInterval(intervalRef.current!);
+            localStorage.removeItem('session_id');
+            
+            // Fazer logout silencioso sem mostrar toast (evita poluir UX)
+            await signOut();
+            navigate('/auth', { replace: true });
+          }
+          
           isValidatingRef.current = false;
           return;
         }
 
-        if (!data.valid) {
+        // Se a resposta indicar que a sessão é inválida
+        if (data && !data.valid) {
           console.log('[SESSION-VALIDATION] Session invalid, forcing logout');
           clearInterval(intervalRef.current!);
           localStorage.removeItem('session_id');
@@ -51,10 +65,24 @@ export function useSessionValidation() {
           });
 
           await signOut();
-          navigate('/auth');
+          navigate('/auth', { replace: true });
         }
       } catch (err) {
         console.error('[SESSION-VALIDATION] Exception:', err);
+        // Em caso de exceção, limpar e fazer logout silencioso
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+        localStorage.removeItem('session_id');
+        
+        // Fazer logout silencioso para limpar estado
+        try {
+          await signOut();
+          navigate('/auth', { replace: true });
+        } catch (signOutErr) {
+          console.error('[SESSION-VALIDATION] Error during signout:', signOutErr);
+        }
       } finally {
         isValidatingRef.current = false;
       }
