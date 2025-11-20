@@ -250,8 +250,11 @@ export default function UserManagement() {
     setEditDialogOpen(true);
   };
 
-  const handleDialogSave = () => {
-    loadUsers();
+  const handleDialogSave = async () => {
+    // Dar tempo para o banco commitar a mudança
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    await loadUsers();
+    toast.success('Dados atualizados!');
   };
 
   const handleChangeRole = (userId: string, userName: string, currentRole: string) => {
