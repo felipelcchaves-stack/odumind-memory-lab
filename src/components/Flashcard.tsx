@@ -144,7 +144,10 @@ const Flashcard = memo(function Flashcard({
           {significado && (
             <div className="mt-4 p-4 bg-muted/50 rounded-lg">
               <p className="text-sm text-muted-foreground mb-1">💡 Significado:</p>
-              <p className="font-medium text-sm">{significado}</p>
+              <SafeHtmlRenderer
+                html={significado}
+                className="font-medium text-sm prose prose-sm dark:prose-invert max-w-none"
+              />
             </div>
           )}
         </CardHeader>
