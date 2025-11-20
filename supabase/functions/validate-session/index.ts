@@ -86,31 +86,48 @@ serve(async (req) => {
       );
     }
 
-    // Buscar sessão ativa do usuário
+    // Query active_sessions to check if there's a valid session for this user
     const { data: activeSession, error: sessionError } = await supabaseClient
-      .from("active_sessions")
-      .select("session_id")
-      .eq("user_id", userId)
+      .from('active_sessions')
+      .select('session_id, last_activity')
+      .eq('user_id', userId)
       .single();
 
     if (sessionError || !activeSession) {
-      console.log(`[VALIDATE-SESSION] Nenhuma sessão encontrada para user ${userId}`);
+      console.log(`[VALIDATE-SESSION] No active session found for user ${userId}`);
       return new Response(
-        JSON.stringify({ valid: false, reason: "no_session" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          valid: false,
+          reason: 'no_session_found',
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
       );
     }
 
-    // Verificar se o session_id enviado pelo cliente corresponde ao armazenado
-    const isValid = activeSession.session_id === session_id;
+    console.log(`[VALIDATE-SESSION] Validating session for user ${userId}`);
+    console.log(`[VALIDATE-SESSION] Expected session_id: ${activeSession.session_id}`);
+    console.log(`[VALIDATE-SESSION] Received session_id: ${session_id}`);
+    console.log(`[VALIDATE-SESSION] Last activity: ${activeSession.last_activity}`);
 
-    if (!isValid) {
-      console.log(`[VALIDATE-SESSION] Sessão inválida para user ${userId}. Esperado: ${activeSession.session_id}, Recebido: ${session_id}`);
+    // Compare the provided session_id with the one in database
+    if (activeSession.session_id !== session_id) {
+      console.log(`[VALIDATE-SESSION] ❌ Session mismatch for user ${userId}`);
       return new Response(
-        JSON.stringify({ valid: false, reason: "session_mismatch" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          valid: false,
+          reason: 'session_mismatch',
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
       );
     }
+
+    console.log(`[VALIDATE-SESSION] ✅ Session valid for user ${userId}`);
 
     // Atualizar last_activity
     await supabaseClient

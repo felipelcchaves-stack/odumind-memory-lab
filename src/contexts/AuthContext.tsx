@@ -62,39 +62,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error, data } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-    
-    if (!error && data.session) {
-      // Enforce single session
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      // Call enforce-single-session after successful login
+      const deviceInfo = {
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+      };
+
       try {
-        const deviceInfo = {
-          userAgent: navigator.userAgent,
-          platform: navigator.platform,
-          language: navigator.language,
-        };
-        
         const { data: sessionData, error: sessionError } = await supabase.functions.invoke(
           'enforce-single-session',
           {
             body: {
               device_info: deviceInfo,
-              ip_address: null, // Server will handle this
-            }
+              ip_address: null, // Will be detected server-side
+            },
           }
         );
-        
-        if (!sessionError && sessionData) {
-          localStorage.setItem('session_id', sessionData.session_id);
+
+        if (sessionError) {
+          console.error('[AUTH] Erro ao enforçar sessão única:', sessionError);
+          // Force logout to prevent inconsistent state
+          await supabase.auth.signOut();
+          throw new Error('Não foi possível criar sessão. Tente novamente.');
         }
+
+        if (!sessionData?.session_id) {
+          console.error('[AUTH] session_id não retornado pela função');
+          await supabase.auth.signOut();
+          throw new Error('Erro ao criar sessão. Tente novamente.');
+        }
+
+        // Only save if everything succeeded
+        localStorage.setItem('session_id', sessionData.session_id);
+        console.log('[AUTH] Sessão criada com sucesso:', sessionData.session_id);
       } catch (sessionError) {
-        console.error('Erro ao enforçar sessão única:', sessionError);
+        console.error('[AUTH] Exceção ao enforçar sessão:', sessionError);
+        await supabase.auth.signOut();
+        return { error: sessionError };
       }
+
+      return { error: null };
+    } catch (error: any) {
+      console.error('[AUTH] Sign in error:', error);
+      return { error };
     }
-    
-    return { error };
   };
 
   const signOut = async () => {
