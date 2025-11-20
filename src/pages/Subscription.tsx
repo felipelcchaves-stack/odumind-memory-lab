@@ -41,7 +41,6 @@ const plans = [
       "Storytelling completo",
       "Testes e simulados ilimitados",
       "Feedback personalizado detalhado",
-      "Certificados de conclusão",
       "Suporte prioritário",
     ],
     planId: "premium",
