@@ -26,6 +26,7 @@ import StudyPlanProgress from '@/components/StudyPlanProgress';
 import { FirstStepsWidget } from '@/components/FirstStepsWidget';
 import { HelpTooltip } from '@/components/HelpTooltip';
 import { FloatingHelp } from '@/components/FloatingHelp';
+import { ReferralBanner } from '@/components/ReferralBanner';
 
 interface ProfileData {
   xp: number;
@@ -400,6 +401,11 @@ export default function Dashboard() {
             />
           </div>
         )}
+        
+        {/* Referral Banner */}
+        <div className="mb-6">
+          <ReferralBanner />
+        </div>
         
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-2">
