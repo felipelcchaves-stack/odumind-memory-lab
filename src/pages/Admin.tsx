@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Upload, Users } from 'lucide-react';
+import { Plus, Upload, Users, BarChart3 } from 'lucide-react';
 import { toast } from 'sonner';
 import OduEditor from '@/components/admin/OduEditor';
 import OduList from '@/components/admin/OduList';
@@ -15,6 +15,7 @@ import UserManagement from '@/components/admin/UserManagement';
 import ChangelogManager from '@/components/admin/ChangelogManager';
 import HtmlCleanupTool from '@/components/admin/HtmlCleanupTool';
 import { SettingsManager } from '@/components/admin/SettingsManager';
+import SessionAnalytics from '@/components/admin/SessionAnalytics';
 import DashboardHeader from '@/components/DashboardHeader';
 
 export default function Admin() {
@@ -135,7 +136,7 @@ export default function Admin() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-7' : 'grid-cols-5'}`}>
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-8' : 'grid-cols-5'}`}>
             <TabsTrigger value="list">Lista de Odu</TabsTrigger>
             <TabsTrigger value="editor">Editor</TabsTrigger>
             <TabsTrigger value="upload">Upload em Massa</TabsTrigger>
@@ -143,6 +144,10 @@ export default function Admin() {
             <TabsTrigger value="changelog">Novidades</TabsTrigger>
             {isAdmin && (
               <>
+                <TabsTrigger value="analytics">
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Analytics
+                </TabsTrigger>
                 <TabsTrigger value="settings">⚙️ Configurações</TabsTrigger>
                 <TabsTrigger value="users">
                   <Users className="h-4 w-4 mr-2" />
@@ -256,6 +261,28 @@ export default function Admin() {
                 <CardContent className="py-12 text-center">
                   <p className="text-muted-foreground">
                     Apenas administradores podem acessar as configurações
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="analytics">
+            {isAdmin ? (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">📊 Analytics de Sessões</h2>
+                  <p className="text-muted-foreground mb-6">
+                    Monitoramento de sessões de estudo e métricas de auto-finalização
+                  </p>
+                </div>
+                <SessionAnalytics />
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-muted-foreground">
+                    Apenas administradores podem acessar analytics
                   </p>
                 </CardContent>
               </Card>
