@@ -138,8 +138,14 @@ async function updateSubscription(
     let planName = 'Gratuito';
     if (priceId === 'price_1SUQd7Do1RHWW8lpaKCqKH8g') {
       planName = 'Premium';
+    } else if (priceId === 'price_1SVYC4Do1RHWW8lprTS45LGC') {
+      planName = 'Premium'; // Annual
     } else if (priceId === 'price_1SUQe8Do1RHWW8lpTManIdtD') {
       planName = 'Profissional';
+    } else if (priceId === 'price_1SVYDGDo1RHWW8lpDluZOrfK') {
+      planName = 'Profissional'; // Annual
+    } else if (priceId === 'price_1SVYDfDo1RHWW8lpGhLjNjoV') {
+      planName = 'Família';
     }
 
     // Safely convert timestamps to ISO strings
@@ -212,6 +218,57 @@ async function updateSubscription(
         plan: planName,
         status: subscription.status 
       });
+    }
+
+    // If family plan, create family group automatically
+    if (planName === 'Família' || planName === 'Egbe') {
+      logStep("Detected family plan, checking for group...", { userId: targetUserId });
+      
+      const { data: existingGroup } = await supabaseClient
+        .from('family_groups')
+        .select('id')
+        .eq('owner_user_id', targetUserId)
+        .maybeSingle();
+      
+      if (!existingGroup) {
+        logStep("Creating family group...", { userId: targetUserId });
+        
+        const { data: newGroup, error: groupError } = await supabaseClient
+          .from('family_groups')
+          .insert({
+            owner_user_id: targetUserId,
+            stripe_subscription_id: subscription.id,
+            group_name: 'Minha Família',
+            max_members: 5,
+          })
+          .select()
+          .single();
+        
+        if (groupError) {
+          logStep("Error creating family group", { error: groupError });
+        } else if (newGroup) {
+          logStep("Family group created", { groupId: newGroup.id });
+          
+          // Add owner as first member
+          const { error: memberError } = await supabaseClient
+            .from('family_members')
+            .insert({
+              family_group_id: newGroup.id,
+              user_id: targetUserId,
+              status: 'active',
+              role: 'owner',
+              joined_at: new Date().toISOString(),
+            });
+          
+          if (memberError) {
+            logStep("Error adding owner as member", { error: memberError });
+          } else {
+            logStep("Owner added to family group successfully");
+          }
+        }
+      } else {
+        logStep("Family group already exists", { groupId: existingGroup.id });
+      }
     }
   } catch (error) {
     logStep("Error updating subscription", { error });

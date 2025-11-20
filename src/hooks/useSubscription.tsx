@@ -173,6 +173,37 @@ export const useSubscription = () => {
     }
   };
 
+  const createFamilyCheckout = async (priceId: string) => {
+    if (!user) {
+      toast.error('Faça login para continuar');
+      return null;
+    }
+
+    try {
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+      
+      if (!accessToken) {
+        toast.error('Sessão inválida. Faça login novamente.');
+        return null;
+      }
+
+      const { data, error } = await supabase.functions.invoke('create-family-checkout', {
+        body: { priceId },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (error) throw error;
+      return data.url;
+    } catch (error) {
+      console.error('Error creating family checkout:', error);
+      toast.error('Erro ao criar sessão de checkout para plano família');
+      return null;
+    }
+  };
+
   const openCustomerPortal = async () => {
     if (!user) {
       toast.error('Faça login para continuar');
@@ -286,6 +317,7 @@ export const useSubscription = () => {
     isFamily,
     isFree,
     createCheckout,
+    createFamilyCheckout,
     openCustomerPortal,
   };
 };
