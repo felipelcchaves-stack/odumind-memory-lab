@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ReferralWelcomeModal } from "@/components/ReferralWelcomeModal";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -23,6 +24,7 @@ import Subscription from "./pages/Subscription";
 import Success from "./pages/Success";
 import NotFound from "./pages/NotFound";
 import Changelog from "./pages/Changelog";
+import Referral from "./pages/Referral";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +35,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <ReferralWelcomeModal />
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
@@ -52,6 +55,7 @@ const App = () => (
               <Route path="/subscription" element={<Subscription />} />
               <Route path="/success" element={<Success />} />
               <Route path="/novidades" element={<Changelog />} />
+              <Route path="/indicar" element={<Referral />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

@@ -544,6 +544,133 @@ export type Database = {
         }
         Relationships: []
       }
+      referral_program: {
+        Row: {
+          created_at: string
+          id: string
+          referral_code: string
+          successful_conversions: number
+          total_earned_days: number
+          total_referrals: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          referral_code: string
+          successful_conversions?: number
+          total_earned_days?: number
+          total_referrals?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          referral_code?: string
+          successful_conversions?: number
+          total_earned_days?: number
+          total_referrals?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_program_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      referral_rewards: {
+        Row: {
+          claimed: boolean
+          created_at: string
+          expires_at: string | null
+          id: string
+          reward_description: string
+          reward_type: string
+          user_id: string
+        }
+        Insert: {
+          claimed?: boolean
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          reward_description: string
+          reward_type: string
+          user_id: string
+        }
+        Update: {
+          claimed?: boolean
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          reward_description?: string
+          reward_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_rewards_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      referral_usage: {
+        Row: {
+          converted_at: string | null
+          id: string
+          referral_code: string
+          referred_user_id: string
+          referrer_id: string
+          reward_type: string
+          reward_value: number
+          status: Database["public"]["Enums"]["referral_status"]
+          used_at: string
+        }
+        Insert: {
+          converted_at?: string | null
+          id?: string
+          referral_code: string
+          referred_user_id: string
+          referrer_id: string
+          reward_type: string
+          reward_value: number
+          status?: Database["public"]["Enums"]["referral_status"]
+          used_at?: string
+        }
+        Update: {
+          converted_at?: string | null
+          id?: string
+          referral_code?: string
+          referred_user_id?: string
+          referrer_id?: string
+          reward_type?: string
+          reward_value?: number
+          status?: Database["public"]["Enums"]["referral_status"]
+          used_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_usage_referred_user_id_fkey"
+            columns: ["referred_user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "referral_usage_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       study_plan: {
         Row: {
           ativo: boolean
@@ -894,6 +1021,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user" | "colaborador" | "aluno"
+      referral_status: "pending" | "converted" | "expired"
       status_memorizacao: "nao_estudado" | "estudando" | "memorizado"
     }
     CompositeTypes: {
@@ -1023,6 +1151,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user", "colaborador", "aluno"],
+      referral_status: ["pending", "converted", "expired"],
       status_memorizacao: ["nao_estudado", "estudando", "memorizado"],
     },
   },
