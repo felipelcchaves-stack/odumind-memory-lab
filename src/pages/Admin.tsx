@@ -14,6 +14,7 @@ import BulkUpload from '@/components/admin/BulkUpload';
 import UserManagement from '@/components/admin/UserManagement';
 import ChangelogManager from '@/components/admin/ChangelogManager';
 import HtmlCleanupTool from '@/components/admin/HtmlCleanupTool';
+import { SettingsManager } from '@/components/admin/SettingsManager';
 import DashboardHeader from '@/components/DashboardHeader';
 
 export default function Admin() {
@@ -134,17 +135,20 @@ export default function Admin() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-6' : 'grid-cols-5'}`}>
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-7' : 'grid-cols-5'}`}>
             <TabsTrigger value="list">Lista de Odu</TabsTrigger>
             <TabsTrigger value="editor">Editor</TabsTrigger>
             <TabsTrigger value="upload">Upload em Massa</TabsTrigger>
             <TabsTrigger value="tools">🔧 Ferramentas</TabsTrigger>
             <TabsTrigger value="changelog">Novidades</TabsTrigger>
             {isAdmin && (
-              <TabsTrigger value="users">
-                <Users className="h-4 w-4 mr-2" />
-                Usuários
-              </TabsTrigger>
+              <>
+                <TabsTrigger value="settings">⚙️ Configurações</TabsTrigger>
+                <TabsTrigger value="users">
+                  <Users className="h-4 w-4 mr-2" />
+                  Usuários
+                </TabsTrigger>
+              </>
             )}
           </TabsList>
 
@@ -234,6 +238,28 @@ export default function Admin() {
               </p>
             </div>
             <HtmlCleanupTool />
+          </TabsContent>
+
+          <TabsContent value="settings">
+            {isAdmin ? (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">⚙️ Configurações do Sistema</h2>
+                  <p className="text-muted-foreground mb-6">
+                    Gerencie as configurações globais da aplicação, incluindo pixels de tracking e integrações
+                  </p>
+                </div>
+                <SettingsManager />
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-muted-foreground">
+                    Apenas administradores podem acessar as configurações
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="users">
