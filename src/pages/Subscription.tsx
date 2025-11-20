@@ -11,6 +11,7 @@ import DashboardHeader from '@/components/DashboardHeader';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { usePixelTracking } from '@/hooks/usePixelTracking';
 
 const plans = [
   {
@@ -72,6 +73,7 @@ export default function Subscription() {
   const navigate = useNavigate();
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
   const [managingSubscription, setManagingSubscription] = useState(false);
+  const { trackInitiateCheckout } = usePixelTracking();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -147,6 +149,13 @@ export default function Subscription() {
     setProcessingPlan(planId);
     
     try {
+      // Track checkout initiation
+      const plan = plans.find(p => p.planId === planId);
+      if (plan) {
+        const price = parseFloat(plan.price.replace('R$ ', '').replace(',', '.'));
+        trackInitiateCheckout(plan.name, price);
+      }
+      
       const url = await createCheckout(stripeId);
       if (url) {
         window.open(url, '_blank');

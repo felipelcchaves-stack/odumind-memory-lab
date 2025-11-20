@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { Mail, Lock, User, ArrowLeft, Sparkles, Shield, Zap } from 'lucide-react';
+import { usePixelTracking } from '@/hooks/usePixelTracking';
 
 const emailSchema = z.string().email('Email inválido');
 const passwordSchema = z.string().min(6, 'Senha deve ter no mínimo 6 caracteres');
@@ -22,6 +23,7 @@ export default function Auth() {
   const [showReset, setShowReset] = useState(false);
   const { signIn, signUp, resetPassword, user } = useAuth();
   const navigate = useNavigate();
+  const { trackSignUp } = usePixelTracking();
 
   useEffect(() => {
     if (user) {
@@ -97,6 +99,9 @@ export default function Auth() {
         variant: 'destructive'
       });
     } else {
+      // Track signup event
+      trackSignUp('email');
+      
       toast({
         title: 'Conta criada!',
         description: 'Sua conta foi criada com sucesso'

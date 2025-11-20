@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, Crown, Sparkles, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePixelTracking } from "@/hooks/usePixelTracking";
 
 const monthlyPlans = [
   {
@@ -192,10 +193,14 @@ const Pricing = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+  const { trackViewContent } = usePixelTracking();
 
   const plans = billingCycle === 'monthly' ? monthlyPlans : annualPlans;
 
-  const handleCTAClick = (planName: string) => {
+  const handleCTAClick = (planName: string, price: string) => {
+    // Track content view
+    trackViewContent(planName, 'pricing_plan');
+    
     if (user) {
       navigate('/subscription');
     } else {
@@ -314,7 +319,7 @@ const Pricing = () => {
                     className="w-full"
                     variant={plan.variant}
                     size="lg"
-                    onClick={() => handleCTAClick(plan.name)}
+                    onClick={() => handleCTAClick(plan.name, plan.price)}
                   >
                     {plan.cta}
                     {plan.popular && <Sparkles className="ml-2 w-4 h-4" />}

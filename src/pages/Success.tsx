@@ -4,15 +4,35 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle2 } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
+import { usePixelTracking } from '@/hooks/usePixelTracking';
 
 const Success = () => {
   const navigate = useNavigate();
-  const { loadSubscription } = useSubscription();
+  const { loadSubscription, subscription } = useSubscription();
+  const { trackPurchase } = usePixelTracking();
 
   useEffect(() => {
     // Reload subscription after successful payment
     loadSubscription();
   }, []);
+
+  useEffect(() => {
+    // Track purchase after subscription is loaded
+    if (subscription && subscription.plan_name !== 'free') {
+      const planPrices: Record<string, number> = {
+        'premium': 49.90,
+        'akapo': 49.90,
+        'professional': 99.90,
+        'awo': 99.90,
+      };
+      
+      const price = planPrices[subscription.plan_name.toLowerCase()] || 0;
+      
+      if (price > 0) {
+        trackPurchase(price, 'BRL', subscription.plan_name);
+      }
+    }
+  }, [subscription, trackPurchase]);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-primary/5">
