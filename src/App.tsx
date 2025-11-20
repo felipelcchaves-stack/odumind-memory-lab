@@ -31,15 +31,19 @@ import FamiliaAceitar from "./pages/FamiliaAceitar";
 
 const queryClient = new QueryClient();
 
-function AppContent() {
+function SessionValidator() {
   useSessionValidation();
-  
+  return null;
+}
+
+function AppContent() {
   return (
     <>
       <Toaster />
       <Sonner />
       <ReferralWelcomeModal />
       <BrowserRouter>
+        <SessionValidator />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
