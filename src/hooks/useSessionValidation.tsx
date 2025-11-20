@@ -21,6 +21,19 @@ export function useSessionValidation() {
     }
 
     const validateSession = async () => {
+      // Skip validation if login is in progress (within last 10 seconds)
+      const loginInProgress = localStorage.getItem('login_in_progress');
+      if (loginInProgress) {
+        const loginTime = parseInt(loginInProgress);
+        const timeSinceLogin = Date.now() - loginTime;
+        if (timeSinceLogin < 10000) {
+          console.log('[SESSION-VALIDATION] Login in progress, skipping validation for', Math.round((10000 - timeSinceLogin) / 1000), 'more seconds');
+          return;
+        }
+        // Clean up old flag
+        localStorage.removeItem('login_in_progress');
+      }
+      
       if (isValidatingRef.current) return;
       isValidatingRef.current = true;
 

@@ -63,12 +63,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
+      // Set login in progress flag to pause session validation
+      localStorage.setItem('login_in_progress', Date.now().toString());
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        localStorage.removeItem('login_in_progress');
+        throw error;
+      }
 
       // Call enforce-single-session after successful login
       const deviceInfo = {
@@ -85,48 +91,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             },
             body: {
               device_info: deviceInfo,
-              ip_address: null, // Will be detected server-side
+              ip_address: null,
             },
           }
         );
 
-        // Se o erro for 401 (não autenticado), não precisa forçar logout
-        // porque já estamos no processo de login
         if (sessionError) {
           console.error('[AUTH] Erro ao enforçar sessão única:', sessionError);
           
           // Se for erro de autenticação (401), continuar com o login normal
-          // A validação de sessão vai lidar com isso depois
           if (sessionError.message?.includes('401') || sessionError.message?.includes('authorization')) {
             console.log('[AUTH] Erro de autenticação ao enforçar sessão, continuando com login normal');
-            return { data, error: null }; // Login bem-sucedido, mas sem sessão forçada
+            // Remove flag after delay to allow session validation to work
+            setTimeout(() => localStorage.removeItem('login_in_progress'), 3000);
+            return { data, error: null };
           }
           
-          // Para outros erros, forçar logout
+          localStorage.removeItem('login_in_progress');
           await supabase.auth.signOut();
           throw new Error('Não foi possível criar sessão. Tente novamente.');
         }
 
         if (!sessionData?.session_id) {
           console.error('[AUTH] session_id não retornado pela função');
-          // Não forçar logout aqui, apenas avisar
           console.warn('[AUTH] Continuando sem enforce de sessão única');
+          // Remove flag after delay
+          setTimeout(() => localStorage.removeItem('login_in_progress'), 3000);
           return { data, error: null };
         }
 
         // Only save if everything succeeded
         localStorage.setItem('session_id', sessionData.session_id);
         console.log('[AUTH] Sessão criada com sucesso:', sessionData.session_id);
+        
+        // Remove login flag after successful session creation
+        setTimeout(() => localStorage.removeItem('login_in_progress'), 2000);
       } catch (sessionError) {
         console.error('[AUTH] Exceção ao enforçar sessão:', sessionError);
-        // Não forçar logout em caso de exceção - permitir que o usuário tente novamente
         console.warn('[AUTH] Continuando sem enforce de sessão única');
+        // Remove flag after delay
+        setTimeout(() => localStorage.removeItem('login_in_progress'), 3000);
         return { data, error: null };
       }
 
       return { error: null };
     } catch (error: any) {
       console.error('[AUTH] Sign in error:', error);
+      localStorage.removeItem('login_in_progress');
       return { error };
     }
   };
