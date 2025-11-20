@@ -70,7 +70,7 @@ serve(async (req) => {
     logStep("Admin role verified");
 
     // Obter dados da requisição
-    const { userId, newPlan, billingCycle, reason } = await req.json();
+    const { userId, newPlan, billingCycle, reason, grantComplimentary } = await req.json();
     
     if (!userId || !newPlan || !billingCycle) {
       throw new Error("Missing required fields: userId, newPlan, billingCycle");
@@ -80,7 +80,7 @@ serve(async (req) => {
       throw new Error("Invalid billing cycle. Must be 'monthly' or 'annual'");
     }
     
-    logStep("Request data", { userId, newPlan, billingCycle, reason });
+    logStep("Request data", { userId, newPlan, billingCycle, reason, grantComplimentary });
 
     // Buscar email do usuário
     const { data: { user: targetUser }, error: userError } = await supabaseClient.auth.admin.getUserById(userId);
@@ -142,7 +142,7 @@ serve(async (req) => {
       }
     }
 
-    // Criar nova assinatura no Stripe (se não for downgrade para Free)
+    // Criar nova assinatura (se não for downgrade para Free)
     if (newPlan !== 'Gratuito' && newPlan !== 'free') {
       const priceId = PRICE_IDS[newPlan as keyof typeof PRICE_IDS]?.[billingCycle as 'monthly' | 'annual'];
       
@@ -150,49 +150,90 @@ serve(async (req) => {
         throw new Error(`Invalid plan or billing cycle: ${newPlan} (${billingCycle}). Available plans: Premium/Akapo, Profissional/Awo, Família/Egbe`);
       }
 
-      logStep("Creating new Stripe subscription", { priceId, plan: newPlan, cycle: billingCycle });
-
-      const newSubscription = await stripe.subscriptions.create({
+      // Verificar se o customer tem payment method
+      const paymentMethods = await stripe.paymentMethods.list({
         customer: customerId,
-        items: [{ price: priceId }],
-        metadata: {
-          supabase_user_id: userId,
-          changed_by_admin: adminUser.id,
-          billing_cycle: billingCycle
-        }
+        type: 'card',
+        limit: 1
       });
 
-      newStripeSubId = newSubscription.id;
-      logStep("Created new subscription", { subscriptionId: newStripeSubId });
+      const hasPaymentMethod = paymentMethods.data.length > 0;
+      logStep("Payment method check", { hasPaymentMethod, customerId });
 
-      stripeResponse.newSubscription = {
-        id: newSubscription.id,
-        status: newSubscription.status,
-        currentPeriodStart: newSubscription.current_period_start,
-        currentPeriodEnd: newSubscription.current_period_end,
-        priceId: priceId
-      };
+      // Se grantComplimentary=true OU não tem payment method: criar subscription complimentary
+      if (grantComplimentary || !hasPaymentMethod) {
+        logStep("Creating complimentary subscription (database only)", { reason: grantComplimentary ? 'admin_grant' : 'no_payment_method' });
+        
+        // Não criar no Stripe, apenas no banco de dados com status 'active' e período de 1 ano
+        const oneYearFromNow = new Date();
+        oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
 
-      // Atualizar tabela subscriptions
-      const { error: updateError } = await supabaseClient
-        .from('subscriptions')
-        .upsert({
-          user_id: userId,
-          stripe_customer_id: customerId,
-          stripe_subscription_id: newStripeSubId,
-          stripe_price_id: priceId,
-          plan_name: newPlan,
-          status: newSubscription.status,
-          current_period_start: new Date(newSubscription.current_period_start * 1000).toISOString(),
-          current_period_end: new Date(newSubscription.current_period_end * 1000).toISOString(),
-          cancel_at_period_end: false
+        const { error: updateError } = await supabaseClient
+          .from('subscriptions')
+          .upsert({
+            user_id: userId,
+            stripe_customer_id: customerId,
+            stripe_subscription_id: null, // NULL indica que é complimentary
+            stripe_price_id: priceId,
+            plan_name: newPlan,
+            status: 'active',
+            current_period_start: new Date().toISOString(),
+            current_period_end: oneYearFromNow.toISOString(),
+            cancel_at_period_end: false
+          });
+
+        if (updateError) throw updateError;
+        
+        logStep("Complimentary subscription created", { validUntil: oneYearFromNow });
+        stripeResponse.complimentaryGrant = {
+          granted: true,
+          validUntil: oneYearFromNow.toISOString(),
+          reason: grantComplimentary ? 'Acesso administrativo concedido' : 'Customer sem método de pagamento - acesso temporário'
+        };
+
+      } else {
+        // Customer tem payment method: criar subscription normal no Stripe
+        logStep("Creating paid Stripe subscription", { priceId });
+
+        const newSubscription = await stripe.subscriptions.create({
+          customer: customerId,
+          items: [{ price: priceId }],
+          metadata: {
+            supabase_user_id: userId,
+            changed_by_admin: adminUser.id,
+            billing_cycle: billingCycle
+          }
         });
 
-      if (updateError) {
-        logStep("Error updating subscriptions table", { error: updateError });
-        throw updateError;
+        newStripeSubId = newSubscription.id;
+        logStep("Created new subscription", { subscriptionId: newStripeSubId });
+
+        stripeResponse.newSubscription = {
+          id: newSubscription.id,
+          status: newSubscription.status,
+          currentPeriodStart: newSubscription.current_period_start,
+          currentPeriodEnd: newSubscription.current_period_end,
+          priceId: priceId
+        };
+
+        // Atualizar tabela subscriptions
+        const { error: updateError } = await supabaseClient
+          .from('subscriptions')
+          .upsert({
+            user_id: userId,
+            stripe_customer_id: customerId,
+            stripe_subscription_id: newStripeSubId,
+            stripe_price_id: priceId,
+            plan_name: newPlan,
+            status: newSubscription.status,
+            current_period_start: new Date(newSubscription.current_period_start * 1000).toISOString(),
+            current_period_end: new Date(newSubscription.current_period_end * 1000).toISOString(),
+            cancel_at_period_end: false
+          });
+
+        if (updateError) throw updateError;
+        logStep("Updated subscriptions table");
       }
-      logStep("Updated subscriptions table");
     } else {
       // Downgrade para Free
       const { error: updateError } = await supabaseClient
