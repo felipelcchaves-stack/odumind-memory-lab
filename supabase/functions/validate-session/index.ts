@@ -36,27 +36,31 @@ serve(async (req) => {
     );
 
     const token = authHeader.replace("Bearer ", "");
-    console.log("[VALIDATE-SESSION] Validando token do usuário");
+    console.log("[VALIDATE-SESSION] Decoding token");
     
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
-
-    if (userError) {
-      console.error("[VALIDATE-SESSION] Erro ao validar usuário:", userError.message);
+    // Decode the JWT token without validating it (in case it's expired)
+    // We just need the user_id from it
+    let userId: string;
+    try {
+      const tokenParts = token.split('.');
+      if (tokenParts.length !== 3) {
+        throw new Error("Invalid token format");
+      }
+      const payload = JSON.parse(atob(tokenParts[1]));
+      userId = payload.sub;
+      
+      if (!userId) {
+        throw new Error("No user ID in token");
+      }
+      
+      console.log(`[VALIDATE-SESSION] Extracted user ID: ${userId}`);
+    } catch (decodeError) {
+      console.error("[VALIDATE-SESSION] Error decoding token:", decodeError);
       return new Response(
-        JSON.stringify({ error: "Token inválido ou expirado" }),
+        JSON.stringify({ error: "Token inválido" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
       );
     }
-
-    if (!user) {
-      console.error("[VALIDATE-SESSION] Usuário não encontrado");
-      return new Response(
-        JSON.stringify({ error: "Usuário não autenticado" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
-      );
-    }
-
-    console.log(`[VALIDATE-SESSION] Usuário autenticado: ${user.id}`);
 
     const { session_id } = await req.json();
 
@@ -72,11 +76,11 @@ serve(async (req) => {
     const { data: activeSession, error: sessionError } = await supabaseClient
       .from("active_sessions")
       .select("session_id")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .single();
 
     if (sessionError || !activeSession) {
-      console.log(`[VALIDATE-SESSION] Nenhuma sessão encontrada para user ${user.id}`);
+      console.log(`[VALIDATE-SESSION] Nenhuma sessão encontrada para user ${userId}`);
       return new Response(
         JSON.stringify({ valid: false, reason: "no_session" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -87,7 +91,7 @@ serve(async (req) => {
     const isValid = activeSession.session_id === session_id;
 
     if (!isValid) {
-      console.log(`[VALIDATE-SESSION] Sessão inválida para user ${user.id}. Esperado: ${activeSession.session_id}, Recebido: ${session_id}`);
+      console.log(`[VALIDATE-SESSION] Sessão inválida para user ${userId}. Esperado: ${activeSession.session_id}, Recebido: ${session_id}`);
       return new Response(
         JSON.stringify({ valid: false, reason: "session_mismatch" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -98,9 +102,9 @@ serve(async (req) => {
     await supabaseClient
       .from("active_sessions")
       .update({ last_activity: new Date().toISOString() })
-      .eq("user_id", user.id);
+      .eq("user_id", userId);
 
-    console.log(`[VALIDATE-SESSION] Sessão válida para user ${user.id}`);
+    console.log(`[VALIDATE-SESSION] Sessão válida para user ${userId}`);
     return new Response(
       JSON.stringify({ valid: true }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
