@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Crown, Check, CreditCard, Calendar, AlertCircle, Shield, Users } from 'lucide-react';
 import DashboardHeader from '@/components/DashboardHeader';
+import RetentionOfferDialog from '@/components/RetentionOfferDialog';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -86,11 +87,26 @@ const plans = [
 export default function Subscription() {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, isColaborador } = useAdmin();
-  const { subscription, loading: subLoading, loadSubscription, createCheckout, createFamilyCheckout, openCustomerPortal, changeOwnSubscription } = useSubscription();
+  const { 
+    subscription, 
+    loading: subLoading, 
+    loadSubscription, 
+    createCheckout, 
+    createFamilyCheckout, 
+    createCheckoutWithCoupon,
+    openCustomerPortal, 
+    changeOwnSubscription,
+    createRetentionOffer,
+  } = useSubscription();
   const navigate = useNavigate();
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
   const [managingSubscription, setManagingSubscription] = useState(false);
   const { trackInitiateCheckout } = usePixelTracking();
+  
+  // Retention offer state
+  const [showRetentionOffer, setShowRetentionOffer] = useState(false);
+  const [retentionOfferData, setRetentionOfferData] = useState<any>(null);
+  const [pendingDowngradePlan, setPendingDowngradePlan] = useState<string | null>(null);
 
   // Plan hierarchy for determining if downgrade is allowed
   const planHierarchy = ['Gratuito', 'Akapo', 'Awo', 'Egbe'];
@@ -160,6 +176,44 @@ export default function Subscription() {
   }
 
   const handleDowngrade = async (planName: string) => {
+    // If downgrading to Gratuito, show retention offer first
+    if (planName === 'Gratuito') {
+      const currentPlanName = subscription?.plan_name || '';
+      
+      // Don't show retention offer if already on Gratuito
+      if (currentPlanName === 'Gratuito') {
+        toast.info('Você já está no plano Gratuito');
+        return;
+      }
+
+      setProcessingPlan(planName);
+      setPendingDowngradePlan(planName);
+      
+      try {
+        // Create retention offer
+        const offerData = await createRetentionOffer(currentPlanName);
+        
+        if (offerData) {
+          setRetentionOfferData(offerData);
+          setShowRetentionOffer(true);
+        } else {
+          // If offer creation fails, proceed with downgrade
+          await proceedWithDowngrade(planName);
+        }
+      } catch (error) {
+        console.error('Error creating retention offer:', error);
+        // If error, proceed with downgrade anyway
+        await proceedWithDowngrade(planName);
+      } finally {
+        setProcessingPlan(null);
+      }
+    } else {
+      // For other downgrades, proceed directly
+      await proceedWithDowngrade(planName);
+    }
+  };
+
+  const proceedWithDowngrade = async (planName: string) => {
     setProcessingPlan(planName);
     
     try {
@@ -172,6 +226,46 @@ export default function Subscription() {
       toast.error('Erro ao processar downgrade');
     } finally {
       setProcessingPlan(null);
+      setPendingDowngradePlan(null);
+      setShowRetentionOffer(false);
+      setRetentionOfferData(null);
+    }
+  };
+
+  const handleAcceptRetentionOffer = async () => {
+    if (!retentionOfferData || !subscription?.plan_name) {
+      toast.error('Erro ao processar oferta');
+      return;
+    }
+
+    // Get the current plan's stripe ID
+    const currentPlan = plans.find(p => p.name === subscription.plan_name);
+    if (!currentPlan?.stripeId) {
+      toast.error('Plano não encontrado');
+      return;
+    }
+
+    try {
+      // Create checkout with the coupon
+      const url = await createCheckoutWithCoupon(
+        currentPlan.stripeId, 
+        retentionOfferData.couponCode
+      );
+      
+      if (url) {
+        window.open(url, '_blank');
+        toast.success('Redirecionando para checkout com desconto...');
+        setShowRetentionOffer(false);
+      }
+    } catch (error) {
+      console.error('Error accepting retention offer:', error);
+      toast.error('Erro ao processar oferta');
+    }
+  };
+
+  const handleDeclineRetentionOffer = async () => {
+    if (pendingDowngradePlan) {
+      await proceedWithDowngrade(pendingDowngradePlan);
     }
   };
 
@@ -427,6 +521,20 @@ export default function Subscription() {
           </Card>
         </div>
       </div>
+
+      {/* Retention Offer Dialog */}
+      {retentionOfferData && (
+        <RetentionOfferDialog
+          open={showRetentionOffer}
+          onOpenChange={setShowRetentionOffer}
+          onAcceptOffer={handleAcceptRetentionOffer}
+          onDeclineOffer={handleDeclineRetentionOffer}
+          currentPlan={subscription?.plan_name || ''}
+          discountPercent={retentionOfferData.discountPercent}
+          durationMonths={retentionOfferData.durationMonths}
+          loading={processingPlan !== null}
+        />
+      )}
     </div>
   );
 }
