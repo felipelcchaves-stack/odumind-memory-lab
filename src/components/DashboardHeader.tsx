@@ -24,12 +24,12 @@ export default function DashboardHeader() {
   const { hasUnreadChangelog } = useChangelog();
 
   const navItems = [
-    { path: '/dashboard', icon: Home, label: 'Dashboard' },
-    { path: '/odu', icon: BookOpen, label: 'Biblioteca' },
-    { path: '/study', icon: Brain, label: 'Estudar' },
-    { path: '/memory-palace', icon: Landmark, label: 'Palácio' },
-    { path: '/tecnicas', icon: Lightbulb, label: 'Técnicas' },
-    { path: '/novidades', icon: Sparkles, label: 'Novidades', showBadge: hasUnreadChangelog },
+    { path: '/dashboard', icon: Home, label: 'Dashboard', priority: 'high' },
+    { path: '/odu', icon: BookOpen, label: 'Biblioteca', priority: 'high' },
+    { path: '/study', icon: Brain, label: 'Estudar', priority: 'high' },
+    { path: '/memory-palace', icon: Landmark, label: 'Palácio', priority: 'medium' },
+    { path: '/tecnicas', icon: Lightbulb, label: 'Técnicas', priority: 'low' },
+    { path: '/novidades', icon: Sparkles, label: 'Novidades', showBadge: hasUnreadChangelog, priority: 'low' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -52,7 +52,15 @@ export default function DashboardHeader() {
 
         {/* Navigation */}
         <nav className="flex items-center gap-1" data-tour="nav-menu">
-      {navItems.map((item) => (
+      {navItems
+        .filter(item => {
+          // On mobile (< 768px), show only high priority items
+          if (typeof window !== 'undefined' && window.innerWidth < 768) {
+            return item.priority === 'high';
+          }
+          return true;
+        })
+        .map((item) => (
         <Button
           key={item.path}
           variant={isActive(item.path) ? 'default' : 'ghost'}

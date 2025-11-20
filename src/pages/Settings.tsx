@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Play, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Play, AlertTriangle, Type } from 'lucide-react';
 import NotificationSettings from '@/components/NotificationSettings';
 import DashboardHeader from '@/components/DashboardHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,10 +8,13 @@ import { useProductTour } from '@/hooks/useProductTour';
 import { ResetProgressDialog } from '@/components/ResetProgressDialog';
 import StudyCalendar from '@/components/StudyCalendar';
 import StudyPlanGenerator from '@/components/StudyPlanGenerator';
+import { useAccessibility } from '@/contexts/AccessibilityContext';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function Settings() {
   const navigate = useNavigate();
   const { resetTour } = useProductTour();
+  const { fontSize, setFontSize } = useAccessibility();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20">
@@ -33,6 +36,33 @@ export default function Settings() {
         </div>
 
         <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Type className="h-5 w-5" />
+                Tamanho do Texto
+              </CardTitle>
+              <CardDescription>
+                Ajuste o tamanho do texto para melhor leitura (ideal para todas as idades)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Select value={fontSize} onValueChange={(value) => setFontSize(value as any)}>
+                <SelectTrigger className="w-full sm:w-64">
+                  <SelectValue placeholder="Selecione o tamanho" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="small">Pequeno</SelectItem>
+                  <SelectItem value="normal">Normal (Padrão)</SelectItem>
+                  <SelectItem value="large">Grande (Mais fácil de ler)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground mt-2">
+                💡 Textos maiores facilitam a leitura para todas as idades
+              </p>
+            </CardContent>
+          </Card>
+
           <StudyCalendar />
           
           <StudyPlanGenerator />

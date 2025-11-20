@@ -70,8 +70,25 @@ const Hero = () => {
             </Button>
           </div>
 
+          {/* Video Demo Section */}
+          <div className="mt-12 max-w-3xl mx-auto">
+            <p className="text-sm text-muted-foreground mb-4 text-center">
+              ▶️ Veja como funciona em 60 segundos:
+            </p>
+            <div className="aspect-video bg-muted rounded-xl flex items-center justify-center border-2 border-border hover:border-primary transition-colors cursor-pointer group">
+              <div className="text-center">
+                <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors mb-3">
+                  <svg className="h-8 w-8 text-primary" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+                <p className="text-sm text-muted-foreground">Clique para assistir a demonstração</p>
+              </div>
+            </div>
+          </div>
+
           {/* Social Proof */}
-          <p className="text-sm text-muted-foreground pt-4">
+          <p className="text-sm text-muted-foreground pt-8">
             Junte-se a milhares de estudantes e mestres de Ifá
           </p>
         </div>
