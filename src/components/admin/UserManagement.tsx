@@ -46,7 +46,7 @@ export default function UserManagement() {
     loadUsers();
   }, []);
 
-  async function loadUsers() {
+  async function loadUsers(): Promise<UserProfile[]> {
     try {
       setLoading(true);
       
@@ -122,9 +122,11 @@ export default function UserManagement() {
 
       console.log('✅ Lista de usuários atualizada:', usersWithRoles.length, 'usuários');
       setUsers(usersWithRoles);
+      return usersWithRoles; // ✅ Retornar dados além de atualizar estado
     } catch (error) {
       console.error('Error loading users:', error);
       toast.error('Erro ao carregar usuários');
+      return []; // Retornar array vazio em caso de erro
     } finally {
       setLoading(false);
     }
@@ -261,53 +263,52 @@ export default function UserManagement() {
 
   const handleDialogSave = async () => {
     try {
-      console.log('🔄 Iniciando processo de atualização com retry...');
+      console.log('🔄 Iniciando verificação pós-atualização...');
       
-      // Capturar o estado anterior para comparação
-      const userBeforeUpdate = users.find(u => u.user_id === editingUserId);
-      const planBefore = userBeforeUpdate?.plan_name;
+      // Capturar plano ANTES
+      const userBefore = users.find(u => u.user_id === editingUserId);
+      const planBefore = userBefore?.plan_name;
+      console.log(`📊 Plano anterior: ${planBefore}`);
       
-      // Retry pattern: tentar até 3 vezes com delay crescente
+      // Retry com dados retornados (não estado)
       for (let attempt = 1; attempt <= 3; attempt++) {
-        console.log(`🔄 Tentativa ${attempt}/3 - Aguardando commit (${attempt * 1000}ms)...`);
-        
-        // Delay crescente: 1s, 2s, 3s
+        console.log(`🔄 Tentativa ${attempt}/3 - Aguardando ${attempt}s...`);
         await new Promise(resolve => setTimeout(resolve, attempt * 1000));
         
-        console.log(`🔄 Recarregando dados (tentativa ${attempt})...`);
-        await loadUsers();
+        console.log(`🔄 Buscando dados atualizados do banco...`);
+        const freshUsers = await loadUsers(); // ✅ Usar dados retornados
         
-        // Verificar se a mudança foi aplicada
-        const userAfterUpdate = users.find(u => u.user_id === editingUserId);
-        const planAfter = userAfterUpdate?.plan_name;
+        const userAfter = freshUsers.find(u => u.user_id === editingUserId);
+        const planAfter = userAfter?.plan_name;
         
-        console.log(`📊 Comparação - Antes: ${planBefore} | Depois: ${planAfter}`);
+        console.log(`📊 Comparação - Antes: "${planBefore}" | Depois: "${planAfter}"`);
         
+        // Verificar se houve mudança REAL
         if (planAfter && planAfter !== planBefore) {
-          console.log('✅ Mudança detectada com sucesso!');
-          toast.success(`✅ Plano atualizado: ${planBefore} → ${planAfter}`);
+          console.log('✅ Mudança detectada!');
+          toast.success(`✅ Plano atualizado: ${planBefore} → ${planAfter}`, { duration: 5000 });
+          return;
+        }
+        
+        // Se os planos são iguais desde o início, não é erro
+        if (planBefore === planAfter && attempt === 1) {
+          console.log('ℹ️ Plano já estava correto ou sem mudança necessária');
+          toast.info('Dados atualizados com sucesso');
           return;
         }
         
         if (attempt < 3) {
-          console.log(`⚠️ Mudança ainda não refletida, tentando novamente...`);
+          console.log(`⚠️ Mudança não detectada, tentando novamente...`);
         }
       }
       
-      // Se chegou aqui, 3 tentativas falharam
-      console.error('❌ Falha após 3 tentativas - mudança não detectada');
-      toast.error('⚠️ Não foi possível confirmar a atualização. Recarregue a página manualmente.');
-      
-      // Forçar reload como último recurso
-      setTimeout(() => {
-        if (window.confirm('A atualização pode não ter sido aplicada. Deseja recarregar a página?')) {
-          window.location.reload();
-        }
-      }, 2000);
+      // Falha após 3 tentativas
+      console.error('❌ Não foi possível confirmar a mudança após 3 tentativas');
+      toast.error('⚠️ Atualização pode não ter sido aplicada. Recarregue a página.', { duration: 8000 });
       
     } catch (error) {
-      console.error('❌ Erro ao recarregar dados:', error);
-      toast.error('Erro ao atualizar lista de usuários');
+      console.error('❌ Erro ao verificar atualização:', error);
+      toast.error('Erro ao validar mudanças');
     }
   };
 

@@ -276,6 +276,23 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
 
         // Update subscription via edge function if changed
         if (selectedPlan !== originalPlan) {
+          // ✅ VALIDAÇÃO: Prevenir mudança para o mesmo plano (considerando aliases)
+          const normalizedNew = selectedPlan === 'Egbe' ? 'Família' : 
+                               selectedPlan === 'Akapo' ? 'Premium' : 
+                               selectedPlan === 'Awo' ? 'Profissional' : selectedPlan;
+          
+          const normalizedOld = originalPlan === 'Egbe' ? 'Família' : 
+                               originalPlan === 'Akapo' ? 'Premium' : 
+                               originalPlan === 'Awo' ? 'Profissional' : originalPlan;
+          
+          if (normalizedNew === normalizedOld) {
+            console.log('⚠️ Plano selecionado é o mesmo (considerando aliases)');
+            toast.info('Usuário já está neste plano');
+            onSave();
+            onOpenChange(false);
+            return;
+          }
+          
           const { data: changeResult, error: changeError } = await supabase.functions.invoke(
             'admin-change-subscription',
             {
