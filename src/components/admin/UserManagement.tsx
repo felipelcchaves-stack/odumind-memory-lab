@@ -432,8 +432,6 @@ export default function UserManagement() {
             <TableRow>
               <TableHead>Usuário</TableHead>
               <TableHead>Plano</TableHead>
-              <TableHead>Stripe Customer</TableHead>
-              <TableHead>Status</TableHead>
               <TableHead>XP</TableHead>
               <TableHead>Streak</TableHead>
               <TableHead>Função</TableHead>
@@ -465,34 +463,13 @@ export default function UserManagement() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      {user.subscription_status === 'active' || user.subscription_status === 'trialing' ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <Circle className="h-4 w-4 text-muted-foreground" />
-                      )}
-                      <Badge variant={
-                        user.plan_name === 'Profissional' ? 'default' :
-                        user.plan_name === 'Premium' ? 'secondary' :
-                        user.plan_name === 'Família' ? 'success' :
-                        'outline'
-                      }>
-                        {user.plan_name || 'Gratuito'}
-                      </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <code className="text-xs bg-muted px-2 py-1 rounded">
-                      {user.stripe_customer_id ? user.stripe_customer_id.substring(0, 15) + '...' : '-'}
-                    </code>
-                  </TableCell>
-                  <TableCell>
                     <Badge variant={
-                      user.subscription_status === 'active' ? 'success' :
-                      user.subscription_status === 'trialing' ? 'secondary' :
+                      user.plan_name === 'Profissional' ? 'default' :
+                      user.plan_name === 'Premium' ? 'secondary' :
+                      user.plan_name === 'Família' ? 'success' :
                       'outline'
                     }>
-                      {user.subscription_status || 'free'}
+                      {user.plan_name || 'Gratuito'}
                     </Badge>
                   </TableCell>
                   <TableCell>{user.xp}</TableCell>
