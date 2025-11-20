@@ -99,10 +99,16 @@ serve(async (req) => {
     }
 
     // Update referral program stats
+    const { data: currentProgram } = await supabaseClient
+      .from('referral_program')
+      .select('total_referrals')
+      .eq('user_id', referralProgram.user_id)
+      .single();
+
     const { error: updateError } = await supabaseClient
       .from('referral_program')
       .update({
-        total_referrals: supabaseClient.rpc('increment', { x: 1 }),
+        total_referrals: (currentProgram?.total_referrals || 0) + 1,
       })
       .eq('user_id', referralProgram.user_id);
 

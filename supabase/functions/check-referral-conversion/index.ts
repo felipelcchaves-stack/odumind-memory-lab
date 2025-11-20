@@ -59,34 +59,23 @@ serve(async (req) => {
       );
     }
 
-    // Update referral program stats
-    const { error: statsError } = await supabaseClient.rpc('increment', {
-      row_id: referralUsage.referrer_id,
-      table_name: 'referral_program',
-      column_name: 'successful_conversions',
-    });
-
-    if (statsError) {
-      console.error('Error updating stats:', statsError);
-    }
-
-    // Get current earned days
-    const { data: program } = await supabaseClient
+    // Update referral program stats (conversions)
+    const { data: currentProgram } = await supabaseClient
       .from('referral_program')
-      .select('total_earned_days')
+      .select('successful_conversions, total_earned_days')
       .eq('user_id', referralUsage.referrer_id)
       .single();
 
-    // Update total earned days (30 days for conversion)
-    const { error: daysError } = await supabaseClient
+    const { error: statsError } = await supabaseClient
       .from('referral_program')
       .update({
-        total_earned_days: (program?.total_earned_days || 0) + 30,
+        successful_conversions: (currentProgram?.successful_conversions || 0) + 1,
+        total_earned_days: (currentProgram?.total_earned_days || 0) + 30,
       })
       .eq('user_id', referralUsage.referrer_id);
 
-    if (daysError) {
-      console.error('Error updating earned days:', daysError);
+    if (statsError) {
+      console.error('Error updating stats:', statsError);
     }
 
     // Create reward for referrer (30 days + badge)
