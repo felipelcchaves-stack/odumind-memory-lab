@@ -103,6 +103,7 @@ export default function StudySession() {
   const [isRecycling, setIsRecycling] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [pauseStartTime, setPauseStartTime] = useState<number | null>(null);
+  const [autoSaveActive, setAutoSaveActive] = useState(true);
   
   // Learning intelligence state
   const [userProfile, setUserProfile] = useState<UserLearningProfile | null>(null);
@@ -145,6 +146,50 @@ export default function StudySession() {
 
     initializeSession();
   }, [user]);
+
+  // Auto-save session on unmount or page close
+  useEffect(() => {
+    return () => {
+      // Cleanup: Auto-save session when component unmounts
+      if (sessionId && user && isSessionActive && sessionStats.cardsStudied > 0) {
+        console.log('🔄 Auto-salvando sessão ao sair...');
+        endStudySession(
+          sessionId,
+          sessionStats.cardsStudied,
+          sessionMetrics.correctAnswers || 0,
+          sessionMetrics.wrongAnswers || 0,
+          sessionMetrics.averageResponseTime || 0
+        ).catch(error => {
+          console.error('Erro ao auto-salvar sessão:', error);
+        });
+      }
+    };
+  }, [sessionId, isSessionActive, sessionStats.cardsStudied, sessionMetrics]);
+
+  // Auto-save session before page unload
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (sessionId && user && isSessionActive && sessionStats.cardsStudied > 0) {
+        console.log('🔄 Auto-salvando sessão antes de fechar página...');
+        // Usar sendBeacon para garantir que a requisição seja enviada
+        const endpoint = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/study_sessions?id=eq.${sessionId}`;
+        const payload = JSON.stringify({
+          ended_at: new Date().toISOString(),
+          total_cards: sessionStats.cardsStudied,
+          correct_answers: sessionMetrics.correctAnswers || 0,
+          wrong_answers: sessionMetrics.wrongAnswers || 0,
+          average_response_time: sessionMetrics.averageResponseTime || 0,
+        });
+        
+        navigator.sendBeacon(endpoint, new Blob([payload], { type: 'application/json' }));
+        toast.success('✅ Progresso salvo automaticamente', { duration: 1500 });
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [sessionId, isSessionActive, sessionStats, sessionMetrics, user]);
+
 
   async function initializeSession() {
     if (!user) return;

@@ -975,6 +975,7 @@ export type Database = {
       }
       study_sessions: {
         Row: {
+          auto_finalized: boolean | null
           average_response_time: number | null
           correct_answers: number | null
           created_at: string
@@ -987,6 +988,7 @@ export type Database = {
           wrong_answers: number | null
         }
         Insert: {
+          auto_finalized?: boolean | null
           average_response_time?: number | null
           correct_answers?: number | null
           created_at?: string
@@ -999,6 +1001,7 @@ export type Database = {
           wrong_answers?: number | null
         }
         Update: {
+          auto_finalized?: boolean | null
           average_response_time?: number | null
           correct_answers?: number | null
           created_at?: string
@@ -1236,6 +1239,7 @@ export type Database = {
         Returns: undefined
       }
       check_and_award_badges: { Args: { _user_id: string }; Returns: undefined }
+      cleanup_abandoned_sessions: { Args: never; Returns: undefined }
       cleanup_expired_sessions: { Args: never; Returns: undefined }
       get_user_emails: {
         Args: { user_ids: string[] }

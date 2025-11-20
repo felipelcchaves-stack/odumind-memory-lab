@@ -57,6 +57,7 @@ export default function StudyPlanProgress() {
   const [plan, setPlan] = useState<StudyPlan | null>(null);
   const [progress, setProgress] = useState<ProgressData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessions, setSessions] = useState<StudySession[]>([]);
 
   useEffect(() => {
     loadProgressData();
@@ -92,6 +93,7 @@ export default function StudyPlanProgress() {
         .gte('started_at', planData.data_inicio)
         .order('started_at', { ascending: true });
 
+      setSessions(sessions || []);
       const progressData = calculateProgress(planData as unknown as StudyPlan, sessions || []);
       setProgress(progressData);
     } catch (error) {
@@ -113,8 +115,18 @@ export default function StudyPlanProgress() {
       today
     );
 
-    // Count completed sessions
-    const completedSessions = sessions.filter(s => s.ended_at !== null).length;
+    // Count completed sessions (finalized + active sessions today with activity)
+    const now = new Date();
+    const completedSessions = sessions.filter(s => {
+      if (s.ended_at !== null) return true;
+      
+      // Count active sessions started today with at least 1 card
+      const sessionDate = new Date(s.started_at);
+      const isToday = sessionDate.toDateString() === now.toDateString();
+      const hasActivity = (s.total_cards || 0) > 0 || (s.correct_answers || 0) > 0;
+      
+      return isToday && hasActivity;
+    }).length;
 
     // Calculate completion rate
     const completionRate = scheduledSessions > 0 
@@ -246,6 +258,29 @@ export default function StudyPlanProgress() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Study Status Badge */}
+        <div className="flex justify-center">
+          {sessions.some(s => {
+            const sessionDate = new Date(s.started_at);
+            const today = new Date();
+            return sessionDate.toDateString() === today.toDateString();
+          }) ? (
+            sessions.some(s => s.ended_at === null && new Date(s.started_at).toDateString() === new Date().toDateString()) ? (
+              <Badge variant="secondary" className="text-base px-4 py-1">
+                ⏳ Sessão em andamento
+              </Badge>
+            ) : (
+              <Badge variant="default" className="text-base px-4 py-1">
+                ✅ Estudado hoje
+              </Badge>
+            )
+          ) : (
+            <Badge variant="outline" className="text-base px-4 py-1">
+              ❌ Não estudado hoje
+            </Badge>
+          )}
+        </div>
+
         {/* Main Progress Bar */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
