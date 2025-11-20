@@ -12,6 +12,23 @@ serve(async (req) => {
   }
 
   try {
+    // Verificar se há header de autorização
+    const authHeader = req.headers.get("Authorization");
+    
+    if (!authHeader) {
+      console.log("[ENFORCE-SESSION] No authorization header provided");
+      return new Response(
+        JSON.stringify({ 
+          error: "No authorization header",
+          requiresAuth: true 
+        }),
+        { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" }, 
+          status: 401 
+        }
+      );
+    }
+
     // Use service role key to bypass RLS for session management
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -24,12 +41,21 @@ serve(async (req) => {
       }
     );
 
-    const authHeader = req.headers.get("Authorization")!;
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
 
     if (userError || !user) {
-      throw new Error("Usuário não autenticado");
+      console.log("[ENFORCE-SESSION] Authentication failed:", userError?.message || "No user");
+      return new Response(
+        JSON.stringify({ 
+          error: "Invalid or expired session",
+          requiresAuth: true 
+        }),
+        { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" }, 
+          status: 401 
+        }
+      );
     }
 
     const { device_info, ip_address } = await req.json();

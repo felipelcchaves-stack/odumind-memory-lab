@@ -87,17 +87,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         );
 
+        // Se o erro for 401 (não autenticado), não precisa forçar logout
+        // porque já estamos no processo de login
         if (sessionError) {
           console.error('[AUTH] Erro ao enforçar sessão única:', sessionError);
-          // Force logout to prevent inconsistent state
+          
+          // Se for erro de autenticação (401), continuar com o login normal
+          // A validação de sessão vai lidar com isso depois
+          if (sessionError.message?.includes('401') || sessionError.message?.includes('authorization')) {
+            console.log('[AUTH] Erro de autenticação ao enforçar sessão, continuando com login normal');
+            return { data, error: null }; // Login bem-sucedido, mas sem sessão forçada
+          }
+          
+          // Para outros erros, forçar logout
           await supabase.auth.signOut();
           throw new Error('Não foi possível criar sessão. Tente novamente.');
         }
 
         if (!sessionData?.session_id) {
           console.error('[AUTH] session_id não retornado pela função');
-          await supabase.auth.signOut();
-          throw new Error('Erro ao criar sessão. Tente novamente.');
+          // Não forçar logout aqui, apenas avisar
+          console.warn('[AUTH] Continuando sem enforce de sessão única');
+          return { data, error: null };
         }
 
         // Only save if everything succeeded
@@ -105,8 +116,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('[AUTH] Sessão criada com sucesso:', sessionData.session_id);
       } catch (sessionError) {
         console.error('[AUTH] Exceção ao enforçar sessão:', sessionError);
-        await supabase.auth.signOut();
-        return { error: sessionError };
+        // Não forçar logout em caso de exceção - permitir que o usuário tente novamente
+        console.warn('[AUTH] Continuando sem enforce de sessão única');
+        return { data, error: null };
       }
 
       return { error: null };
