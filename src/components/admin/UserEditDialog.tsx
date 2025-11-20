@@ -315,7 +315,7 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto animate-enter">
         <DialogHeader>
           <DialogTitle>{isCreate ? 'Criar Novo Usuário' : 'Editar Perfil do Usuário'}</DialogTitle>
           <DialogDescription>
