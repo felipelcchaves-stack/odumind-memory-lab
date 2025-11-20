@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      active_sessions: {
+        Row: {
+          created_at: string
+          device_info: Json | null
+          id: string
+          ip_address: string | null
+          last_activity: string
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_info?: Json | null
+          id?: string
+          ip_address?: string | null
+          last_activity?: string
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_info?: Json | null
+          id?: string
+          ip_address?: string | null
+          last_activity?: string
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       badges: {
         Row: {
           code: string
@@ -145,6 +175,137 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "odu"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      family_groups: {
+        Row: {
+          created_at: string
+          group_name: string | null
+          id: string
+          max_members: number
+          owner_user_id: string
+          stripe_subscription_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          group_name?: string | null
+          id?: string
+          max_members?: number
+          owner_user_id: string
+          stripe_subscription_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          group_name?: string | null
+          id?: string
+          max_members?: number
+          owner_user_id?: string
+          stripe_subscription_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_groups_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      family_invites: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          family_group_id: string
+          id: string
+          invited_by: string
+          status: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at: string
+          family_group_id: string
+          id?: string
+          invited_by: string
+          status?: string
+          token: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          family_group_id?: string
+          id?: string
+          invited_by?: string
+          status?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_invites_family_group_id_fkey"
+            columns: ["family_group_id"]
+            isOneToOne: false
+            referencedRelation: "family_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_invites_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      family_members: {
+        Row: {
+          family_group_id: string
+          id: string
+          invited_at: string
+          joined_at: string | null
+          role: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          family_group_id: string
+          id?: string
+          invited_at?: string
+          joined_at?: string | null
+          role?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          family_group_id?: string
+          id?: string
+          invited_at?: string
+          joined_at?: string | null
+          role?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_members_family_group_id_fkey"
+            columns: ["family_group_id"]
+            isOneToOne: false
+            referencedRelation: "family_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1006,6 +1167,7 @@ export type Database = {
         Returns: undefined
       }
       check_and_award_badges: { Args: { _user_id: string }; Returns: undefined }
+      cleanup_expired_sessions: { Args: never; Returns: undefined }
       get_user_emails: {
         Args: { user_ids: string[] }
         Returns: {
@@ -1013,10 +1175,19 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_user_family_group: { Args: { _user_id: string }; Returns: string }
       has_active_subscription: { Args: { _user_id: string }; Returns: boolean }
       has_admin_role: { Args: { _user_id: string }; Returns: boolean }
       has_aluno_role: { Args: { _user_id: string }; Returns: boolean }
       has_colaborador_role: { Args: { _user_id: string }; Returns: boolean }
+      is_family_member: {
+        Args: { _family_group_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_family_owner: {
+        Args: { _family_group_id: string; _user_id: string }
+        Returns: boolean
+      }
       update_user_streak: { Args: { _user_id: string }; Returns: undefined }
     }
     Enums: {
