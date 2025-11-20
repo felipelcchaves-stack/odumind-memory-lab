@@ -19,23 +19,20 @@ export function useSessionValidation() {
       return;
     }
 
-    const sessionId = localStorage.getItem('session_id');
-    if (!sessionId) {
-      console.warn('[SESSION-VALIDATION] No session_id found, user might have logged in before single-session was implemented');
-      return;
-    }
-
     const validateSession = async () => {
       if (isValidatingRef.current) return;
       isValidatingRef.current = true;
 
       try {
-        // First, get the current session (this will auto-refresh the token if needed)
+        // Get the current session (this will auto-refresh the token if needed)
         const { data: sessionData } = await supabase.auth.getSession();
         
         if (!sessionData.session) {
           console.log('[SESSION-VALIDATION] No active session, forcing logout');
-          clearInterval(intervalRef.current!);
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
           localStorage.removeItem('session_id');
           await signOut();
           navigate('/auth', { replace: true });
@@ -43,9 +40,21 @@ export function useSessionValidation() {
           return;
         }
 
-        // Now call validate-session with the fresh token
+        // Extract session_id from the JWT token payload
+        const accessToken = sessionData.session.access_token;
+        const tokenPayload = JSON.parse(atob(accessToken.split('.')[1]));
+        const currentSessionId = tokenPayload.session_id;
+
+        // Update localStorage with the correct session_id if different
+        const storedSessionId = localStorage.getItem('session_id');
+        if (storedSessionId !== currentSessionId) {
+          console.log('[SESSION-VALIDATION] Updating session_id in localStorage');
+          localStorage.setItem('session_id', currentSessionId);
+        }
+
+        // Now call validate-session with the correct session_id
         const { data, error } = await supabase.functions.invoke('validate-session', {
-          body: { session_id: sessionId }
+          body: { session_id: currentSessionId }
         });
 
         // Se houver erro na chamada da função (500, 401, etc)
