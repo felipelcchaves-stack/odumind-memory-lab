@@ -12,6 +12,22 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CHANGE-OWN-SUBSCRIPTION] ${step}${detailsStr}`);
 };
 
+// Mapeamento de aliases de planos
+const PLAN_ALIASES: { [key: string]: string } = {
+  'Egbe (Família)': 'Egbe',
+  'Família': 'Egbe',
+  'Profissional': 'Awo',
+  'Premium': 'Akapo',
+  'Awo': 'Awo',
+  'Akapo': 'Akapo',
+  'Egbe': 'Egbe',
+  'Gratuito': 'Gratuito',
+};
+
+function normalizePlanName(planName: string): string {
+  return PLAN_ALIASES[planName] || planName;
+}
+
 // Plan hierarchy for downgrade validation (lower index = lower tier)
 const PLAN_HIERARCHY = ['Gratuito', 'Akapo', 'Awo', 'Egbe'];
 
@@ -62,9 +78,20 @@ serve(async (req) => {
     const currentPlan = currentSub?.plan_name || 'Gratuito';
     logStep("Current plan", { currentPlan });
 
+    // Normalize plan names
+    const currentPlanNormalized = normalizePlanName(currentPlan);
+    const newPlanNormalized = normalizePlanName(newPlan);
+    
+    logStep("Plans normalized", { 
+      currentPlan, 
+      currentPlanNormalized, 
+      newPlan, 
+      newPlanNormalized 
+    });
+
     // Validate downgrade (can only go to same or lower tier)
-    const currentIndex = PLAN_HIERARCHY.indexOf(currentPlan);
-    const newIndex = PLAN_HIERARCHY.indexOf(newPlan);
+    const currentIndex = PLAN_HIERARCHY.indexOf(currentPlanNormalized);
+    const newIndex = PLAN_HIERARCHY.indexOf(newPlanNormalized);
 
     if (currentIndex === -1 || newIndex === -1) {
       throw new Error("Invalid plan name");
@@ -86,8 +113,49 @@ serve(async (req) => {
 
     logStep("Downgrade validated", { from: currentPlan, to: newPlan });
 
+    // Se está fazendo downgrade de Egbe (Família), verificar se é owner
+    if (currentPlanNormalized === 'Egbe' && newPlanNormalized !== 'Egbe') {
+      const { data: familyGroup, error: groupError } = await supabaseClient
+        .from('family_groups')
+        .select('*')
+        .eq('owner_user_id', user.id)
+        .single();
+
+      if (familyGroup && !groupError) {
+        // Verificar se há membros ativos
+        const { data: members, error: membersError } = await supabaseClient
+          .from('family_members')
+          .select('id')
+          .eq('family_group_id', familyGroup.id)
+          .eq('status', 'active');
+
+        if (members && members.length > 1) {
+          throw new Error(
+            'Você não pode fazer downgrade do plano Família enquanto houver membros ativos. ' +
+            'Remova todos os membros primeiro ou transfira a propriedade do grupo.'
+          );
+        }
+
+        // Se chegou aqui, é owner mas não há outros membros
+        // Desativar o grupo familiar
+        await supabaseClient
+          .from('family_members')
+          .update({ status: 'inactive' })
+          .eq('family_group_id', familyGroup.id);
+
+        // Desativar todos os convites pendentes
+        await supabaseClient
+          .from('family_invites')
+          .update({ status: 'expired' })
+          .eq('family_group_id', familyGroup.id)
+          .eq('status', 'pending');
+
+        logStep("Family group deactivated", { groupId: familyGroup.id });
+      }
+    }
+
     // If downgrading to Gratuito, cancel Stripe subscription
-    if (newPlan === 'Gratuito' && currentSub?.stripe_subscription_id) {
+    if (newPlanNormalized === 'Gratuito' && currentSub?.stripe_subscription_id) {
       const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
         apiVersion: "2025-08-27.basil",
       });
@@ -109,8 +177,8 @@ serve(async (req) => {
     const { error: updateError } = await supabaseClient
       .from("subscriptions")
       .update({
-        plan_name: newPlan,
-        status: newPlan === 'Gratuito' ? 'free' : currentSub.status,
+        plan_name: newPlanNormalized,
+        status: newPlanNormalized === 'Gratuito' ? 'free' : currentSub.status,
         updated_at: new Date().toISOString(),
       })
       .eq("user_id", user.id);
@@ -128,10 +196,10 @@ serve(async (req) => {
       .insert({
         user_id: user.id,
         changed_by: user.id,
-        old_plan: currentPlan,
-        new_plan: newPlan,
+        old_plan: currentPlanNormalized,
+        new_plan: newPlanNormalized,
         old_stripe_subscription_id: currentSub?.stripe_subscription_id,
-        new_stripe_subscription_id: newPlan === 'Gratuito' ? null : currentSub?.stripe_subscription_id,
+        new_stripe_subscription_id: newPlanNormalized === 'Gratuito' ? null : currentSub?.stripe_subscription_id,
         billing_cycle: 'monthly',
         reason: 'User requested downgrade',
       });
@@ -143,8 +211,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Plan successfully changed from ${currentPlan} to ${newPlan}`,
-        newPlan,
+        message: `Plan successfully changed from ${currentPlan} to ${newPlanNormalized}`,
+        newPlan: newPlanNormalized,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );

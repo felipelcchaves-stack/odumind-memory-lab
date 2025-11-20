@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { usePixelTracking } from '@/hooks/usePixelTracking';
+import { supabase } from '@/integrations/supabase/client';
 
 const plans = [
   {
@@ -176,10 +177,43 @@ export default function Subscription() {
   }
 
   const handleDowngrade = async (planName: string) => {
+    const currentPlanName = subscription?.plan_name || '';
+    
+    // Validação especial para plano Família
+    if ((currentPlanName === 'Egbe' || currentPlanName === 'Egbe (Família)' || currentPlanName === 'Família') && 
+        planName !== 'Egbe') {
+      
+      // Verificar se é owner de grupo com membros
+      try {
+        const { data: familyGroup } = await supabase
+          .from('family_groups')
+          .select('id, owner_user_id')
+          .eq('owner_user_id', user?.id)
+          .single();
+
+        if (familyGroup) {
+          const { data: members } = await supabase
+            .from('family_members')
+            .select('id')
+            .eq('family_group_id', familyGroup.id)
+            .eq('status', 'active');
+
+          if (members && members.length > 1) {
+            toast.error(
+              'Você não pode fazer downgrade enquanto houver membros ativos no grupo Família. ' +
+              'Acesse a página Família para gerenciar os membros.',
+              { duration: 8000 }
+            );
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Error checking family group:', error);
+      }
+    }
+    
     // If downgrading to Gratuito, show retention offer first
     if (planName === 'Gratuito') {
-      const currentPlanName = subscription?.plan_name || '';
-      
       // Don't show retention offer if already on Gratuito
       if (currentPlanName === 'Gratuito') {
         toast.info('Você já está no plano Gratuito');
