@@ -43,6 +43,7 @@ export const useChangelog = () => {
         .select('*')
         .eq('destaque', true)
         .order('release_date', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(1)
         .single();
 
