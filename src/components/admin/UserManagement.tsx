@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shield, ShieldOff, Eye, Search, X, Edit, UserPlus, Settings } from 'lucide-react';
+import { Shield, ShieldOff, Eye, Search, X, Edit, UserPlus, Settings, Download, Upload, CheckCircle2, Circle } from 'lucide-react';
 import { toast } from 'sonner';
 import UserEditDialog from './UserEditDialog';
 import UserRoleDialog from './UserRoleDialog';
@@ -20,6 +20,8 @@ interface UserProfile {
   streak: number;
   created_at: string;
   user_roles?: Array<{ role: string }>;
+  plan_name?: string;
+  subscription_status?: string;
 }
 
 export default function UserManagement() {
@@ -29,6 +31,7 @@ export default function UserManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'colaborador' | 'aluno'>('all');
   const [activityFilter, setActivityFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [planFilter, setPlanFilter] = useState<'all' | 'Gratuito' | 'Premium' | 'Profissional' | 'Família'>('all');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | undefined>(undefined);
   const [isCreating, setIsCreating] = useState(false);
@@ -77,11 +80,24 @@ export default function UserManagement() {
         .select('user_id, role')
         .in('user_id', userIds);
 
-      // Combine profiles with emails and roles
+      // Get subscriptions for all users
+      const { data: subscriptions } = await supabase
+        .from('subscriptions')
+        .select('user_id, plan_name, status')
+        .in('user_id', userIds);
+
+      // Create subscription map
+      const subscriptionMap = new Map(
+        subscriptions?.map(s => [s.user_id, { plan_name: s.plan_name, status: s.status }]) || []
+      );
+
+      // Combine profiles with emails, roles and subscriptions
       const usersWithRoles = profiles?.map(profile => ({
         ...profile,
         email: emailMap.get(profile.user_id),
-        user_roles: roles?.filter(r => r.user_id === profile.user_id).map(r => ({ role: r.role })) || []
+        user_roles: roles?.filter(r => r.user_id === profile.user_id).map(r => ({ role: r.role })) || [],
+        plan_name: subscriptionMap.get(profile.user_id)?.plan_name || 'Gratuito',
+        subscription_status: subscriptionMap.get(profile.user_id)?.status || 'free'
       })) || [];
 
       setUsers(usersWithRoles);
@@ -140,6 +156,11 @@ export default function UserManagement() {
       if (activityFilter === 'inactive' && isActive) return false;
     }
 
+    // Plan filter
+    if (planFilter !== 'all') {
+      if (user.plan_name !== planFilter) return false;
+    }
+
     return true;
   });
 
@@ -147,9 +168,55 @@ export default function UserManagement() {
     setSearchTerm('');
     setRoleFilter('all');
     setActivityFilter('all');
+    setPlanFilter('all');
   };
 
-  const hasActiveFilters = searchTerm || roleFilter !== 'all' || activityFilter !== 'all';
+  const hasActiveFilters = searchTerm || roleFilter !== 'all' || activityFilter !== 'all' || planFilter !== 'all';
+
+  const exportToCSV = () => {
+    const csvData = filteredUsers.map(user => ({
+      'Nome': user.nome || 'Sem nome',
+      'Email': user.email || 'Sem email',
+      'Plano': user.plan_name || 'Gratuito',
+      'Role': getUserRole(user),
+      'XP': user.xp,
+      'Streak': user.streak,
+      'Criado em': new Date(user.created_at).toLocaleDateString('pt-BR'),
+    }));
+
+    const headers = Object.keys(csvData[0]).join(',');
+    const rows = csvData.map(row => Object.values(row).join(','));
+    const csv = [headers, ...rows].join('\n');
+    
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `usuarios_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    
+    toast.success(`${filteredUsers.length} usuários exportados com sucesso`);
+  };
+
+  const importFromCSV = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string;
+        const lines = text.split('\n');
+        const headers = lines[0].split(',');
+        
+        toast.info(`Importação iniciada. ${lines.length - 1} linhas detectadas.`);
+        toast.info('Funcionalidade de importação em desenvolvimento. Por favor, use a criação manual.');
+      } catch (error) {
+        toast.error('Erro ao processar arquivo CSV');
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  };
 
   if (loading) {
     return (
@@ -197,10 +264,28 @@ export default function UserManagement() {
                 Gerencie privilégios e acesso dos usuários da plataforma
               </CardDescription>
             </div>
-            <Button onClick={handleCreate}>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Criar Usuário
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={exportToCSV} disabled={filteredUsers.length === 0}>
+                <Download className="h-4 w-4 mr-2" />
+                Exportar CSV
+              </Button>
+              <Button variant="outline" asChild>
+                <label className="cursor-pointer">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importar CSV
+                  <input
+                    type="file"
+                    accept=".csv"
+                    className="hidden"
+                    onChange={importFromCSV}
+                  />
+                </label>
+              </Button>
+              <Button onClick={handleCreate}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Criar Usuário
+              </Button>
+            </div>
           </div>
         </CardHeader>
       <CardContent>
@@ -236,6 +321,18 @@ export default function UserManagement() {
                 <SelectItem value="inactive">Inativos</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={planFilter} onValueChange={(value: any) => setPlanFilter(value)}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Filtrar por plano" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Planos</SelectItem>
+                <SelectItem value="Gratuito">Gratuito</SelectItem>
+                <SelectItem value="Premium">Premium</SelectItem>
+                <SelectItem value="Profissional">Profissional</SelectItem>
+                <SelectItem value="Família">Família</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           {hasActiveFilters && (
             <div className="flex items-center justify-between">
@@ -258,6 +355,7 @@ export default function UserManagement() {
           <TableHeader>
             <TableRow>
               <TableHead>Usuário</TableHead>
+              <TableHead>Plano</TableHead>
               <TableHead>XP</TableHead>
               <TableHead>Streak</TableHead>
               <TableHead>Função</TableHead>
@@ -268,7 +366,7 @@ export default function UserManagement() {
           <TableBody>
             {filteredUsers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   {users.length === 0 ? 'Nenhum usuário encontrado' : 'Nenhum usuário corresponde aos filtros'}
                 </TableCell>
               </TableRow>
@@ -286,6 +384,23 @@ export default function UserManagement() {
                       {user.nome && user.email && (
                         <span className="text-xs text-muted-foreground">{user.email}</span>
                       )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {user.subscription_status === 'active' || user.subscription_status === 'trialing' ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      <Badge variant={
+                        user.plan_name === 'Profissional' ? 'default' :
+                        user.plan_name === 'Premium' ? 'secondary' :
+                        user.plan_name === 'Família' ? 'outline' :
+                        'outline'
+                      }>
+                        {user.plan_name}
+                      </Badge>
                     </div>
                   </TableCell>
                   <TableCell>{user.xp}</TableCell>
