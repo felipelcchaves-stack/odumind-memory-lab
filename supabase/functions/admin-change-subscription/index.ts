@@ -226,6 +226,69 @@ serve(async (req) => {
           reason: grantComplimentary ? 'Acesso administrativo concedido' : 'Customer sem método de pagamento - acesso temporário'
         };
 
+        // Se for plano Família/Egbe, criar grupo automaticamente
+        if (normalizedPlan === 'Família') {
+          logStep("Detected family plan, creating family group...", { userId });
+          
+          // Verificar se já existe grupo
+          const { data: existingGroup } = await supabaseClient
+            .from('family_groups')
+            .select('id')
+            .eq('owner_user_id', userId)
+            .maybeSingle();
+          
+          if (!existingGroup) {
+            logStep("Creating family group for complimentary subscription...");
+            
+            const { data: newGroup, error: groupError } = await supabaseClient
+              .from('family_groups')
+              .insert({
+                owner_user_id: userId,
+                stripe_subscription_id: null, // NULL para complimentary
+                group_name: 'Minha Família',
+                max_members: 5,
+              })
+              .select()
+              .single();
+            
+            if (groupError) {
+              logStep("ERROR creating family group", { error: groupError });
+              throw new Error(`Erro ao criar grupo familiar: ${groupError.message}`);
+            }
+            
+            logStep("Family group created", { groupId: newGroup.id });
+            
+            // Adicionar owner como primeiro membro
+            const { error: memberError } = await supabaseClient
+              .from('family_members')
+              .insert({
+                family_group_id: newGroup.id,
+                user_id: userId,
+                status: 'active',
+                role: 'owner',
+                invited_at: new Date().toISOString(),
+                joined_at: new Date().toISOString(),
+              });
+            
+            if (memberError) {
+              logStep("ERROR adding owner as member", { error: memberError });
+              throw new Error(`Erro ao adicionar membro: ${memberError.message}`);
+            }
+            
+            logStep("Owner added to family group successfully");
+            stripeResponse.familyGroupCreated = {
+              groupId: newGroup.id,
+              reason: 'auto_created_for_complimentary'
+            };
+          } else {
+            logStep("Family group already exists", { groupId: existingGroup.id });
+            stripeResponse.familyGroupCreated = {
+              groupId: existingGroup.id,
+              reason: 'already_exists'
+            };
+          }
+        }
+
       } else {
         // Customer tem payment method: criar subscription normal no Stripe
         logStep("Creating paid Stripe subscription", { priceId });
