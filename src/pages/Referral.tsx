@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Copy, Share2, Gift, Trophy, Clock, CheckCircle2, XCircle, Award, Users, Target } from "lucide-react";
+import DashboardHeader from "@/components/DashboardHeader";
 
 interface ReferralStats {
   referral_code: string;
@@ -184,9 +185,12 @@ const Referral = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-4 md:p-8">
-        <div className="text-center">Carregando...</div>
-      </div>
+      <>
+        <DashboardHeader />
+        <div className="container mx-auto p-4 md:p-8">
+          <div className="text-center">Carregando...</div>
+        </div>
+      </>
     );
   }
 
@@ -195,13 +199,15 @@ const Referral = () => {
   const convertedReferrals = history.filter(h => h.status === 'converted').length;
 
   return (
-    <div className="container mx-auto p-4 md:p-8 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Sistema de Indicação</h1>
-        <p className="text-muted-foreground">
-          Indique amigos e ganhe recompensas incríveis!
-        </p>
-      </div>
+    <>
+      <DashboardHeader />
+      <div className="container mx-auto p-4 md:p-8 space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Sistema de Indicação</h1>
+          <p className="text-muted-foreground">
+            Indique amigos e ganhe recompensas incríveis!
+          </p>
+        </div>
 
       {/* Apply Received Code Section */}
       {!usedCode ? (
@@ -507,6 +513,7 @@ const Referral = () => {
         </Card>
       )}
     </div>
+    </>
   );
 };
 
