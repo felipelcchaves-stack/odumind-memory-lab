@@ -28,7 +28,7 @@ const plans = [
     planId: "free",
   },
   {
-    name: "Premium",
+    name: "Akapo",
     price: "R$ 49,90",
     period: "/mês",
     description: "Para estudantes sérios e comprometidos",
@@ -48,17 +48,16 @@ const plans = [
     stripeId: "price_1SUQd7Do1RHWW8lpaKCqKH8g",
   },
   {
-    name: "Profissional",
+    name: "Awo",
     price: "R$ 99,90",
     period: "/mês",
     description: "Para mestres e professores de Ifá",
     features: [
-      "Tudo do Premium",
+      "Tudo do Akapo",
       "Criar flashcards personalizados",
       "Módulos exclusivos para ensino",
       "Análises avançadas de progresso",
       "Mentoria em grupo mensal",
-      "Materiais para impressão profissional",
       "Acesso antecipado a novos conteúdos",
       "Badge de mestre verificado",
     ],

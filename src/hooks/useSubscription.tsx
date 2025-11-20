@@ -239,14 +239,22 @@ export const useSubscription = () => {
     // Admins and Colaboradores have premium access
     if (isAdmin || isColaborador) return true;
     
-    return hasActiveSubscription() && subscription?.plan_name === 'Premium';
+    return hasActiveSubscription() && (
+      subscription?.plan_name === 'Premium' || 
+      subscription?.plan_name === 'Akapo' ||
+      subscription?.plan_name?.includes('Premium')
+    );
   };
 
   const isProfessional = () => {
     // Admins and Colaboradores have professional access
     if (isAdmin || isColaborador) return true;
     
-    return hasActiveSubscription() && subscription?.plan_name === 'Profissional';
+    return hasActiveSubscription() && (
+      subscription?.plan_name === 'Profissional' || 
+      subscription?.plan_name === 'Awo' ||
+      subscription?.plan_name?.includes('Profissional')
+    );
   };
 
   const isFree = () => {
