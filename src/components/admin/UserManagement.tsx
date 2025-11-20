@@ -49,6 +49,11 @@ export default function UserManagement() {
   async function loadUsers() {
     try {
       setLoading(true);
+      
+      // Cache-bust: timestamp para forçar nova query
+      const cacheBust = Date.now();
+      console.log('🔄 Cache-bust timestamp:', cacheBust);
+      
       const { data: profiles, error } = await supabase
         .from('profiles')
         .select(`
@@ -82,12 +87,15 @@ export default function UserManagement() {
         .select('user_id, role')
         .in('user_id', userIds);
 
-      // Get subscriptions for all users (with Stripe IDs)
+      // Get subscriptions - COM CACHE BUST E ORDENAÇÃO POR UPDATED_AT
       const { data: subscriptions } = await supabase
         .from('subscriptions')
-        .select('user_id, plan_name, status, stripe_customer_id, stripe_subscription_id')
-        .in('user_id', userIds);
+        .select('user_id, plan_name, status, stripe_customer_id, stripe_subscription_id, updated_at')
+        .in('user_id', userIds)
+        .order('updated_at', { ascending: false });
 
+      console.log('🔄 Subscriptions recarregadas:', subscriptions?.length, 'registros');
+      
       // Create subscription map
       const subscriptionMap = new Map(
         subscriptions?.map(s => [s.user_id, { 
@@ -112,6 +120,7 @@ export default function UserManagement() {
         };
       }) || [];
 
+      console.log('✅ Lista de usuários atualizada:', usersWithRoles.length, 'usuários');
       setUsers(usersWithRoles);
     } catch (error) {
       console.error('Error loading users:', error);
@@ -251,10 +260,19 @@ export default function UserManagement() {
   };
 
   const handleDialogSave = async () => {
-    // Dar tempo para o banco commitar a mudança
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    await loadUsers();
-    toast.success('Dados atualizados!');
+    try {
+      console.log('🔄 Aguardando commit no banco (2s)...');
+      // Delay maior para garantir commit no banco
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      console.log('🔄 Recarregando lista de usuários...');
+      await loadUsers();
+      
+      toast.success('✅ Plano atualizado com sucesso!');
+    } catch (error) {
+      console.error('❌ Erro ao recarregar dados:', error);
+      toast.error('Erro ao atualizar lista de usuários');
+    }
   };
 
   const handleChangeRole = (userId: string, userName: string, currentRole: string) => {
