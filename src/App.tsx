@@ -6,7 +6,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ReferralWelcomeModal } from "@/components/ReferralWelcomeModal";
+import ChangelogModal from "@/components/ChangelogModal";
 import { useSessionValidation } from "@/hooks/useSessionValidation";
+import { useChangelog } from "@/hooks/useChangelog";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -37,11 +39,19 @@ function SessionValidator() {
 }
 
 function AppContent() {
+  const { showModal, latestChangelog, markAsViewed } = useChangelog();
+  
   return (
     <>
       <Toaster />
       <Sonner />
       <ReferralWelcomeModal />
+      <ChangelogModal 
+        open={showModal}
+        onClose={markAsViewed}
+        changelog={latestChangelog}
+        onMarkAsViewed={markAsViewed}
+      />
       <BrowserRouter>
         <SessionValidator />
         <Routes>
