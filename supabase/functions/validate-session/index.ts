@@ -41,6 +41,7 @@ serve(async (req) => {
     // Decode the JWT token without validating it (in case it's expired)
     // We just need the user_id from it
     let userId: string;
+    let tokenExp: number;
     try {
       const tokenParts = token.split('.');
       if (tokenParts.length !== 3) {
@@ -48,12 +49,25 @@ serve(async (req) => {
       }
       const payload = JSON.parse(atob(tokenParts[1]));
       userId = payload.sub;
+      tokenExp = payload.exp;
       
       if (!userId) {
         throw new Error("No user ID in token");
       }
       
-      console.log(`[VALIDATE-SESSION] Extracted user ID: ${userId}`);
+      console.log(`[VALIDATE-SESSION] Extracted user ID: ${userId}, exp: ${tokenExp}`);
+      
+      // Check if token is expired by more than 1 hour
+      const now = Math.floor(Date.now() / 1000);
+      const oneHourAgo = now - 3600;
+      
+      if (tokenExp < oneHourAgo) {
+        console.log("[VALIDATE-SESSION] Token expired by more than 1 hour, returning invalid session");
+        return new Response(
+          JSON.stringify({ valid: false, reason: "token_expired" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+        );
+      }
     } catch (decodeError) {
       console.error("[VALIDATE-SESSION] Error decoding token:", decodeError);
       return new Response(

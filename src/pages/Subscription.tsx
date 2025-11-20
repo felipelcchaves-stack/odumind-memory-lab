@@ -6,7 +6,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Crown, Check, CreditCard, Calendar, AlertCircle, Shield } from 'lucide-react';
+import { ArrowLeft, Crown, Check, CreditCard, Calendar, AlertCircle, Shield, Users } from 'lucide-react';
 import DashboardHeader from '@/components/DashboardHeader';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -63,6 +63,23 @@ const plans = [
     ],
     planId: "professional",
     stripeId: "price_1SUQe8Do1RHWW8lpTManIdtD",
+  },
+  {
+    name: "Egbe (Família)",
+    price: "R$ 129,90",
+    period: "/mês",
+    description: "Para grupos e terreiros que estudam juntos",
+    features: [
+      "Até 5 contas Akapo",
+      "Todos os 256 Odu Ifá (cada conta)",
+      "Dashboard compartilhado de progresso",
+      "Recursos Akapo completos",
+      "Perfeito para grupos de estudo",
+      "Gestão centralizada",
+      "Suporte dedicado",
+    ],
+    planId: "family",
+    stripeId: "price_1SVYDfDo1RHWW8lpGhLjNjoV",
   },
 ];
 
@@ -281,7 +298,7 @@ export default function Subscription() {
         )}
 
         {/* Plans Grid */}
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-4 gap-6">
           {plans.map((plan, index) => {
             const isCurrentPlan = plan.name === currentPlanName;
             

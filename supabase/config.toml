@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.cleanup-abandoned-sessions]
 verify_jwt = false
+
+[functions.cleanup-old-sessions]
+verify_jwt = false

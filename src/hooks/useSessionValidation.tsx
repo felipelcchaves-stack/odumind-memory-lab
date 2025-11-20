@@ -9,6 +9,7 @@ export function useSessionValidation() {
   const navigate = useNavigate();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const isValidatingRef = useRef(false);
+  const hasShownErrorRef = useRef(false);
 
   useEffect(() => {
     if (!user) {
@@ -80,10 +81,14 @@ export function useSessionValidation() {
           clearInterval(intervalRef.current!);
           localStorage.removeItem('session_id');
           
-          toast.error('Sua sessão foi encerrada', {
-            description: 'Você foi desconectado porque fez login em outro dispositivo.',
-            duration: 5000,
-          });
+          // Show toast only once
+          if (!hasShownErrorRef.current) {
+            toast.error('Sua sessão foi encerrada', {
+              description: 'Você foi desconectado porque fez login em outro dispositivo.',
+              duration: 5000,
+            });
+            hasShownErrorRef.current = true;
+          }
 
           await signOut();
           navigate('/auth', { replace: true });
@@ -112,8 +117,8 @@ export function useSessionValidation() {
     // Validate immediately
     validateSession();
 
-    // Then validate every 30 seconds
-    intervalRef.current = setInterval(validateSession, 30000);
+    // Then validate every 60 seconds (reduced frequency)
+    intervalRef.current = setInterval(validateSession, 60000);
 
     return () => {
       if (intervalRef.current) {
