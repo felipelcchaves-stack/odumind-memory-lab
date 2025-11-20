@@ -6,7 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Upload, Loader2 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Upload, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
@@ -47,6 +49,9 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [password, setPassword] = useState('');
   const [selectedRole, setSelectedRole] = useState<'admin' | 'colaborador' | 'aluno'>('aluno');
+  const [selectedPlan, setSelectedPlan] = useState<string>('Gratuito');
+  const [currentSubscriptionStatus, setCurrentSubscriptionStatus] = useState<string>('free');
+  const [originalPlan, setOriginalPlan] = useState<string>('Gratuito');
 
   useEffect(() => {
     if (open && userId && !isCreate) {
@@ -59,6 +64,9 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
       setAvatarUrl(null);
       setPassword('');
       setSelectedRole('aluno');
+      setSelectedPlan('Gratuito');
+      setCurrentSubscriptionStatus('free');
+      setOriginalPlan('Gratuito');
     }
   }, [open, userId, isCreate]);
 
@@ -94,6 +102,17 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
         console.error('Error loading role:', roleError);
       }
 
+      // Get subscription/plan
+      const { data: subscription, error: subError } = await supabase
+        .from('subscriptions')
+        .select('plan_name, status')
+        .eq('user_id', userId)
+        .single();
+
+      if (subError && subError.code !== 'PGRST116') {
+        console.error('Error loading subscription:', subError);
+      }
+
       if (profile) {
         setNome(profile.nome || '');
         setMetaDiaria(profile.meta_diaria);
@@ -108,6 +127,16 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
         setSelectedRole(roleData.role as 'admin' | 'colaborador' | 'aluno');
       } else {
         setSelectedRole('aluno');
+      }
+
+      if (subscription) {
+        setSelectedPlan(subscription.plan_name);
+        setCurrentSubscriptionStatus(subscription.status);
+        setOriginalPlan(subscription.plan_name);
+      } else {
+        setSelectedPlan('Gratuito');
+        setCurrentSubscriptionStatus('free');
+        setOriginalPlan('Gratuito');
       }
     } catch (error) {
       console.error('Error loading user:', error);
@@ -243,7 +272,26 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
           throw roleError;
         }
 
-        toast.success('Perfil atualizado com sucesso');
+        // Update subscription
+        const newStatus = selectedPlan === 'Gratuito' ? 'free' : 'active';
+
+        const { error: subscriptionError } = await supabase
+          .from('subscriptions')
+          .upsert({
+            user_id: userId,
+            plan_name: selectedPlan,
+            status: newStatus,
+            updated_at: new Date().toISOString(),
+          }, { 
+            onConflict: 'user_id' 
+          });
+
+        if (subscriptionError) {
+          console.error('Error updating subscription:', subscriptionError);
+          throw subscriptionError;
+        }
+
+        toast.success(`Usuário atualizado com sucesso${selectedPlan !== originalPlan ? ` - Plano alterado para ${selectedPlan}` : ''}`);
       }
 
       onSave();
@@ -369,6 +417,60 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Plan Selector - Only for editing existing users */}
+            {!isCreate && (
+              <div className="space-y-2">
+                <Label htmlFor="plan">Plano de Assinatura</Label>
+                <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+                  <SelectTrigger id="plan">
+                    <SelectValue placeholder="Selecione o plano" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Gratuito">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">Gratuito</Badge>
+                        <span className="text-sm text-muted-foreground">Plano básico</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="Premium">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">Premium</Badge>
+                        <span className="text-sm text-muted-foreground">R$ 49,90/mês</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="Profissional">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="default">Profissional</Badge>
+                        <span className="text-sm text-muted-foreground">R$ 99,90/mês</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="Família">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">Família</Badge>
+                        <span className="text-sm text-muted-foreground">R$ 129,90/mês (até 5 contas)</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Alterar o plano manualmente sobrescreve o status da assinatura no Stripe.
+                </p>
+              </div>
+            )}
+
+            {/* Warning alert if plan changed */}
+            {!isCreate && selectedPlan !== originalPlan && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Atenção!</AlertTitle>
+                <AlertDescription>
+                  Você está alterando o plano de <strong>{originalPlan}</strong> para <strong>{selectedPlan}</strong>. 
+                  Isso pode causar inconsistências com o Stripe caso o usuário tenha uma assinatura ativa. 
+                  Certifique-se de que essa alteração é intencional.
+                </AlertDescription>
+              </Alert>
+            )}
 
             {/* Daily Goal Field */}
             <div className="space-y-2">
