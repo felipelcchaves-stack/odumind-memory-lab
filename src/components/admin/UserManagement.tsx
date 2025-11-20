@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shield, ShieldOff, Eye, Search, X, Edit, UserPlus, Settings, Download, Upload, CheckCircle2, Circle } from 'lucide-react';
+import { Shield, ShieldOff, Eye, Search, X, Edit, UserPlus, Settings, Download, Upload, CheckCircle2, Circle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import UserEditDialog from './UserEditDialog';
 import UserRoleDialog from './UserRoleDialog';
@@ -250,6 +250,12 @@ export default function UserManagement() {
     event.target.value = '';
   };
 
+  const handleRefresh = async () => {
+    toast.info('Atualizando dados...');
+    await loadUsers();
+    toast.success(`✅ ${users.length} usuários atualizados com sucesso`);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -327,6 +333,14 @@ export default function UserManagement() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={handleRefresh} 
+                disabled={loading}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                {loading ? 'Atualizando...' : 'Atualizar Dados'}
+              </Button>
               <Button variant="outline" onClick={exportToCSV} disabled={filteredUsers.length === 0}>
                 <Download className="h-4 w-4 mr-2" />
                 Exportar CSV
