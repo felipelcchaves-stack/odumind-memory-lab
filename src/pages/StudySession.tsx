@@ -139,7 +139,7 @@ export default function StudySession() {
 
   useEffect(() => {
     if (!user) {
-      navigate("/auth");
+      navigate("/");
       return;
     }
 

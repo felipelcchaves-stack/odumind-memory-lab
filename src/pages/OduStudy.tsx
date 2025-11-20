@@ -43,7 +43,7 @@ export default function OduStudy() {
 
   useEffect(() => {
     if (!user) {
-      navigate("/auth");
+      navigate("/");
       return;
     }
 

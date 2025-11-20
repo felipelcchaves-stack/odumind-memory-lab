@@ -45,7 +45,7 @@ export default function Profile() {
 
   useEffect(() => {
     if (!user) {
-      navigate('/auth');
+      navigate('/');
       return;
     }
     loadProfile();

@@ -50,7 +50,7 @@ export default function MemoryPalace() {
 
   useEffect(() => {
     if (!user) {
-      navigate("/auth");
+      navigate("/");
       return;
     }
     fetchData();

@@ -81,7 +81,7 @@ export default function UserDetail() {
 
   useEffect(() => {
     if (!adminLoading && !user) {
-      navigate('/auth');
+      navigate('/');
       return;
     }
 
