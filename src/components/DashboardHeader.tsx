@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useChangelog } from '@/hooks/useChangelog';
+import { useSubscription } from '@/hooks/useSubscription';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Home, BookOpen, Brain, Shield, Settings, LogOut, Sun, Moon, User, Crown, BarChart3, Edit, Landmark, Lightbulb, Sparkles, Gift } from 'lucide-react';
+import { Home, BookOpen, Brain, Shield, Settings, LogOut, Sun, Moon, User, Crown, BarChart3, Edit, Landmark, Lightbulb, Sparkles, Gift, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 export default function DashboardHeader() {
@@ -22,12 +23,14 @@ export default function DashboardHeader() {
   const { isAdmin, isColaborador } = useAdmin();
   const { theme, setTheme } = useTheme();
   const { hasUnreadChangelog } = useChangelog();
+  const { isFamily } = useSubscription();
 
   const navItems = [
     { path: '/dashboard', icon: Home, label: 'Dashboard', priority: 'high' },
     { path: '/odu', icon: BookOpen, label: 'Biblioteca', priority: 'high' },
     { path: '/study', icon: Brain, label: 'Estudar', priority: 'high' },
     { path: '/indicar', icon: Gift, label: 'Indicar', priority: 'medium' },
+    ...(isFamily() ? [{ path: '/familia', icon: Users, label: 'Família', priority: 'medium' as const }] : []),
     { path: '/memory-palace', icon: Landmark, label: 'Palácio', priority: 'medium' },
     { path: '/tecnicas', icon: Lightbulb, label: 'Técnicas', priority: 'low' },
     { path: '/novidades', icon: Sparkles, label: 'Novidades', showBadge: hasUnreadChangelog, priority: 'low' },

@@ -257,6 +257,18 @@ export const useSubscription = () => {
     );
   };
 
+  const isFamily = () => {
+    // Admins and Colaboradores don't have family plan
+    if (isAdmin || isColaborador) return false;
+    
+    return hasActiveSubscription() && (
+      subscription?.plan_name === 'Família' || 
+      subscription?.plan_name === 'Family' ||
+      subscription?.plan_name?.toLowerCase().includes('familia') ||
+      subscription?.plan_name?.toLowerCase().includes('family')
+    );
+  };
+
   const isFree = () => {
     // Admins and Colaboradores are never on free plan
     if (isAdmin || isColaborador) return false;
@@ -271,6 +283,7 @@ export const useSubscription = () => {
     hasActiveSubscription,
     isPremium,
     isProfessional,
+    isFamily,
     isFree,
     createCheckout,
     openCustomerPortal,
