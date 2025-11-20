@@ -431,13 +431,6 @@ export default function UserManagement() {
                       {user.subscription_status || 'free'}
                     </Badge>
                   </TableCell>
-                        user.plan_name === 'Família' ? 'outline' :
-                        'outline'
-                      }>
-                        {user.plan_name}
-                      </Badge>
-                    </div>
-                  </TableCell>
                   <TableCell>{user.xp}</TableCell>
                   <TableCell>{user.streak} dias</TableCell>
                   <TableCell>
