@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.claim-referral-rewards]
 verify_jwt = true
+
+[functions.change-own-subscription]
+verify_jwt = true

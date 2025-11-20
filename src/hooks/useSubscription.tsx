@@ -258,6 +258,48 @@ export const useSubscription = () => {
     }
   };
 
+  const changeOwnSubscription = async (newPlan: string): Promise<boolean> => {
+    if (!user) {
+      toast.error('Faça login para continuar');
+      return false;
+    }
+
+    try {
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+      
+      if (!accessToken) {
+        toast.error('Sessão inválida. Faça login novamente.');
+        return false;
+      }
+
+      const { data, error } = await supabase.functions.invoke('change-own-subscription', {
+        body: { newPlan },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      
+      if (error) {
+        console.error('Error changing subscription:', error);
+        toast.error(error.message || 'Erro ao mudar plano');
+        return false;
+      }
+
+      if (data?.success) {
+        toast.success(data.message || 'Plano alterado com sucesso!');
+        await loadSubscription();
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Error changing subscription:', error);
+      toast.error('Erro ao processar mudança de plano');
+      return false;
+    }
+  };
+
   const hasActiveSubscription = () => {
     // Admins and Colaboradores always have access
     if (isAdmin || isColaborador) return true;
@@ -319,5 +361,6 @@ export const useSubscription = () => {
     createCheckout,
     createFamilyCheckout,
     openCustomerPortal,
+    changeOwnSubscription,
   };
 };
