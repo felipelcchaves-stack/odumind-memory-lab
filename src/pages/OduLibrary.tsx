@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useSubscription } from "@/hooks/useSubscription";
 import UpgradeBanner from "@/components/UpgradeBanner";
+import { SafeHtmlRenderer } from "@/components/SafeHtmlRenderer";
 
 interface Odu {
   id: string;
@@ -165,9 +166,9 @@ export default function OduLibrary() {
                       Conteúdo bloqueado. Faça upgrade para acessar.
                     </CardDescription>
                   ) : (
-                    <div 
+                    <SafeHtmlRenderer
+                      html={odu.texto_principal}
                       className="text-sm text-muted-foreground line-clamp-2 prose prose-sm dark:prose-invert max-w-none"
-                      dangerouslySetInnerHTML={{ __html: odu.texto_principal }}
                     />
                   )}
                 </CardHeader>
@@ -184,9 +185,9 @@ export default function OduLibrary() {
                         </div>
                       )}
                       {odu.verso && (
-                        <blockquote 
+                        <SafeHtmlRenderer
+                          html={odu.verso}
                           className="border-l-4 border-primary pl-4 italic text-sm text-muted-foreground mb-4 prose prose-sm dark:prose-invert max-w-none"
-                          dangerouslySetInnerHTML={{ __html: odu.verso }}
                         />
                       )}
                     </>

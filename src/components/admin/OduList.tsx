@@ -14,6 +14,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Edit, Trash2, Search, Eye } from 'lucide-react';
 import { toast } from 'sonner';
+import { SafeHtmlRenderer } from '@/components/SafeHtmlRenderer';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -138,9 +139,9 @@ export default function OduList({ onEdit, refreshTrigger }: OduListProps) {
                 <TableCell className="font-medium">#{odu.numero}</TableCell>
                 <TableCell className="font-semibold">{odu.nome}</TableCell>
                 <TableCell className="max-w-md truncate">
-                  <div 
+                  <SafeHtmlRenderer
+                    html={odu.texto_principal}
                     className="line-clamp-2"
-                    dangerouslySetInnerHTML={{ __html: odu.texto_principal }}
                   />
                 </TableCell>
                 <TableCell>

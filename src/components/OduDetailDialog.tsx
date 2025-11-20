@@ -12,6 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookOpen, Sparkles, Lightbulb, Tag, TrendingDown } from "lucide-react";
 import ForgettingCurveChart from "./ForgettingCurveChart";
+import { SafeHtmlRenderer } from "@/components/SafeHtmlRenderer";
 
 interface Odu {
   id: string;
@@ -133,9 +134,9 @@ export default function OduDetailDialog({ odu, open, onOpenChange }: OduDetailDi
                   <BookOpen className="h-5 w-5 text-primary" />
                   <h3 className="text-lg font-semibold">Texto Principal</h3>
                 </div>
-                <div 
+                <SafeHtmlRenderer
+                  html={odu.texto_principal}
                   className="text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ __html: odu.texto_principal }}
                 />
               </div>
 
@@ -170,9 +171,9 @@ export default function OduDetailDialog({ odu, open, onOpenChange }: OduDetailDi
                       <Sparkles className="h-5 w-5 text-primary" />
                       <h3 className="text-lg font-semibold">Verso Completo</h3>
                     </div>
-                    <blockquote 
+                    <SafeHtmlRenderer
+                      html={odu.verso}
                       className="border-l-4 border-primary pl-4 italic text-muted-foreground prose prose-sm dark:prose-invert"
-                      dangerouslySetInnerHTML={{ __html: odu.verso }}
                     />
                   </div>
                   <Separator />
@@ -187,9 +188,9 @@ export default function OduDetailDialog({ odu, open, onOpenChange }: OduDetailDi
                       <Lightbulb className="h-5 w-5 text-primary" />
                       <h3 className="text-lg font-semibold">Significado</h3>
                     </div>
-                    <div 
+                    <SafeHtmlRenderer
+                      html={odu.significado}
                       className="text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none"
-                      dangerouslySetInnerHTML={{ __html: odu.significado }}
                     />
                   </div>
                   <Separator />
@@ -204,9 +205,9 @@ export default function OduDetailDialog({ odu, open, onOpenChange }: OduDetailDi
                       <BookOpen className="h-5 w-5 text-primary" />
                       <h3 className="text-lg font-semibold">Exemplos Práticos</h3>
                     </div>
-                    <div 
+                    <SafeHtmlRenderer
+                      html={odu.exemplos_praticos}
                       className="text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none"
-                      dangerouslySetInnerHTML={{ __html: odu.exemplos_praticos }}
                     />
                   </div>
                   <Separator />
