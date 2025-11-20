@@ -27,6 +27,7 @@ import { FirstStepsWidget } from '@/components/FirstStepsWidget';
 import { HelpTooltip } from '@/components/HelpTooltip';
 import { FloatingHelp } from '@/components/FloatingHelp';
 import { ReferralBanner } from '@/components/ReferralBanner';
+import { ReferralWidget } from '@/components/ReferralWidget';
 
 interface ProfileData {
   xp: number;
@@ -583,6 +584,11 @@ export default function Dashboard() {
               <p className="text-xs text-muted-foreground mt-2">Odu restantes</p>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Referral Widget */}
+        <div className="mb-8">
+          <ReferralWidget />
         </div>
 
         {/* Action Buttons */}
