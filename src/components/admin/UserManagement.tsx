@@ -96,12 +96,9 @@ export default function UserManagement() {
         .select('user_id, role')
         .in('user_id', userIds);
 
-      // Get subscriptions - COM CACHE BUST E ORDENAÇÃO POR UPDATED_AT
+      // Get subscriptions - using RPC with DISTINCT ON to ensure latest subscription
       const { data: subscriptions } = await supabase
-        .from('subscriptions')
-        .select('user_id, plan_name, status, stripe_customer_id, stripe_subscription_id, updated_at')
-        .in('user_id', userIds)
-        .order('updated_at', { ascending: false });
+        .rpc('get_latest_subscriptions', { user_ids: userIds });
 
       console.log('🔄 Subscriptions recarregadas:', subscriptions?.length, 'registros');
       

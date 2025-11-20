@@ -1283,6 +1283,17 @@ export type Database = {
       check_and_award_badges: { Args: { _user_id: string }; Returns: undefined }
       cleanup_abandoned_sessions: { Args: never; Returns: undefined }
       cleanup_expired_sessions: { Args: never; Returns: undefined }
+      get_latest_subscriptions: {
+        Args: { user_ids: string[] }
+        Returns: {
+          plan_name: string
+          status: string
+          stripe_customer_id: string
+          stripe_subscription_id: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
       get_user_emails: {
         Args: { user_ids: string[] }
         Returns: {
