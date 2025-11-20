@@ -12,6 +12,17 @@ serve(async (req) => {
   }
 
   try {
+    // Verificar se o header Authorization existe
+    const authHeader = req.headers.get("Authorization");
+    
+    if (!authHeader) {
+      console.error("[VALIDATE-SESSION] Authorization header não encontrado");
+      return new Response(
+        JSON.stringify({ error: "Authorization header não fornecido" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+      );
+    }
+
     // Use service role key to bypass RLS for session management
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -24,18 +35,37 @@ serve(async (req) => {
       }
     );
 
-    const authHeader = req.headers.get("Authorization")!;
     const token = authHeader.replace("Bearer ", "");
+    console.log("[VALIDATE-SESSION] Validando token do usuário");
+    
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
 
-    if (userError || !user) {
-      throw new Error("Usuário não autenticado");
+    if (userError) {
+      console.error("[VALIDATE-SESSION] Erro ao validar usuário:", userError.message);
+      return new Response(
+        JSON.stringify({ error: "Token inválido ou expirado" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+      );
     }
+
+    if (!user) {
+      console.error("[VALIDATE-SESSION] Usuário não encontrado");
+      return new Response(
+        JSON.stringify({ error: "Usuário não autenticado" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+      );
+    }
+
+    console.log(`[VALIDATE-SESSION] Usuário autenticado: ${user.id}`);
 
     const { session_id } = await req.json();
 
     if (!session_id) {
-      throw new Error("session_id não fornecido");
+      console.error("[VALIDATE-SESSION] session_id não fornecido no body");
+      return new Response(
+        JSON.stringify({ error: "session_id não fornecido" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
     }
 
     // Buscar sessão ativa do usuário
@@ -70,12 +100,13 @@ serve(async (req) => {
       .update({ last_activity: new Date().toISOString() })
       .eq("user_id", user.id);
 
+    console.log(`[VALIDATE-SESSION] Sessão válida para user ${user.id}`);
     return new Response(
       JSON.stringify({ valid: true }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("[VALIDATE-SESSION] Erro:", error);
+    console.error("[VALIDATE-SESSION] Erro não tratado:", error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(
       JSON.stringify({ error: errorMessage }),
