@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, Scroll, Users, BarChart3, Settings, Wrench, History, Megaphone } from "lucide-react";
+import { LayoutDashboard, FileText, Scroll, Users, BarChart3, Settings, Wrench, History, Megaphone, TrendingUp } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
   Sidebar,
@@ -52,6 +52,7 @@ export function AdminSidebar({ isAdmin }: AdminSidebarProps) {
       items: [
         { title: "Usuários", url: "/admin/users", icon: Users, adminOnly: true },
         { title: "Analytics", url: "/admin/analytics", icon: BarChart3, adminOnly: true },
+        { title: "Analytics Avançadas", url: "/admin/advanced-analytics", icon: TrendingUp, adminOnly: true },
       ],
     },
     {

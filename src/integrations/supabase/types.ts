@@ -799,11 +799,16 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          data_nascimento: string | null
+          estado: string | null
           id: string
           last_study_date: string | null
           last_viewed_changelog: string | null
           meta_diaria: number
           nome: string | null
+          pais: string | null
+          profile_completed: boolean | null
+          sexo: string | null
           streak: number
           updated_at: string
           user_id: string
@@ -812,11 +817,16 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          data_nascimento?: string | null
+          estado?: string | null
           id?: string
           last_study_date?: string | null
           last_viewed_changelog?: string | null
           meta_diaria?: number
           nome?: string | null
+          pais?: string | null
+          profile_completed?: boolean | null
+          sexo?: string | null
           streak?: number
           updated_at?: string
           user_id: string
@@ -825,11 +835,16 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          data_nascimento?: string | null
+          estado?: string | null
           id?: string
           last_study_date?: string | null
           last_viewed_changelog?: string | null
           meta_diaria?: number
           nome?: string | null
+          pais?: string | null
+          profile_completed?: boolean | null
+          sexo?: string | null
           streak?: number
           updated_at?: string
           user_id?: string
@@ -1440,7 +1455,16 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_demographics_summary: {
+        Row: {
+          estado: string | null
+          faixa_etaria: string | null
+          pais: string | null
+          sexo: string | null
+          total_usuarios: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       calcular_proxima_revisao: {

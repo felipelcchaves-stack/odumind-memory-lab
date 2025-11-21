@@ -38,6 +38,7 @@ import AdminOduPage from "./pages/admin/AdminOduPage";
 import AdminRituaisPage from "./pages/admin/AdminRituaisPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import AdminAnalyticsPage from "./pages/admin/AdminAnalyticsPage";
+import AdminAdvancedAnalytics from "./pages/admin/AdminAdvancedAnalytics";
 import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 import AdminToolsPage from "./pages/admin/AdminToolsPage";
 import AdminChangelogPage from "./pages/admin/AdminChangelogPage";
@@ -87,9 +88,10 @@ function AppContent() {
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="odu" element={<AdminOduPage />} />
             <Route path="rituais" element={<AdminRituaisPage />} />
-            <Route path="users" element={<AdminUsersPage />} />
-            <Route path="analytics" element={<AdminAnalyticsPage />} />
-            <Route path="settings" element={<AdminSettingsPage />} />
+              <Route path="users" element={<AdminUsersPage />} />
+              <Route path="analytics" element={<AdminAnalyticsPage />} />
+              <Route path="advanced-analytics" element={<AdminAdvancedAnalytics />} />
+              <Route path="settings" element={<AdminSettingsPage />} />
             <Route path="tools" element={<AdminToolsPage />} />
             <Route path="changelog" element={<AdminChangelogPage />} />
             <Route path="restore" element={<AdminRestorePage />} />
