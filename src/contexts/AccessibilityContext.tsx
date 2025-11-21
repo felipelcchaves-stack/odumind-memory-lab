@@ -5,6 +5,10 @@ type FontSize = 'small' | 'normal' | 'large';
 interface AccessibilityContextType {
   fontSize: FontSize;
   setFontSize: (size: FontSize) => void;
+  simplifiedMode: boolean;
+  setSimplifiedMode: (enabled: boolean) => void;
+  highContrast: boolean;
+  setHighContrast: (enabled: boolean) => void;
 }
 
 const AccessibilityContext = createContext<AccessibilityContextType | undefined>(undefined);
@@ -13,6 +17,16 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
   const [fontSize, setFontSize] = useState<FontSize>(() => {
     const stored = localStorage.getItem('accessibility-font-size');
     return (stored as FontSize) || 'normal';
+  });
+
+  const [simplifiedMode, setSimplifiedMode] = useState<boolean>(() => {
+    const stored = localStorage.getItem('accessibility-simplified-mode');
+    return stored === 'true';
+  });
+
+  const [highContrast, setHighContrast] = useState<boolean>(() => {
+    const stored = localStorage.getItem('accessibility-high-contrast');
+    return stored === 'true';
   });
 
   useEffect(() => {
@@ -25,8 +39,28 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
     document.documentElement.classList.add(`font-size-${fontSize}`);
   }, [fontSize]);
 
+  useEffect(() => {
+    localStorage.setItem('accessibility-simplified-mode', String(simplifiedMode));
+    
+    if (simplifiedMode) {
+      document.documentElement.classList.add('simplified-mode');
+    } else {
+      document.documentElement.classList.remove('simplified-mode');
+    }
+  }, [simplifiedMode]);
+
+  useEffect(() => {
+    localStorage.setItem('accessibility-high-contrast', String(highContrast));
+    
+    if (highContrast) {
+      document.documentElement.classList.add('high-contrast');
+    } else {
+      document.documentElement.classList.remove('high-contrast');
+    }
+  }, [highContrast]);
+
   return (
-    <AccessibilityContext.Provider value={{ fontSize, setFontSize }}>
+    <AccessibilityContext.Provider value={{ fontSize, setFontSize, simplifiedMode, setSimplifiedMode, highContrast, setHighContrast }}>
       {children}
     </AccessibilityContext.Provider>
   );

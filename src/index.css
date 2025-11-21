@@ -192,4 +192,41 @@ All colors MUST be HSL.
                       linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px);
     background-size: 20px 20px;
   }
+  
+  /* Acessibilidade: Alto Contraste */
+  .high-contrast {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+    --primary: 220 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 90%;
+    --secondary-foreground: 0 0% 0%;
+    --muted: 0 0% 85%;
+    --muted-foreground: 0 0% 20%;
+    --accent: 0 0% 85%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 0%;
+    --input: 0 0% 0%;
+    --ring: 220 100% 50%;
+  }
+
+  .high-contrast * {
+    border-width: 3px !important;
+    font-weight: 600 !important;
+  }
+
+  .high-contrast .gradient-primary,
+  .high-contrast .gradient-secondary,
+  .high-contrast .gradient-hero {
+    background: hsl(var(--primary)) !important;
+  }
+
+  /* Simplified Mode - Hide gamification elements */
+  .simplified-mode .gamification-hidden {
+    display: none !important;
+  }
 }

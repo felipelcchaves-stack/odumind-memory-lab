@@ -23,13 +23,19 @@ import ForgettingRiskAlert from '@/components/ForgettingRiskAlert';
 import { useSubscription } from '@/hooks/useSubscription';
 import MemorizationStatusBadge from '@/components/MemorizationStatusBadge';
 import StudyPlanProgress from '@/components/StudyPlanProgress';
-import { FirstStepsWidget } from '@/components/FirstStepsWidget';
+import { DailyGuideWidget } from '@/components/DailyGuideWidget';
+import { ActionCard } from '@/components/ActionCard';
+import { GlossaryDialog } from '@/components/GlossaryDialog';
 import { HelpTooltip } from '@/components/HelpTooltip';
 import { FloatingHelp } from '@/components/FloatingHelp';
 import { ReferralBanner } from '@/components/ReferralBanner';
 import { ReferralWidget } from '@/components/ReferralWidget';
 import { ProfileCompletionModal } from '@/components/ProfileCompletionModal';
 import { useProfileCompletion } from '@/hooks/useProfileCompletion';
+import { useAccessibility } from '@/contexts/AccessibilityContext';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ChevronDown, HelpCircle } from 'lucide-react';
+import confetti from 'canvas-confetti';
 
 interface ProfileData {
   xp: number;
@@ -83,6 +89,8 @@ export default function Dashboard() {
   const { showModal, latestChangelog, markAsViewed, setShowModal } = useChangelog();
   const [hasCompletedFirstStudy, setHasCompletedFirstStudy] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showGlossary, setShowGlossary] = useState(false);
+  const { simplifiedMode } = useAccessibility();
 
   // Debug log para changelog
   useEffect(() => {
@@ -461,180 +469,98 @@ export default function Dashboard() {
         )}
         
         {/* Forgetting Risk Alert - Predição de Ebbinghaus */}
-        {user && (
+        {!simplifiedMode && user && (
           <div className="mb-6">
             <ForgettingRiskAlert />
           </div>
         )}
         
-        {/* First Steps Widget for new users */}
-        {!hasCompletedFirstStudy && profile && (
-          <div className="mb-8">
-            <FirstStepsWidget 
-              hasCompletedFirstStudy={hasCompletedFirstStudy}
-              onStartStudy={() => navigate('/study')}
-            />
+        {/* Referral Banner */}
+        {!simplifiedMode && (
+          <div className="mb-6">
+            <ReferralBanner />
           </div>
         )}
-        
-        {/* Referral Banner */}
-        <div className="mb-6">
-          <ReferralBanner />
-        </div>
 
-        {/* Widget "Biblioteca Completa" */}
-        <div className="mb-6">
-          <Card className="bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/20">
-            <CardContent className="pt-6">
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
-                    <BookOpen className="h-5 w-5" />
-                    Biblioteca Completa Yorubá
-                  </h3>
-                  <p className="text-muted-foreground">
-                    Acesse 256 Odu Ifá + {stats?.totalRituais || 0}+ Rituais + {stats?.totalRezas || 0}+ Rezas + {stats?.totalInvocacoes || 0}+ Invocações
-                  </p>
-                </div>
-                <Button 
-                  size="lg" 
-                  variant="hero"
-                  onClick={() => navigate('/biblioteca-yoruba')}
-                >
-                  Explorar Agora
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        {/* FASE 2: Card Principal "O Que Fazer Agora?" */}
+        <div className="mb-8">
+          <ActionCard 
+            reviewCount={stats?.reviewTodayCount || 0}
+            hasReviews={(stats?.reviewTodayCount || 0) > 0}
+          />
         </div>
         
         <div className="mb-8">
-          <h2 className="text-3xl font-bold mb-2">
+          <h2 className="text-4xl font-bold mb-2">
             {getGreeting()}{profile?.nome ? `, ${profile.nome}` : ''}! 🌟
           </h2>
-          <p className="text-muted-foreground">{getMotivationalMessage()}</p>
+          <p className="text-lg text-muted-foreground mb-4">{getMotivationalMessage()}</p>
           
           {/* Quick Badges Display */}
-          {user && (
+          {!simplifiedMode && user && (
             <div className="mt-4">
               <BadgesDisplay userId={user.id} compact />
             </div>
           )}
         </div>
 
-        {/* Primary Stats Grid */}
-        <div className="grid gap-6 mb-8">
-          {/* Progresso Geral Multi-Conteúdo */}
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle>Seu Progresso na Biblioteca Yorubá</CardTitle>
-              <CardDescription>Acompanhe seu avanço em todas as categorias de estudo</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <BookOpen className="h-4 w-4 text-primary" />
-                    <p className="text-sm text-muted-foreground">Odu Memorizados</p>
-                  </div>
-                  <p className="text-2xl font-bold">{stats?.memorizedCount || 0}/{stats?.totalOdus || 256}</p>
-                  <Progress value={memorizedPercentage} />
-                  <p className="text-xs text-muted-foreground">{memorizedPercentage.toFixed(0)}% completo</p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Flame className="h-4 w-4 text-orange-500" />
-                    <p className="text-sm text-muted-foreground">Rituais Praticados</p>
-                  </div>
-                  <p className="text-2xl font-bold">{stats?.rituaisPraticados || 0}/{stats?.totalRituais || 0}</p>
-                  <Progress value={(stats?.rituaisPraticados || 0) / Math.max(stats?.totalRituais || 1, 1) * 100} />
-                  <p className="text-xs text-muted-foreground">
-                    {(((stats?.rituaisPraticados || 0) / Math.max(stats?.totalRituais || 1, 1)) * 100).toFixed(0)}% completo
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Heart className="h-4 w-4 text-red-500" />
-                    <p className="text-sm text-muted-foreground">Rezas Aprendidas</p>
-                  </div>
-                  <p className="text-2xl font-bold">{stats?.rezasAprendidas || 0}/{stats?.totalRezas || 0}</p>
-                  <Progress value={(stats?.rezasAprendidas || 0) / Math.max(stats?.totalRezas || 1, 1) * 100} />
-                  <p className="text-xs text-muted-foreground">
-                    {(((stats?.rezasAprendidas || 0) / Math.max(stats?.totalRezas || 1, 1)) * 100).toFixed(0)}% completo
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-purple-500" />
-                    <p className="text-sm text-muted-foreground">Invocações</p>
-                  </div>
-                  <p className="text-2xl font-bold">{stats?.invocacoesPraticadas || 0}/{stats?.totalInvocacoes || 0}</p>
-                  <Progress value={(stats?.invocacoesPraticadas || 0) / Math.max(stats?.totalInvocacoes || 1, 1) * 100} />
-                  <p className="text-xs text-muted-foreground">
-                    {(((stats?.invocacoesPraticadas || 0) / Math.max(stats?.totalInvocacoes || 1, 1)) * 100).toFixed(0)}% completo
-                  </p>
-                </div>
+        {/* FASE 2: Card Principal de Progresso Simplificado */}
+        <Card className="mb-8 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-2 border-green-300">
+          <CardContent className="pt-8 pb-8">
+            <div className="text-center mb-6">
+              <p className="text-lg text-muted-foreground mb-2">🌟 Seu Progresso nos Odu Ifá</p>
+              <p className="text-6xl font-bold text-primary mb-4">
+                {stats?.memorizedCount || 0}
+                <span className="text-3xl text-muted-foreground"> / 256</span>
+              </p>
+              <p className="text-xl mb-4">
+                🎉 Parabéns! Você já domina {memorizedPercentage}% dos Odu!
+              </p>
+            </div>
+            
+            <Progress value={memorizedPercentage} className="h-6 mb-6" />
+            
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="p-4 rounded-lg bg-background/50">
+                <p className="text-4xl font-bold">{stats?.notStudiedCount || 0}</p>
+                <p className="text-base mt-2">Ainda Não Vistos</p>
               </div>
-            </CardContent>
-          </Card>
+              <div className="p-4 rounded-lg bg-background/50">
+                <p className="text-4xl font-bold text-blue-600">{stats?.studyingCount || 0}</p>
+                <p className="text-base mt-2">Em Progresso</p>
+              </div>
+              <div className="p-4 rounded-lg bg-background/50">
+                <p className="text-4xl font-bold text-green-600">{stats?.memorizedCount || 0}</p>
+                <p className="text-base mt-2">Dominados! ✅</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* FASE 5: Daily Guide Widget (Onboarding Permanente) */}
+        <div className="mb-8">
+          <DailyGuideWidget 
+            reviewCount={stats?.reviewTodayCount || 0}
+            hasStudiedToday={false}
+            hasExploredRitual={false}
+            hasPracticedPrayer={false}
+          />
         </div>
 
+        {/* FASE 3: Cards de Stats com Legendas Claras */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8" data-tour="stats-cards">
-          <Card data-tour="progress-bar" className="md:col-span-2">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div className="flex items-center gap-2">
-                <CardTitle className="text-sm font-medium">Quanto Você Já Memorizou</CardTitle>
-                <HelpTooltip text="Esta porcentagem mostra quantos Odu você já memorizou completamente" />
+                <Calendar className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg font-medium">Para Revisar Hoje</CardTitle>
               </div>
-              <BookOpen className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-3xl font-bold">{memorizedPercentage}%</span>
-                  <span className="text-sm text-muted-foreground">
-                    {stats?.memorizedCount || 0} de {stats?.totalOdus || 256}
-                  </span>
-                </div>
-                <Progress value={memorizedPercentage} className="h-3" />
-              </div>
-              
-              <div className="grid grid-cols-3 gap-2 text-sm">
-                <div className="flex flex-col items-start gap-1 p-2 rounded-lg bg-muted/30">
-                  <MemorizationStatusBadge status="nao_estudado" />
-                  <span className="text-lg font-bold">
-                    {stats?.notStudiedCount || 0}
-                  </span>
-                </div>
-                <div className="flex flex-col items-start gap-1 p-2 rounded-lg bg-muted/30">
-                  <MemorizationStatusBadge status="estudando" showProgress />
-                  <span className="text-lg font-bold">
-                    {stats?.studyingCount || 0}
-                  </span>
-                </div>
-                <div className="flex flex-col items-start gap-1 p-2 rounded-lg bg-muted/30">
-                  <MemorizationStatusBadge status="memorizado" />
-                  <span className="text-lg font-bold">
-                    {stats?.memorizedCount || 0}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card data-tour="daily-reviews">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-sm font-medium">Para Revisar Hoje</CardTitle>
-                <HelpTooltip text="Estes são os Odu que você precisa revisar hoje para não esquecer!" />
-              </div>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{stats?.reviewTodayCount || 0}</div>
-              <p className="text-xs text-muted-foreground mt-2">
+              <div className="text-4xl font-bold mb-2">{stats?.reviewTodayCount || 0}</div>
+              <p className="text-base text-muted-foreground">
                 {stats?.reviewTodayCount === 0
-                  ? 'Você está em dia! 🎉'
+                  ? '🎉 Você está em dia!'
                   : 'Odu aguardando revisão'}
               </p>
             </CardContent>
@@ -643,15 +569,14 @@ export default function Dashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div className="flex items-center gap-2">
-                <CardTitle className="text-sm font-medium">Quanto Você Sabe</CardTitle>
-                <HelpTooltip text="Mostra o quanto você domina os Odu que está estudando" />
+                <Brain className="h-5 w-5 text-blue-500" />
+                <CardTitle className="text-lg font-medium">O Quanto Você Domina</CardTitle>
               </div>
-              <Brain className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{stats?.averageMemoryStrength || 0}%</div>
-              <Progress value={stats?.averageMemoryStrength || 0} className="mt-2" />
-              <p className="text-xs text-muted-foreground mt-2">
+              <div className="text-4xl font-bold mb-2">{stats?.averageMemoryStrength || 0}%</div>
+              <Progress value={stats?.averageMemoryStrength || 0} className="h-3 mb-2" />
+              <p className="text-base text-muted-foreground">
                 Seu conhecimento médio
               </p>
             </CardContent>
@@ -659,19 +584,37 @@ export default function Dashboard() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Streak</CardTitle>
-              <Zap className="h-4 w-4 text-muted-foreground" />
+              <div className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-orange-500" />
+                <CardTitle className="text-lg font-medium">Dias Seguidos Estudando</CardTitle>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold flex items-center gap-2">
-                {profile?.streak || 0}
-                <Badge variant="secondary">dias</Badge>
+              <div className="text-4xl font-bold flex items-center gap-2 mb-2">
+                {profile?.streak || 0} 🔥
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Estude hoje para manter seu streak
+              <p className="text-base text-muted-foreground">
+                Continue estudando para manter sua sequência
               </p>
             </CardContent>
           </Card>
+
+          {!simplifiedMode && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="flex items-center gap-2">
+                  <Trophy className="h-5 w-5 text-yellow-500" />
+                  <CardTitle className="text-lg font-medium">Pontos de Estudo</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-bold mb-2">{profile?.xp || 0}</div>
+                <p className="text-base text-muted-foreground">
+                  Continue estudando para ganhar mais!
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Secondary Stats */}
@@ -743,191 +686,219 @@ export default function Dashboard() {
         </div>
 
         {/* Referral Widget */}
-        <div className="mb-8">
-          <ReferralWidget />
-        </div>
+        {!simplifiedMode && (
+          <div className="mb-8">
+            <ReferralWidget />
+          </div>
+        )}
 
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-8 justify-center">
-          <Button 
-            size="lg" 
-            variant="hero" 
-            className="text-lg px-8 py-6"
-            onClick={() => navigate('/study')}
-            data-tour="study-button"
-          >
-            <BookOpen className="mr-2 h-5 w-5" />
-            {stats?.reviewTodayCount && stats.reviewTodayCount > 0
-              ? `Revisar ${stats.reviewTodayCount} Odu`
-              : 'Estudar Agora'}
-          </Button>
-          <Button 
-            size="lg" 
-            variant="outline" 
-            className="text-lg px-8 py-6"
-            onClick={() => navigate('/memory-palace')}
-          >
-            <Home className="mr-2 h-5 w-5" />
-            Palácio da Memória
-          </Button>
-        </div>
-
-        {/* Gamification Section */}
-        <div className="grid gap-6 lg:grid-cols-3 mb-8">
-          {/* Weekly Progress Chart */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                Progresso Semanal
-              </CardTitle>
-              <CardDescription>Revisões nos últimos 7 dias</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {stats && stats.weeklyProgress.length > 0 ? (
-                <div className="space-y-4">
-                  {stats.weeklyProgress.map((day, index) => (
-                    <div key={index} className="flex items-center gap-4">
-                      <span className="text-sm font-medium w-12">{day.date}</span>
-                      <div className="flex-1">
-                        <Progress value={(day.reviews / Math.max(...stats.weeklyProgress.map(d => d.reviews), 1)) * 100} />
-                      </div>
-                      <span className="text-sm text-muted-foreground w-8 text-right">
-                        {day.reviews}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  Comece a estudar para ver seu progresso aqui
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Weekly Ranking */}
-          <WeeklyRanking currentUserId={user?.id || ''} />
-        </div>
-
-        {/* Study Plan Progress */}
-        <div className="mb-8">
-          <StudyPlanProgress />
-        </div>
-
-        <div id="achievements-section" className="grid gap-6 md:grid-cols-2 mb-8" data-tour="badges">
-          {/* Badges */}
-          {user && <BadgesDisplay userId={user.id} />}
-
-          {/* Achievements History */}
-          {user && <AchievementsHistory />}
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2 mb-8">
-          {/* Upcoming Reviews */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Próximas Revisões
-              </CardTitle>
-              <CardDescription>Odu agendados para revisão</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {stats && stats.upcomingReviews.length > 0 ? (
-                <div className="space-y-3">
-                  {stats.upcomingReviews.map((review, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent cursor-pointer transition-colors"
-                      onClick={() => navigate(`/odu/${review.odu_id}`)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline">#{review.numero}</Badge>
-                        <div>
-                          <p className="text-sm font-medium">{review.nome}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(review.proxima_revisao), "dd 'de' MMM", {
-                              locale: ptBR,
-                            })}
+        {/* FASE 4: Seções Avançadas (Collapsible) */}
+        {!simplifiedMode && (
+          <Collapsible defaultOpen={false} className="mb-8">
+            <div className="flex justify-center mb-4">
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" size="lg" className="gap-2">
+                  Ver Estatísticas Detalhadas
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </CollapsibleTrigger>
+            </div>
+            <CollapsibleContent className="space-y-8">
+              {/* Secondary Stats */}
+              <div className="grid gap-6 md:grid-cols-3">
+                {stats?.nextReview && (
+                  <Card className="md:col-span-3">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        Próxima Revisão
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div className="space-y-2">
+                          <p className="text-2xl font-bold">
+                            {formatNextReviewDate(stats.nextReview.proxima_revisao)}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Odu #{stats.nextReview.odu.numero} - {stats.nextReview.odu.nome}
                           </p>
                         </div>
+                        <Button 
+                          variant={new Date(stats.nextReview.proxima_revisao) > new Date() ? "outline" : "default"}
+                          disabled={new Date(stats.nextReview.proxima_revisao) > new Date()}
+                          onClick={() => new Date(stats.nextReview.proxima_revisao) <= new Date() && navigate("/study")}
+                        >
+                          {new Date(stats.nextReview.proxima_revisao) > new Date() 
+                            ? "Aguarde a próxima revisão" 
+                            : "Estudar Agora"}
+                        </Button>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Progress value={review.forca_memoria} className="w-16 h-2" />
-                        <span className="text-xs text-muted-foreground w-8">
-                          {review.forca_memoria}%
-                        </span>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              {/* Gamification Section */}
+              <div className="grid gap-6 lg:grid-cols-3">
+                {/* Weekly Progress Chart */}
+                <Card className="lg:col-span-2">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5" />
+                      Seus Estudos Esta Semana
+                    </CardTitle>
+                    <CardDescription>Revisões nos últimos 7 dias</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {stats && stats.weeklyProgress.length > 0 ? (
+                      <div className="space-y-4">
+                        {stats.weeklyProgress.map((day, index) => (
+                          <div key={index} className="flex items-center gap-4">
+                            <span className="text-sm font-medium w-12">{day.date}</span>
+                            <div className="flex-1">
+                              <Progress value={(day.reviews / Math.max(...stats.weeklyProgress.map(d => d.reviews), 1)) * 100} />
+                            </div>
+                            <span className="text-sm text-muted-foreground w-8 text-right">
+                              {day.reviews}
+                            </span>
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                  ))}
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-8">
+                        Comece a estudar para ver seu progresso aqui
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Weekly Ranking */}
+                <WeeklyRanking currentUserId={user?.id || ''} />
+              </div>
+
+              {/* Study Plan Progress */}
+              <StudyPlanProgress />
+
+              <div id="achievements-section" className="grid gap-6 md:grid-cols-2" data-tour="badges">
+                {/* Badges */}
+                {user && <BadgesDisplay userId={user.id} />}
+
+                {/* Achievements History */}
+                {user && <AchievementsHistory />}
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                {/* Upcoming Reviews */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Calendar className="h-5 w-5" />
+                      Próximas Revisões
+                    </CardTitle>
+                    <CardDescription>Odu agendados para revisão</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {stats && stats.upcomingReviews.length > 0 ? (
+                      <div className="space-y-3">
+                        {stats.upcomingReviews.slice(0, 3).map((review, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent cursor-pointer transition-colors"
+                            onClick={() => navigate(`/odu/${review.odu_id}`)}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Badge variant="outline">#{review.numero}</Badge>
+                              <div>
+                                <p className="text-sm font-medium">{review.nome}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {format(new Date(review.proxima_revisao), "dd 'de' MMM", {
+                                    locale: ptBR,
+                                  })}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Progress value={review.forca_memoria} className="w-16 h-2" />
+                              <span className="text-xs text-muted-foreground w-8">
+                                {review.forca_memoria}%
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-8">
+                        Nenhuma revisão agendada no momento
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
+        {/* EXPLORAR CONTEÚDO - Cards Grandes de Categorias */}
+        <div className="mb-8">
+          <h3 className="text-2xl font-bold mb-4 text-center">📚 Explorar Conteúdo</h3>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <Card 
+              className="cursor-pointer hover:shadow-xl transition-all hover:scale-105 border-2"
+              onClick={() => navigate('/biblioteca-yoruba?tab=odu')}
+            >
+              <CardContent className="pt-8 pb-8 text-center">
+                <BookOpen className="h-12 w-12 text-primary mx-auto mb-4" />
+                <p className="font-bold text-xl mb-2">256 Odu Ifá</p>
+                <p className="text-base text-muted-foreground mb-3">Explore os Odu sagrados</p>
+                <div className="mt-4 p-2 bg-primary/10 rounded">
+                  <p className="text-lg font-semibold">{stats?.memorizedCount || 0} dominados</p>
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  Nenhuma revisão agendada no momento
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
 
-        {/* Cards de Categorias de Conteúdo */}
-        <div className="grid gap-4 md:grid-cols-4 mb-8">
-          <Card 
-            className="cursor-pointer hover:shadow-lg transition-all hover:scale-105"
-            onClick={() => navigate('/biblioteca-yoruba?tab=odu')}
-          >
-            <CardContent className="pt-6 text-center">
-              <BookOpen className="h-8 w-8 text-primary mx-auto mb-3" />
-              <p className="font-semibold text-lg">256 Odu Ifá</p>
-              <p className="text-sm text-muted-foreground mt-1">Explore os Odu sagrados</p>
-              <div className="mt-3 text-xs text-muted-foreground">
-                {stats?.memorizedCount || 0} memorizados
-              </div>
-            </CardContent>
-          </Card>
+            <Card 
+              className="cursor-pointer hover:shadow-xl transition-all hover:scale-105 border-2"
+              onClick={() => navigate('/biblioteca-yoruba?tab=rituais')}
+            >
+              <CardContent className="pt-8 pb-8 text-center">
+                <Flame className="h-12 w-12 text-orange-500 mx-auto mb-4" />
+                <p className="font-bold text-xl mb-2">{stats?.totalRituais || 0}+ Rituais</p>
+                <p className="text-base text-muted-foreground mb-3">Práticas sagradas</p>
+                <div className="mt-4 p-2 bg-orange-500/10 rounded">
+                  <p className="text-lg font-semibold">{stats?.rituaisPraticados || 0} praticados</p>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card 
-            className="cursor-pointer hover:shadow-lg transition-all hover:scale-105"
-            onClick={() => navigate('/biblioteca-yoruba?tab=rituais')}
-          >
-            <CardContent className="pt-6 text-center">
-              <Flame className="h-8 w-8 text-orange-500 mx-auto mb-3" />
-              <p className="font-semibold text-lg">{stats?.totalRituais || 0}+ Rituais</p>
-              <p className="text-sm text-muted-foreground mt-1">Práticas sagradas</p>
-              <div className="mt-3 text-xs text-muted-foreground">
-                {stats?.rituaisPraticados || 0} praticados
-              </div>
-            </CardContent>
-          </Card>
+            <Card 
+              className="cursor-pointer hover:shadow-xl transition-all hover:scale-105 border-2"
+              onClick={() => navigate('/biblioteca-yoruba?tab=rezas')}
+            >
+              <CardContent className="pt-8 pb-8 text-center">
+                <Heart className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                <p className="font-bold text-xl mb-2">{stats?.totalRezas || 0}+ Rezas</p>
+                <p className="text-base text-muted-foreground mb-3">Orações Yorubá</p>
+                <div className="mt-4 p-2 bg-red-500/10 rounded">
+                  <p className="text-lg font-semibold">{stats?.rezasAprendidas || 0} aprendidas</p>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card 
-            className="cursor-pointer hover:shadow-lg transition-all hover:scale-105"
-            onClick={() => navigate('/biblioteca-yoruba?tab=rezas')}
-          >
-            <CardContent className="pt-6 text-center">
-              <Heart className="h-8 w-8 text-red-500 mx-auto mb-3" />
-              <p className="font-semibold text-lg">{stats?.totalRezas || 0}+ Rezas</p>
-              <p className="text-sm text-muted-foreground mt-1">Orações Yorubá</p>
-              <div className="mt-3 text-xs text-muted-foreground">
-                {stats?.rezasAprendidas || 0} aprendidas
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card 
-            className="cursor-pointer hover:shadow-lg transition-all hover:scale-105"
-            onClick={() => navigate('/biblioteca-yoruba?tab=invocacoes')}
-          >
-            <CardContent className="pt-6 text-center">
-              <Sparkles className="h-8 w-8 text-purple-500 mx-auto mb-3" />
-              <p className="font-semibold text-lg">{stats?.totalInvocacoes || 0}+ Invocações</p>
-              <p className="text-sm text-muted-foreground mt-1">Chamados sagrados</p>
-              <div className="mt-3 text-xs text-muted-foreground">
-                {stats?.invocacoesPraticadas || 0} praticadas
-              </div>
-            </CardContent>
-          </Card>
+            <Card 
+              className="cursor-pointer hover:shadow-xl transition-all hover:scale-105 border-2"
+              onClick={() => navigate('/biblioteca-yoruba?tab=invocacoes')}
+            >
+              <CardContent className="pt-8 pb-8 text-center">
+                <Sparkles className="h-12 w-12 text-purple-500 mx-auto mb-4" />
+                <p className="font-bold text-xl mb-2">{stats?.totalInvocacoes || 0}+ Invocações</p>
+                <p className="text-base text-muted-foreground mb-3">Chamados sagrados</p>
+                <div className="mt-4 p-2 bg-purple-500/10 rounded">
+                  <p className="text-lg font-semibold">{stats?.invocacoesPraticadas || 0} praticadas</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </main>
 
@@ -942,8 +913,17 @@ export default function Dashboard() {
         onMarkAsViewed={markAsViewed}
       />
       
-      {/* Floating Help Button */}
-      <FloatingHelp />
+      {/* FASE 3: Glossário Flutuante */}
+      <GlossaryDialog open={showGlossary} onOpenChange={setShowGlossary} />
+      
+      {/* Floating Help Button with Glossary */}
+      <Button
+        className="fixed bottom-6 right-6 rounded-full h-16 w-16 shadow-2xl z-50"
+        size="icon"
+        onClick={() => setShowGlossary(true)}
+      >
+        <HelpCircle className="h-8 w-8" />
+      </Button>
     </div>
   );
 }
