@@ -32,6 +32,16 @@ import Familia from "./pages/Familia";
 import FamiliaAceitar from "./pages/FamiliaAceitar";
 import BibliotecaYoruba from "./pages/BibliotecaYoruba";
 import RitualStudy from "./pages/RitualStudy";
+import { AdminLayout } from "./components/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminOduPage from "./pages/admin/AdminOduPage";
+import AdminRituaisPage from "./pages/admin/AdminRituaisPage";
+import AdminUsersPage from "./pages/admin/AdminUsersPage";
+import AdminAnalyticsPage from "./pages/admin/AdminAnalyticsPage";
+import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
+import AdminToolsPage from "./pages/admin/AdminToolsPage";
+import AdminChangelogPage from "./pages/admin/AdminChangelogPage";
+import AdminRestorePage from "./pages/admin/AdminRestorePage";
 
 const queryClient = new QueryClient();
 
@@ -67,11 +77,23 @@ function AppContent() {
           <Route path="/study" element={<StudySession />} />
           <Route path="/memory-palace" element={<MemoryPalace />} />
           <Route path="/tecnicas" element={<Tecnicas />} />
-          <Route path="/admin" element={<Admin />} />
           <Route path="/colaborador" element={<Colaborador />} />
-          <Route path="/admin/analytics" element={<Analytics />} />
           <Route path="/admin/user/:userId" element={<UserDetail />} />
           <Route path="/settings" element={<Settings />} />
+          
+          {/* Admin routes with sidebar */}
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="odu" element={<AdminOduPage />} />
+            <Route path="rituais" element={<AdminRituaisPage />} />
+            <Route path="users" element={<AdminUsersPage />} />
+            <Route path="analytics" element={<AdminAnalyticsPage />} />
+            <Route path="settings" element={<AdminSettingsPage />} />
+            <Route path="tools" element={<AdminToolsPage />} />
+            <Route path="changelog" element={<AdminChangelogPage />} />
+            <Route path="restore" element={<AdminRestorePage />} />
+          </Route>
           <Route path="/profile" element={<Profile />} />
           <Route path="/subscription" element={<Subscription />} />
           <Route path="/success" element={<Success />} />
