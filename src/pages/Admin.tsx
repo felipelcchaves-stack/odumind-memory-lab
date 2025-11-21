@@ -11,6 +11,9 @@ import { toast } from 'sonner';
 import OduEditor from '@/components/admin/OduEditor';
 import OduList from '@/components/admin/OduList';
 import BulkUpload from '@/components/admin/BulkUpload';
+import RitualEditor from '@/components/admin/RitualEditor';
+import RitualList from '@/components/admin/RitualList';
+import RitualBulkUpload from '@/components/admin/RitualBulkUpload';
 import UserManagement from '@/components/admin/UserManagement';
 import ChangelogManager from '@/components/admin/ChangelogManager';
 import HtmlCleanupTool from '@/components/admin/HtmlCleanupTool';
@@ -24,8 +27,9 @@ export default function Admin() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isAdmin, isColaborador, loading: adminLoading } = useAdmin();
-  const [stats, setStats] = useState({ totalOdus: 0, totalUsers: 0 });
+  const [stats, setStats] = useState({ totalOdus: 0, totalUsers: 0, totalRituais: 0 });
   const [selectedOdu, setSelectedOdu] = useState<string | null>(null);
+  const [selectedRitual, setSelectedRitual] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [activeTab, setActiveTab] = useState("list");
 
@@ -57,9 +61,14 @@ export default function Admin() {
         .from('profiles')
         .select('*', { count: 'exact', head: true });
 
+      const { count: ritualCount } = await supabase
+        .from('ritual_content')
+        .select('*', { count: 'exact', head: true });
+
       setStats({
         totalOdus: oduCount || 0,
         totalUsers: userCount || 0,
+        totalRituais: ritualCount || 0,
       });
     } catch (error) {
       console.error('Error loading stats:', error);
@@ -76,6 +85,18 @@ export default function Admin() {
   const handleEditOdu = (oduId: string) => {
     setSelectedOdu(oduId);
     setActiveTab("editor");
+  };
+
+  const handleRitualSaved = () => {
+    setSelectedRitual(null);
+    setActiveTab("ritual-list");
+    setRefreshTrigger((prev) => prev + 1);
+    loadStats();
+  };
+
+  const handleEditRitual = (ritualId: string) => {
+    setSelectedRitual(ritualId);
+    setActiveTab("ritual-editor");
   };
 
   if (adminLoading) {
@@ -125,23 +146,24 @@ export default function Admin() {
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Progresso</CardTitle>
+              <CardTitle className="text-sm font-medium">Rituais/Rezas/Invocações</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">
-                {Math.round((stats.totalOdus / 256) * 100)}%
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Da biblioteca completa</p>
+              <div className="text-3xl font-bold">{stats.totalRituais}</div>
+              <p className="text-xs text-muted-foreground mt-1">Total de conteúdos</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-9' : 'grid-cols-5'}`}>
-            <TabsTrigger value="list">Lista de Odu</TabsTrigger>
-            <TabsTrigger value="editor">Editor</TabsTrigger>
-            <TabsTrigger value="upload">Upload em Massa</TabsTrigger>
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-12' : 'grid-cols-8'}`}>
+            <TabsTrigger value="list">Odu</TabsTrigger>
+            <TabsTrigger value="editor">Editor Odu</TabsTrigger>
+            <TabsTrigger value="upload">Upload Odu</TabsTrigger>
+            <TabsTrigger value="ritual-list">Rituais</TabsTrigger>
+            <TabsTrigger value="ritual-editor">Editor Ritual</TabsTrigger>
+            <TabsTrigger value="ritual-upload">Upload Ritual</TabsTrigger>
             <TabsTrigger value="tools">🔧 Ferramentas</TabsTrigger>
             <TabsTrigger value="changelog">Novidades</TabsTrigger>
             {isAdmin && (
@@ -230,6 +252,80 @@ export default function Admin() {
               </CardHeader>
               <CardContent>
                 <BulkUpload onSuccess={() => {
+                  loadStats();
+                  setRefreshTrigger((prev) => prev + 1);
+                }} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="ritual-list" className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold">Gerenciar Rituais, Rezas e Invocações</h2>
+                <p className="text-muted-foreground">
+                  Visualize, edite ou exclua os conteúdos cadastrados
+                </p>
+              </div>
+              <Button onClick={() => {
+                setSelectedRitual('new');
+                setActiveTab("ritual-editor");
+              }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Conteúdo
+              </Button>
+            </div>
+            <RitualList onEdit={handleEditRitual} refreshTrigger={refreshTrigger} />
+          </TabsContent>
+
+          <TabsContent value="ritual-editor" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  {selectedRitual === 'new' ? 'Criar Novo Conteúdo' : selectedRitual ? 'Editar Conteúdo' : 'Editor de Conteúdo'}
+                </CardTitle>
+                <CardDescription>
+                  {selectedRitual ? 'Edite os campos abaixo e salve as alterações' : 'Selecione um conteúdo da lista para editar ou crie um novo'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {selectedRitual ? (
+                  <RitualEditor
+                    ritualId={selectedRitual === 'new' ? undefined : selectedRitual}
+                    onSaved={handleRitualSaved}
+                    onCancel={() => setSelectedRitual(null)}
+                  />
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground mb-4">
+                      Nenhum conteúdo selecionado para edição
+                    </p>
+                    <Button onClick={() => {
+                      setSelectedRitual('new');
+                      setActiveTab("ritual-editor");
+                    }}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Criar Novo Conteúdo
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="ritual-upload" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="h-5 w-5" />
+                  Upload em Massa de Rituais
+                </CardTitle>
+                <CardDescription>
+                  Importe múltiplos rituais, rezas ou invocações de uma vez usando arquivos CSV ou JSON
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RitualBulkUpload onSuccess={() => {
                   loadStats();
                   setRefreshTrigger((prev) => prev + 1);
                 }} />
