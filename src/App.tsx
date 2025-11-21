@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ReferralWelcomeModal } from "@/components/ReferralWelcomeModal";
 import ChangelogModal from "@/components/ChangelogModal";
+import { ProfileCompletionChecker } from "@/components/ProfileCompletionChecker";
 import { useSessionValidation } from "@/hooks/useSessionValidation";
 import { useChangelog } from "@/hooks/useChangelog";
 import Index from "./pages/Index";
@@ -59,8 +60,9 @@ function AppContent() {
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <ProfileCompletionChecker />
         <ReferralWelcomeModal />
-        <ChangelogModal 
+        <ChangelogModal
           open={showModal}
           onClose={markAsViewed}
           changelog={latestChangelog}
