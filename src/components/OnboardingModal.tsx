@@ -79,14 +79,9 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
     setLoading(true);
     
     try {
-      // Marca onboarding como completo
-      const { error } = await supabase
-        .from('profiles')
-        .update({ onboarding_completed: true })
-        .eq('user_id', user?.id);
-
-      if (error) throw error;
-
+      // NÃO marca onboarding como completo aqui
+      // O DashboardTour vai marcar quando o usuário completar o tour
+      
       // Celebração com confetti
       confetti({
         particleCount: 100,
@@ -94,8 +89,15 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
         origin: { y: 0.6 }
       });
 
-      toast.success('🎉 Pronto para começar sua jornada!');
-      onComplete();
+      toast.success('🎉 Agora vamos conhecer o Dashboard!');
+      
+      // Sinaliza para iniciar o tour do dashboard
+      localStorage.setItem('start_dashboard_tour', 'true');
+      
+      // Aguarda um pouco antes de fechar o modal
+      setTimeout(() => {
+        onComplete();
+      }, 1500);
     } catch (error) {
       console.error('Error completing onboarding:', error);
       toast.error('Erro ao finalizar onboarding');
@@ -108,6 +110,7 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
     setLoading(true);
     
     try {
+      // Ao pular, ainda marca como completo mas sinaliza para o tour
       const { error } = await supabase
         .from('profiles')
         .update({ onboarding_completed: true })
@@ -115,6 +118,7 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
 
       if (error) throw error;
       
+      toast.info('Você pode rever o tour nas configurações a qualquer momento');
       onComplete();
     } catch (error) {
       console.error('Error skipping onboarding:', error);

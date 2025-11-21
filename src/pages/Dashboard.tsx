@@ -33,6 +33,7 @@ import { ReferralWidget } from '@/components/ReferralWidget';
 import { ProfileCompletionModal } from '@/components/ProfileCompletionModal';
 import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { useAccessibility } from '@/contexts/AccessibilityContext';
+import { DashboardTour } from '@/components/DashboardTour';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, HelpCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -90,7 +91,22 @@ export default function Dashboard() {
   const [hasCompletedFirstStudy, setHasCompletedFirstStudy] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showGlossary, setShowGlossary] = useState(false);
+  const [runTour, setRunTour] = useState(false);
   const { simplifiedMode } = useAccessibility();
+  
+  // Inicia o tour se há flag do onboarding
+  useEffect(() => {
+    const shouldStartTour = localStorage.getItem('start_dashboard_tour');
+    if (shouldStartTour === 'true' && !loading) {
+      localStorage.removeItem('start_dashboard_tour');
+      // Aguarda renderização completa
+      const timer = setTimeout(() => {
+        setRunTour(true);
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
 
   // Debug log para changelog
   useEffect(() => {
@@ -483,8 +499,8 @@ export default function Dashboard() {
         )}
 
         {/* FASE 2: Card Principal "O Que Fazer Agora?" */}
-        <div className="mb-8">
-          <ActionCard 
+        <div className="mb-8" data-tour="action-card">
+          <ActionCard
             reviewCount={stats?.reviewTodayCount || 0}
             hasReviews={(stats?.reviewTodayCount || 0) > 0}
           />
@@ -505,7 +521,7 @@ export default function Dashboard() {
         </div>
 
         {/* FASE 2: Card Principal de Progresso Simplificado */}
-        <Card className="mb-8 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-2 border-green-300">
+        <Card className="mb-8 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-2 border-green-300" data-tour="progress-card">
           <CardContent className="pt-8 pb-8">
             <div className="text-center mb-6">
               <p className="text-lg text-muted-foreground mb-2">🌟 Seu Progresso nos Odu Ifá</p>
@@ -538,8 +554,8 @@ export default function Dashboard() {
         </Card>
 
         {/* FASE 5: Daily Guide Widget (Onboarding Permanente) */}
-        <div className="mb-8">
-          <DailyGuideWidget 
+        <div className="mb-8" data-tour="daily-guide">
+          <DailyGuideWidget
             reviewCount={stats?.reviewTodayCount || 0}
             hasStudiedToday={false}
             hasExploredRitual={false}
@@ -842,8 +858,8 @@ export default function Dashboard() {
         {/* EXPLORAR CONTEÚDO - Cards Grandes de Categorias */}
         <div className="mb-8">
           <h3 className="text-2xl font-bold mb-4 text-center">📚 Explorar Conteúdo</h3>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <Card 
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4" data-tour="content-categories">
+            <Card
               className="cursor-pointer hover:shadow-xl transition-all hover:scale-105 border-2"
               onClick={() => navigate('/biblioteca-yoruba?tab=odu')}
             >
@@ -924,6 +940,12 @@ export default function Dashboard() {
       >
         <HelpCircle className="h-8 w-8" />
       </Button>
+
+      {/* Dashboard Tour */}
+      <DashboardTour 
+        run={runTour}
+        onComplete={() => setRunTour(false)}
+      />
     </div>
   );
 }
