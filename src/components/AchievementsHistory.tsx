@@ -4,9 +4,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Trophy, Calendar } from "lucide-react";
+import { Trophy, Calendar, Maximize2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Button } from "@/components/ui/button";
+import { AchievementsModal } from "./AchievementsModal";
 
 interface Conquista {
   id: string;
@@ -100,13 +102,24 @@ export default function AchievementsHistory() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
             <Trophy className="h-5 w-5" />
             Histórico de Conquistas
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary">{conquistas.length}</Badge>
+            <AchievementsModal 
+              conquistas={conquistas}
+              trigger={
+                <Button variant="outline" size="sm" className="gap-2 hover-scale">
+                  <Maximize2 className="h-4 w-4" />
+                  Ver todas
+                </Button>
+              }
+            />
           </div>
-          <Badge variant="secondary">{conquistas.length}</Badge>
-        </CardTitle>
+        </div>
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[400px] pr-4">
