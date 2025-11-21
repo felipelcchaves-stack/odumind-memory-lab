@@ -474,7 +474,7 @@ export default function StudySession() {
           consecutive_wrong: isCorrect ? 0 : (currentRecord?.consecutive_wrong || 0) + 1,
           total_study_time: (currentRecord?.total_study_time || 0) + responseTime,
           last_response_time: responseTime
-        })
+        }, { onConflict: 'user_id,odu_id' })
         .select();
 
       if (upsertError) {
