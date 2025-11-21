@@ -11,6 +11,7 @@ import { Shield, ShieldOff, Eye, Search, X, Edit, UserPlus, Settings, Download, 
 import { toast } from 'sonner';
 import UserEditDialog from './UserEditDialog';
 import UserRoleDialog from './UserRoleDialog';
+import { CollaboratorPermissionsDialog } from './CollaboratorPermissionsDialog';
 
 interface UserProfile {
   user_id: string;
@@ -42,6 +43,9 @@ export default function UserManagement() {
   const [roleChangeUserName, setRoleChangeUserName] = useState<string>('');
   const [roleChangeCurrentRole, setRoleChangeCurrentRole] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
+  const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
+  const [permissionsUserId, setPermissionsUserId] = useState<string>('');
+  const [permissionsUserName, setPermissionsUserName] = useState<string>('');
 
   useEffect(() => {
     loadUsers();
@@ -518,9 +522,23 @@ export default function UserManagement() {
                           userRole
                         )}
                       >
-                        <Settings className="h-4 w-4 mr-1" />
+                        <Shield className="h-4 w-4 mr-1" />
                         Alterar Perfil
                       </Button>
+                      {userRole === 'colaborador' && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            setPermissionsUserId(user.user_id);
+                            setPermissionsUserName(user.nome || user.email || 'Usuário');
+                            setPermissionsDialogOpen(true);
+                          }}
+                        >
+                          <Settings className="h-4 w-4 mr-1" />
+                          Permissões
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -547,6 +565,13 @@ export default function UserManagement() {
       userName={roleChangeUserName}
       currentRole={roleChangeCurrentRole}
       onSave={handleRoleDialogSave}
+    />
+
+    <CollaboratorPermissionsDialog
+      open={permissionsDialogOpen}
+      onOpenChange={setPermissionsDialogOpen}
+      userId={permissionsUserId}
+      userName={permissionsUserName}
     />
     </>
   );
