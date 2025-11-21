@@ -669,7 +669,7 @@ export default function Dashboard() {
           <StudyPlanProgress />
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 mb-8" data-tour="badges">
+        <div id="achievements-section" className="grid gap-6 md:grid-cols-2 mb-8" data-tour="badges">
           {/* Badges */}
           {user && <BadgesDisplay userId={user.id} />}
 
@@ -677,7 +677,7 @@ export default function Dashboard() {
           {user && <AchievementsHistory />}
         </div>
 
-        <div id="achievements-section" className="grid gap-6 md:grid-cols-2 mb-8">
+        <div className="grid gap-6 md:grid-cols-2 mb-8">
           {/* Upcoming Reviews */}
           <Card>
             <CardHeader>
