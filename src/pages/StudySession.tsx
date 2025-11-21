@@ -457,7 +457,7 @@ export default function StudySession() {
       proximaData.setDate(proximaData.getDate() + novoIntervalo);
 
       // Update memorization record with additional intelligence fields
-      await supabase
+      const { data: upsertResult, error: upsertError } = await supabase
         .from("memorizacao")
         .upsert({
           user_id: user.id,
@@ -474,7 +474,21 @@ export default function StudySession() {
           consecutive_wrong: isCorrect ? 0 : (currentRecord?.consecutive_wrong || 0) + 1,
           total_study_time: (currentRecord?.total_study_time || 0) + responseTime,
           last_response_time: responseTime
-        });
+        })
+        .select();
+
+      if (upsertError) {
+        console.error('❌ Erro ao atualizar memorização:', upsertError);
+        toast.error('Erro ao salvar progresso. Tente novamente.');
+        throw upsertError;
+      }
+
+      console.log('✅ Memorização atualizada:', {
+        odu: currentOdu.nome,
+        revisoes,
+        ultima_revisao: new Date().toISOString(),
+        forca_memoria: newMemoryStrength
+      });
 
       // Calculate XP based on difficulty and performance
       const xp = qualidade * 10;
