@@ -4,7 +4,10 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { useChangelog } from '@/hooks/useChangelog';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useTheme } from 'next-themes';
+import { useAccessibility } from '@/contexts/AccessibilityContext';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +27,7 @@ export default function DashboardHeader() {
   const { theme, setTheme } = useTheme();
   const { hasUnreadChangelog } = useChangelog();
   const { isFamily } = useSubscription();
+  const { simplifiedMode, setSimplifiedMode, highContrast, setHighContrast } = useAccessibility();
 
   const navItems = [
     { path: '/dashboard', icon: Home, label: 'Dashboard', priority: 'high' },
@@ -83,6 +87,20 @@ export default function DashboardHeader() {
 
         {/* User Menu */}
         <div className="flex items-center gap-2">
+          {/* Simplified Mode Toggle (only on Dashboard) */}
+          {location.pathname === '/dashboard' && (
+            <div className="hidden md:flex items-center gap-2 mr-2">
+              <Switch
+                id="simplified-mode"
+                checked={simplifiedMode}
+                onCheckedChange={setSimplifiedMode}
+              />
+              <Label htmlFor="simplified-mode" className="text-sm cursor-pointer">
+                Modo Simples
+              </Label>
+            </div>
+          )}
+
           {/* Theme Toggle */}
           <Button
             variant="ghost"
@@ -146,6 +164,29 @@ export default function DashboardHeader() {
                 <Settings className="mr-2 h-4 w-4" />
                 Configurações
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <div className="px-2 py-2 space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="high-contrast-menu" className="text-sm cursor-pointer">
+                    Alto Contraste
+                  </Label>
+                  <Switch
+                    id="high-contrast-menu"
+                    checked={highContrast}
+                    onCheckedChange={setHighContrast}
+                  />
+                </div>
+                <div className="flex items-center justify-between md:hidden">
+                  <Label htmlFor="simplified-mode-menu" className="text-sm cursor-pointer">
+                    Modo Simples
+                  </Label>
+                  <Switch
+                    id="simplified-mode-menu"
+                    checked={simplifiedMode}
+                    onCheckedChange={setSimplifiedMode}
+                  />
+                </div>
+              </div>
               {isAdmin && (
                 <>
                   <DropdownMenuItem onClick={() => navigate('/admin')}>
