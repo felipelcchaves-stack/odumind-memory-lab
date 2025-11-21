@@ -2,10 +2,11 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Trophy, Calendar, Filter, X } from "lucide-react";
+import { Trophy, Calendar, Filter, X, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
+import { ShareAchievementDialog } from "./ShareAchievementDialog";
 
 interface Conquista {
   id: string;
@@ -24,12 +25,19 @@ interface AchievementsModalProps {
 
 export function AchievementsModal({ conquistas, trigger }: AchievementsModalProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [selectedAchievement, setSelectedAchievement] = useState<Conquista | null>(null);
   
   const categories = Array.from(new Set(conquistas.map(c => c.tipo)));
   
   const filteredConquistas = selectedCategory 
     ? conquistas.filter(c => c.tipo === selectedCategory)
     : conquistas;
+
+  const handleShare = (conquista: Conquista) => {
+    setSelectedAchievement(conquista);
+    setShareDialogOpen(true);
+  };
 
   const getCategoryColor = (tipo: string) => {
     const colors: Record<string, string> = {
@@ -153,16 +161,27 @@ export function AchievementsModal({ conquistas, trigger }: AchievementsModalProp
                       </div>
 
                       {/* Detalhes */}
-                      <div className="flex items-center justify-between pt-3 border-t border-border">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Calendar className="h-3.5 w-3.5" />
-                          {format(new Date(conquista.conquistado_em), "dd 'de' MMMM, yyyy", { locale: ptBR })}
+                      <div className="space-y-2 pt-3 border-t border-border">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Calendar className="h-3.5 w-3.5" />
+                            {format(new Date(conquista.conquistado_em), "dd 'de' MMMM, yyyy", { locale: ptBR })}
+                          </div>
+                          {conquista.valor_conquista > 0 && (
+                            <Badge variant="secondary" className="text-xs font-semibold">
+                              +{conquista.valor_conquista} XP
+                            </Badge>
+                          )}
                         </div>
-                        {conquista.valor_conquista > 0 && (
-                          <Badge variant="secondary" className="text-xs font-semibold">
-                            +{conquista.valor_conquista} XP
-                          </Badge>
-                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full gap-2 hover-scale"
+                          onClick={() => handleShare(conquista)}
+                        >
+                          <Share2 className="h-3.5 w-3.5" />
+                          Compartilhar
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -184,6 +203,15 @@ export function AchievementsModal({ conquistas, trigger }: AchievementsModalProp
           </div>
         </div>
       </DialogContent>
+
+      {/* Share Dialog */}
+      {selectedAchievement && (
+        <ShareAchievementDialog
+          open={shareDialogOpen}
+          onOpenChange={setShareDialogOpen}
+          achievement={selectedAchievement}
+        />
+      )}
     </Dialog>
   );
 }
