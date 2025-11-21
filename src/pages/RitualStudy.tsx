@@ -10,6 +10,7 @@ import { ArrowLeft, Clock, Package, Check } from "lucide-react";
 import { toast } from "sonner";
 import { ProtectedContent } from "@/components/ProtectedContent";
 import { useTrackingEvents } from "@/hooks/useTrackingEvents";
+import DashboardHeader from "@/components/DashboardHeader";
 
 interface RitualContent {
   id: string;
@@ -184,8 +185,10 @@ export default function RitualStudy() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen bg-background">
+      <DashboardHeader />
+      <div className="container mx-auto py-8 px-4">
+        <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/biblioteca-yoruba')}>
@@ -344,6 +347,7 @@ export default function RitualStudy() {
             </CardContent>
           </Card>
         )}
+        </div>
       </div>
     </div>
   );
