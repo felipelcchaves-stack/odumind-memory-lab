@@ -1,21 +1,35 @@
 import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { ProfileCompletionModal } from '@/components/ProfileCompletionModal';
+import { OnboardingModal } from '@/components/OnboardingModal';
 import { useAuth } from '@/contexts/AuthContext';
 
 export function ProfileCompletionChecker() {
   const { user } = useAuth();
-  const { isProfileComplete, loading, refetch } = useProfileCompletion();
+  const { isProfileComplete, isOnboardingComplete, loading, refetch } = useProfileCompletion();
 
-  // Só mostra o modal se:
-  // 1. Usuário está autenticado
-  // 2. Não está carregando
-  // 3. Perfil não está completo (false)
-  const shouldShowModal = user && !loading && isProfileComplete === false;
+  // Mostra ProfileCompletionModal se perfil não está completo
+  const shouldShowProfileModal = user && !loading && isProfileComplete === false;
+  
+  // Mostra OnboardingModal se perfil está completo mas onboarding não
+  const shouldShowOnboarding = user && !loading && isProfileComplete === true && isOnboardingComplete === false;
 
-  return (
-    <ProfileCompletionModal 
-      open={!!shouldShowModal}
-      onComplete={refetch}
-    />
-  );
+  if (shouldShowProfileModal) {
+    return (
+      <ProfileCompletionModal 
+        open={true}
+        onComplete={refetch}
+      />
+    );
+  }
+
+  if (shouldShowOnboarding) {
+    return (
+      <OnboardingModal 
+        open={true}
+        onComplete={refetch}
+      />
+    );
+  }
+
+  return null;
 }

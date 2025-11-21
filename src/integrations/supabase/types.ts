@@ -806,6 +806,7 @@ export type Database = {
           last_viewed_changelog: string | null
           meta_diaria: number
           nome: string | null
+          onboarding_completed: boolean | null
           pais: string | null
           profile_completed: boolean | null
           sexo: string | null
@@ -824,6 +825,7 @@ export type Database = {
           last_viewed_changelog?: string | null
           meta_diaria?: number
           nome?: string | null
+          onboarding_completed?: boolean | null
           pais?: string | null
           profile_completed?: boolean | null
           sexo?: string | null
@@ -842,6 +844,7 @@ export type Database = {
           last_viewed_changelog?: string | null
           meta_diaria?: number
           nome?: string | null
+          onboarding_completed?: boolean | null
           pais?: string | null
           profile_completed?: boolean | null
           sexo?: string | null
