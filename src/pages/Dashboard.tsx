@@ -294,9 +294,19 @@ export default function Dashboard() {
         const dayEnd = endOfDay(date);
 
         const reviewsOnDay = records.filter((r) => {
-          if (!r.ultima_revisao) return false;
-          const reviewDate = new Date(r.ultima_revisao);
-          return reviewDate >= dayStart && reviewDate <= dayEnd;
+          // Priorizar ultima_revisao se disponível e recente
+          if (r.ultima_revisao) {
+            const reviewDate = new Date(r.ultima_revisao);
+            return reviewDate >= dayStart && reviewDate <= dayEnd;
+          }
+          
+          // Fallback: Se ultima_revisao está null ou muito antigo, usar updated_at
+          if (r.updated_at && r.revisoes > 0) {
+            const updateDate = new Date(r.updated_at);
+            return updateDate >= dayStart && updateDate <= dayEnd;
+          }
+          
+          return false;
         }).length;
 
         weeklyProgress.push({
