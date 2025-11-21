@@ -151,6 +151,14 @@ All colors MUST be HSL.
     transition: var(--transition-smooth);
   }
   
+  .hover-scale {
+    transition: transform 0.2s ease;
+  }
+  
+  .hover-scale:hover {
+    transform: scale(1.05);
+  }
+  
   .animate-float {
     animation: float 6s ease-in-out infinite;
   }
@@ -177,5 +185,11 @@ All colors MUST be HSL.
       opacity: 1;
       transform: translateY(0);
     }
+  }
+  
+  .bg-grid-pattern {
+    background-image: linear-gradient(to right, hsl(var(--border)) 1px, transparent 1px),
+                      linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px);
+    background-size: 20px 20px;
   }
 }
