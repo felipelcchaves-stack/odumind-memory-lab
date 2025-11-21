@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { BookOpen, Flame, Heart, Sparkles, Search, Filter } from "lucide-react";
 import { toast } from "sonner";
 import MemorizationStatusBadge from "@/components/MemorizationStatusBadge";
+import DashboardHeader from "@/components/DashboardHeader";
 
 interface ContentType {
   id: string;
@@ -213,7 +214,9 @@ export default function BibliotecaYoruba() {
   };
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="min-h-screen bg-background">
+      <DashboardHeader />
+      <div className="container mx-auto py-8 px-4">
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2">Biblioteca Yorubá</h1>
         <p className="text-muted-foreground">
@@ -351,6 +354,7 @@ export default function BibliotecaYoruba() {
           </TabsContent>
         ))}
       </Tabs>
+      </div>
     </div>
   );
 }
