@@ -176,6 +176,33 @@ export type Database = {
         }
         Relationships: []
       }
+      collaborator_permissions: {
+        Row: {
+          can_access: boolean
+          created_at: string
+          id: string
+          permission_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          can_access?: boolean
+          created_at?: string
+          id?: string
+          permission_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          can_access?: boolean
+          created_at?: string
+          id?: string
+          permission_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       conquistas: {
         Row: {
           conquistado_em: string
@@ -1454,6 +1481,10 @@ export type Database = {
       has_admin_role: { Args: { _user_id: string }; Returns: boolean }
       has_aluno_role: { Args: { _user_id: string }; Returns: boolean }
       has_colaborador_role: { Args: { _user_id: string }; Returns: boolean }
+      has_permission: {
+        Args: { _permission_type: string; _user_id: string }
+        Returns: boolean
+      }
       is_family_member: {
         Args: { _family_group_id: string; _user_id: string }
         Returns: boolean

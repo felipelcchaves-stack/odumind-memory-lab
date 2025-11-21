@@ -12,16 +12,27 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { usePermissions, PermissionType } from "@/hooks/usePermissions";
+import { LucideIcon } from "lucide-react";
 
 interface AdminSidebarProps {
   isAdmin: boolean;
 }
 
+interface MenuItem {
+  title: string;
+  url: string;
+  icon: LucideIcon;
+  adminOnly?: boolean;
+  permission?: PermissionType;
+}
+
 export function AdminSidebar({ isAdmin }: AdminSidebarProps) {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
+  const { hasPermission } = usePermissions();
 
-  const sections = [
+  const sections: Array<{ label: string; items: MenuItem[] }> = [
     {
       label: "Principal",
       items: [
@@ -31,9 +42,9 @@ export function AdminSidebar({ isAdmin }: AdminSidebarProps) {
     {
       label: "Conteúdo",
       items: [
-        { title: "Odu", url: "/admin/odu", icon: FileText },
-        { title: "Rituais", url: "/admin/rituais", icon: Scroll },
-        { title: "Novidades", url: "/admin/changelog", icon: Megaphone },
+        { title: "Odu", url: "/admin/odu", icon: FileText, permission: "odu" as const },
+        { title: "Rituais", url: "/admin/rituais", icon: Scroll, permission: "rituais" as const },
+        { title: "Novidades", url: "/admin/changelog", icon: Megaphone, permission: "changelog" as const },
       ],
     },
     {
@@ -47,7 +58,7 @@ export function AdminSidebar({ isAdmin }: AdminSidebarProps) {
       label: "Sistema",
       items: [
         { title: "Configurações", url: "/admin/settings", icon: Settings, adminOnly: true },
-        { title: "Ferramentas", url: "/admin/tools", icon: Wrench },
+        { title: "Ferramentas", url: "/admin/tools", icon: Wrench, permission: "tools" as const },
         { title: "Restaurar", url: "/admin/restore", icon: History, adminOnly: true },
       ],
     },
@@ -67,7 +78,14 @@ export function AdminSidebar({ isAdmin }: AdminSidebarProps) {
 
       <SidebarContent>
         {sections.map((section) => {
-          const visibleItems = section.items.filter(item => !item.adminOnly || isAdmin);
+          const visibleItems = section.items.filter(item => {
+            // Admin-only items
+            if (item.adminOnly) return isAdmin;
+            // Items with specific permissions
+            if (item.permission) return hasPermission(item.permission);
+            // Default items (like Dashboard)
+            return true;
+          });
           if (visibleItems.length === 0) return null;
 
           return (
