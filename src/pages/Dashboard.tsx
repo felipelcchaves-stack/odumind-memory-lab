@@ -28,6 +28,8 @@ import { HelpTooltip } from '@/components/HelpTooltip';
 import { FloatingHelp } from '@/components/FloatingHelp';
 import { ReferralBanner } from '@/components/ReferralBanner';
 import { ReferralWidget } from '@/components/ReferralWidget';
+import { ProfileCompletionModal } from '@/components/ProfileCompletionModal';
+import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 
 interface ProfileData {
   xp: number;
@@ -69,10 +71,12 @@ export default function Dashboard() {
     scheduleReviewReminder 
   } = useNotifications();
   const { subscription, loading: subLoading } = useSubscription();
+  const { isProfileComplete, loading: profileLoading, refetch: refetchProfile } = useProfileCompletion();
   const [achievementsHistory, setAchievementsHistory] = useState<any[]>([]);
   const hasScheduledNotifications = useRef(false);
   const { showModal, latestChangelog, markAsViewed, setShowModal } = useChangelog();
   const [hasCompletedFirstStudy, setHasCompletedFirstStudy] = useState(true);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   // Debug log para changelog
   useEffect(() => {
@@ -94,6 +98,13 @@ export default function Dashboard() {
       loadDashboardData();
     }
   }, [user]);
+
+  // Check profile completion
+  useEffect(() => {
+    if (!profileLoading && isProfileComplete === false) {
+      setShowProfileModal(true);
+    }
+  }, [isProfileComplete, profileLoading]);
 
   // Schedule notifications when data is loaded
   useEffect(() => {
@@ -370,7 +381,7 @@ export default function Dashboard() {
     navigate('/');
   };
 
-  if (authLoading || loading) {
+  if (authLoading || loading || profileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-subtle">
         <div className="text-center">
@@ -386,6 +397,13 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-subtle" data-tour="welcome">
+      <ProfileCompletionModal 
+        open={showProfileModal} 
+        onComplete={() => {
+          setShowProfileModal(false);
+          refetchProfile();
+        }} 
+      />
       <ProductTour />
       <DashboardHeader />
 
