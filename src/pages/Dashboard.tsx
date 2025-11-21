@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, Target, Zap, BookOpen, Brain, Calendar, TrendingUp, Award, Home, Clock } from 'lucide-react';
+import { Trophy, Target, Zap, BookOpen, Brain, Calendar, TrendingUp, Award, Home, Clock, Flame, Heart, Sparkles, FileText, Lightbulb } from 'lucide-react';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import BadgesDisplay from '@/components/BadgesDisplay';
@@ -57,6 +57,12 @@ interface MemorizationStats {
     proxima_revisao: string;
     odu: { numero: number; nome: string };
   } | null;
+  totalRituais: number;
+  rituaisPraticados: number;
+  totalRezas: number;
+  rezasAprendidas: number;
+  totalInvocacoes: number;
+  invocacoesPraticadas: number;
 }
 
 export default function Dashboard() {
@@ -152,6 +158,11 @@ export default function Dashboard() {
     const memorizedPercentage = Math.round((stats.memorizedCount / stats.totalOdus) * 100);
     const streak = profile.streak;
     const reviewsToday = stats.reviewTodayCount;
+
+    // Incentivar exploração de rituais se tem progresso em Odu mas não praticou rituais
+    if (memorizedPercentage > 10 && stats.rituaisPraticados === 0) {
+      return "🕯️ Que tal explorar os Rituais sagrados agora? Você já domina os Odu!";
+    }
 
     // Mensagens baseadas em streak
     if (streak >= 30) {
@@ -360,6 +371,35 @@ export default function Dashboard() {
         }
       } : null;
 
+      // Buscar stats de rituais/rezas/invocações
+      const { data: contentTypesData } = await supabase
+        .from('content_types')
+        .select('id, slug')
+        .in('slug', ['rituais', 'rezas', 'invocacoes']);
+
+      const typeIds = {
+        rituais: contentTypesData?.find(ct => ct.slug === 'rituais')?.id || '',
+        rezas: contentTypesData?.find(ct => ct.slug === 'rezas')?.id || '',
+        invocacoes: contentTypesData?.find(ct => ct.slug === 'invocacoes')?.id || '',
+      };
+
+      const [rituaisTotal, rituaisProg, rezasTotal, rezasProg, invocTotal, invocProg] = await Promise.all([
+        supabase.from('ritual_content').select('*', { count: 'exact', head: true }),
+        supabase.from('user_ritual_progress').select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('status', 'praticado'),
+        supabase.from('ritual_content').select('*', { count: 'exact', head: true })
+          .eq('content_type_id', typeIds.rezas),
+        supabase.from('user_ritual_progress').select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('status', 'memorizado'),
+        supabase.from('ritual_content').select('*', { count: 'exact', head: true })
+          .eq('content_type_id', typeIds.invocacoes),
+        supabase.from('user_ritual_progress').select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('status', 'praticado'),
+      ]);
+
       setStats({
         totalOdus: totalOdus || 0,
         memorizedCount,
@@ -370,6 +410,12 @@ export default function Dashboard() {
         weeklyProgress,
         upcomingReviews,
         nextReview,
+        totalRituais: rituaisTotal.count || 0,
+        rituaisPraticados: rituaisProg.count || 0,
+        totalRezas: rezasTotal.count || 0,
+        rezasAprendidas: rezasProg.count || 0,
+        totalInvocacoes: invocTotal.count || 0,
+        invocacoesPraticadas: invocProg.count || 0,
       });
     } catch (error) {
       console.error('Error loading memorization stats:', error);
@@ -435,6 +481,32 @@ export default function Dashboard() {
         <div className="mb-6">
           <ReferralBanner />
         </div>
+
+        {/* Widget "Biblioteca Completa" */}
+        <div className="mb-6">
+          <Card className="bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/20">
+            <CardContent className="pt-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
+                    <BookOpen className="h-5 w-5" />
+                    Biblioteca Completa Yorubá
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Acesse 256 Odu Ifá + {stats?.totalRituais || 0}+ Rituais + {stats?.totalRezas || 0}+ Rezas + {stats?.totalInvocacoes || 0}+ Invocações
+                  </p>
+                </div>
+                <Button 
+                  size="lg" 
+                  variant="hero"
+                  onClick={() => navigate('/biblioteca-yoruba')}
+                >
+                  Explorar Agora
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
         
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-2">
@@ -451,6 +523,62 @@ export default function Dashboard() {
         </div>
 
         {/* Primary Stats Grid */}
+        <div className="grid gap-6 mb-8">
+          {/* Progresso Geral Multi-Conteúdo */}
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle>Seu Progresso na Biblioteca Yorubá</CardTitle>
+              <CardDescription>Acompanhe seu avanço em todas as categorias de estudo</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 text-primary" />
+                    <p className="text-sm text-muted-foreground">Odu Memorizados</p>
+                  </div>
+                  <p className="text-2xl font-bold">{stats?.memorizedCount || 0}/{stats?.totalOdus || 256}</p>
+                  <Progress value={memorizedPercentage} />
+                  <p className="text-xs text-muted-foreground">{memorizedPercentage.toFixed(0)}% completo</p>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Flame className="h-4 w-4 text-orange-500" />
+                    <p className="text-sm text-muted-foreground">Rituais Praticados</p>
+                  </div>
+                  <p className="text-2xl font-bold">{stats?.rituaisPraticados || 0}/{stats?.totalRituais || 0}</p>
+                  <Progress value={(stats?.rituaisPraticados || 0) / Math.max(stats?.totalRituais || 1, 1) * 100} />
+                  <p className="text-xs text-muted-foreground">
+                    {(((stats?.rituaisPraticados || 0) / Math.max(stats?.totalRituais || 1, 1)) * 100).toFixed(0)}% completo
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Heart className="h-4 w-4 text-red-500" />
+                    <p className="text-sm text-muted-foreground">Rezas Aprendidas</p>
+                  </div>
+                  <p className="text-2xl font-bold">{stats?.rezasAprendidas || 0}/{stats?.totalRezas || 0}</p>
+                  <Progress value={(stats?.rezasAprendidas || 0) / Math.max(stats?.totalRezas || 1, 1) * 100} />
+                  <p className="text-xs text-muted-foreground">
+                    {(((stats?.rezasAprendidas || 0) / Math.max(stats?.totalRezas || 1, 1)) * 100).toFixed(0)}% completo
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-purple-500" />
+                    <p className="text-sm text-muted-foreground">Invocações</p>
+                  </div>
+                  <p className="text-2xl font-bold">{stats?.invocacoesPraticadas || 0}/{stats?.totalInvocacoes || 0}</p>
+                  <Progress value={(stats?.invocacoesPraticadas || 0) / Math.max(stats?.totalInvocacoes || 1, 1) * 100} />
+                  <p className="text-xs text-muted-foreground">
+                    {(((stats?.invocacoesPraticadas || 0) / Math.max(stats?.totalInvocacoes || 1, 1)) * 100).toFixed(0)}% completo
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8" data-tour="stats-cards">
           <Card data-tour="progress-bar" className="md:col-span-2">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -743,49 +871,60 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Quick Links */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/odu')}>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <BookOpen className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="font-semibold">Biblioteca de Odu</p>
-                  <p className="text-sm text-muted-foreground">Explore os {stats?.totalOdus || 256} Odu</p>
-                </div>
+        {/* Cards de Categorias de Conteúdo */}
+        <div className="grid gap-4 md:grid-cols-4 mb-8">
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-all hover:scale-105"
+            onClick={() => navigate('/biblioteca-yoruba?tab=odu')}
+          >
+            <CardContent className="pt-6 text-center">
+              <BookOpen className="h-8 w-8 text-primary mx-auto mb-3" />
+              <p className="font-semibold text-lg">256 Odu Ifá</p>
+              <p className="text-sm text-muted-foreground mt-1">Explore os Odu sagrados</p>
+              <div className="mt-3 text-xs text-muted-foreground">
+                {stats?.memorizedCount || 0} memorizados
               </div>
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/study')}>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Brain className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="font-semibold">Sessão de Estudo</p>
-                  <p className="text-sm text-muted-foreground">Flashcards e quizzes</p>
-                </div>
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-all hover:scale-105"
+            onClick={() => navigate('/biblioteca-yoruba?tab=rituais')}
+          >
+            <CardContent className="pt-6 text-center">
+              <Flame className="h-8 w-8 text-orange-500 mx-auto mb-3" />
+              <p className="font-semibold text-lg">{stats?.totalRituais || 0}+ Rituais</p>
+              <p className="text-sm text-muted-foreground mt-1">Práticas sagradas</p>
+              <div className="mt-3 text-xs text-muted-foreground">
+                {stats?.rituaisPraticados || 0} praticados
               </div>
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => {
-            const element = document.getElementById('achievements-section');
-            element?.scrollIntoView({ behavior: 'smooth' });
-          }}>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Trophy className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="font-semibold">Conquistas</p>
-                  <p className="text-sm text-muted-foreground">Ver histórico completo</p>
-                </div>
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-all hover:scale-105"
+            onClick={() => navigate('/biblioteca-yoruba?tab=rezas')}
+          >
+            <CardContent className="pt-6 text-center">
+              <Heart className="h-8 w-8 text-red-500 mx-auto mb-3" />
+              <p className="font-semibold text-lg">{stats?.totalRezas || 0}+ Rezas</p>
+              <p className="text-sm text-muted-foreground mt-1">Orações Yorubá</p>
+              <div className="mt-3 text-xs text-muted-foreground">
+                {stats?.rezasAprendidas || 0} aprendidas
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-all hover:scale-105"
+            onClick={() => navigate('/biblioteca-yoruba?tab=invocacoes')}
+          >
+            <CardContent className="pt-6 text-center">
+              <Sparkles className="h-8 w-8 text-purple-500 mx-auto mb-3" />
+              <p className="font-semibold text-lg">{stats?.totalInvocacoes || 0}+ Invocações</p>
+              <p className="text-sm text-muted-foreground mt-1">Chamados sagrados</p>
+              <div className="mt-3 text-xs text-muted-foreground">
+                {stats?.invocacoesPraticadas || 0} praticadas
               </div>
             </CardContent>
           </Card>
