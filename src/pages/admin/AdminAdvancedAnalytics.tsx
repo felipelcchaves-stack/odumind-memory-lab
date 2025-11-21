@@ -9,6 +9,7 @@ import { TrendingUp, Users, DollarSign, Target, UserMinus, MapPin, Calendar } fr
 import { calculateAdvancedMetrics, getMonthlyComparison, getDemographicData, AdvancedMetrics, MonthlyComparison, DemographicData } from '@/lib/advancedAnalytics';
 import { Skeleton } from '@/components/ui/skeleton';
 import { startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { MarketingInsights } from '@/components/admin/MarketingInsights';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))', 'hsl(var(--muted))', 'hsl(var(--chart-1))', 'hsl(var(--chart-2))'];
 
@@ -181,6 +182,16 @@ export default function AdminAdvancedAnalytics() {
           icon={TrendingUp}
         />
       </div>
+
+      {/* AI Marketing Insights */}
+      {currentMetrics && (
+        <MarketingInsights 
+          metrics={currentMetrics}
+          demographicData={demographicData}
+          monthlyData={monthlyData}
+          period={period}
+        />
+      )}
 
       {/* Monthly Comparison Charts */}
       <Card>
