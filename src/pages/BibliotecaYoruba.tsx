@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +8,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { BookOpen, Flame, Heart, Sparkles, Search, Filter } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import MemorizationStatusBadge from "@/components/MemorizationStatusBadge";
 
@@ -46,6 +46,7 @@ const iconMap: Record<string, any> = {
 export default function BibliotecaYoruba() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [contentTypes, setContentTypes] = useState<ContentType[]>([]);
   const [selectedType, setSelectedType] = useState<string>("odu");
   const [content, setContent] = useState<Content[]>([]);
@@ -56,6 +57,14 @@ export default function BibliotecaYoruba() {
   const [searchQuery, setSearchQuery] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  // Abrir tab específica via URL (?tab=rituais)
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && contentTypes.some(ct => ct.slug === tab)) {
+      setSelectedType(tab);
+    }
+  }, [searchParams, contentTypes]);
 
   useEffect(() => {
     loadContentTypes();

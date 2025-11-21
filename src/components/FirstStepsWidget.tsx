@@ -38,16 +38,21 @@ export function FirstStepsWidget({ hasCompletedFirstStudy, onStartStudy }: First
 
           <div className="flex items-center gap-3 p-2 rounded-lg bg-background/50">
             <Circle className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-            <span>3. Explore a biblioteca</span>
+            <span>3. Explorar os 256 Odu e 50+ Rituais</span>
           </div>
 
           <div className="flex items-center gap-3 p-2 rounded-lg bg-background/50">
             <Circle className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-            <span>4. Configure suas preferências</span>
+            <span>4. Praticar seu primeiro Ritual</span>
+          </div>
+
+          <div className="flex items-center gap-3 p-2 rounded-lg bg-background/50">
+            <Circle className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+            <span>5. Configurar sua meta diária</span>
           </div>
         </div>
 
-        {!hasCompletedFirstStudy && (
+        {!hasCompletedFirstStudy ? (
           <Button 
             size="lg" 
             className="w-full mt-4 text-lg font-semibold" 
@@ -55,23 +60,30 @@ export function FirstStepsWidget({ hasCompletedFirstStudy, onStartStudy }: First
           >
             🚀 Começar Meu Primeiro Estudo
           </Button>
-        )}
-
-        {hasCompletedFirstStudy && (
-          <div className="flex gap-2 mt-4">
+        ) : (
+          <div className="space-y-2 mt-4">
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={() => navigate('/biblioteca-yoruba')}
+              >
+                📚 Ver Biblioteca
+              </Button>
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={() => navigate('/settings')}
+              >
+                ⚙️ Configurar
+              </Button>
+            </div>
             <Button 
-              variant="outline" 
-              className="flex-1"
-              onClick={() => navigate('/odu')}
+              variant="secondary" 
+              className="w-full"
+              onClick={() => navigate('/biblioteca-yoruba?tab=rituais')}
             >
-              📚 Ver Biblioteca
-            </Button>
-            <Button 
-              variant="outline" 
-              className="flex-1"
-              onClick={() => navigate('/settings')}
-            >
-              ⚙️ Configurar
+              🕯️ Explorar Rituais
             </Button>
           </div>
         )}
