@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Share2, Download, Loader2, Twitter, MessageCircle, Instagram, Copy, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useTrackingEvents } from "@/hooks/useTrackingEvents";
 
 interface ShareAchievementDialogProps {
   open: boolean;
@@ -21,6 +22,7 @@ export function ShareAchievementDialog({ open, onOpenChange, achievement }: Shar
   const [loading, setLoading] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const { trackAchievementUnlocked } = useTrackingEvents();
 
   const generateImage = async () => {
     if (imageUrl) return; // Already generated
@@ -81,11 +83,13 @@ export function ShareAchievementDialog({ open, onOpenChange, achievement }: Shar
   const shareText = `🎉 Acabei de conquistar: ${achievement.titulo}!\n\n${achievement.descricao}\n\n#IseseMind #Conquista #Yoruba`;
 
   const shareToWhatsApp = () => {
+    trackAchievementUnlocked(achievement.titulo, achievement.valor_conquista);
     const url = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
     window.open(url, '_blank');
   };
 
   const shareToTwitter = () => {
+    trackAchievementUnlocked(achievement.titulo, achievement.valor_conquista);
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
     window.open(url, '_blank');
   };

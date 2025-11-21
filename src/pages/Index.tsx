@@ -12,6 +12,8 @@ import { ComparisonSection } from "@/components/ComparisonSection";
 import { FAQSection } from "@/components/FAQSection";
 import { UrgencySection } from "@/components/UrgencySection";
 import { ExitIntentPopup } from "@/components/ExitIntentPopup";
+import { DynamicSocialProof } from "@/components/DynamicSocialProof";
+import { TopReferrers } from "@/components/TopReferrers";
 
 const Index = () => {
   const { user } = useAuth();
@@ -29,7 +31,9 @@ const Index = () => {
       <ExitIntentPopup />
       <main>
         <Hero />
+        <DynamicSocialProof />
         <TestimonialsSection />
+        <TopReferrers />
         <div id="features">
           <Features />
         </div>
