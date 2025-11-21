@@ -192,13 +192,30 @@ export default function Settings() {
             <CardHeader>
               <CardTitle>Tour da Plataforma</CardTitle>
               <CardDescription>
-                Refaça o tour guiado para conhecer novamente todas as funcionalidades
+                Refaça os tours guiados para conhecer novamente todas as funcionalidades
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Button onClick={resetTour} variant="outline" className="w-full sm:w-auto">
+            <CardContent className="space-y-3">
+              <Button 
+                onClick={resetTour} 
+                variant="outline" 
+                className="w-full sm:w-auto"
+              >
                 <Play className="h-4 w-4 mr-2" />
-                Refazer Tour da Plataforma
+                Refazer Tour Inicial
+              </Button>
+              
+              <Button 
+                onClick={() => {
+                  localStorage.setItem('start_dashboard_tour', 'true');
+                  navigate('/dashboard');
+                  toast.success('Tour do Dashboard iniciado! Aguarde um momento...');
+                }}
+                variant="outline" 
+                className="w-full sm:w-auto"
+              >
+                <Play className="h-4 w-4 mr-2" />
+                Refazer Tour do Dashboard
               </Button>
             </CardContent>
           </Card>

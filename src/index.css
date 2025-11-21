@@ -229,4 +229,19 @@ All colors MUST be HSL.
   .simplified-mode .gamification-hidden {
     display: none !important;
   }
+  
+  /* React Joyride custom styles */
+  .__floater__open {
+    z-index: 10000 !important;
+  }
+  
+  .react-joyride__tooltip {
+    border-radius: 12px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2) !important;
+  }
+  
+  .react-joyride__spotlight {
+    border-radius: 8px !important;
+  }
 }
+
