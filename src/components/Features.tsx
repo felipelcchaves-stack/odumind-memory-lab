@@ -6,38 +6,38 @@ import flashcardsIllustration from "@/assets/flashcards-illustration.jpg";
 const features = [
   {
     icon: Brain,
-    title: "Mapas Mentais Inteligentes",
-    description: "Associe os Odu Ifá a imagens e conceitos poderosos para memorização rápida e duradoura.",
+    title: "256 Odu Ifá Completos",
+    description: "Memorize todos os Odu sagrados com mapas mentais inteligentes e repetição espaçada científica.",
     color: "text-primary",
   },
   {
     icon: BookOpen,
-    title: "Storytelling Envolvente",
-    description: "Aprenda através das narrativas sagradas, transformando conhecimento em histórias memoráveis.",
+    title: "50+ Rituais Tradicionais",
+    description: "Aprenda e pratique rituais yorubá autênticos com passo a passo detalhado e materiais necessários.",
     color: "text-secondary",
   },
   {
     icon: Target,
-    title: "Repetição Espaçada",
-    description: "Sistema científico que otimiza suas revisões no momento ideal para máxima retenção.",
+    title: "Rezas & Invocações",
+    description: "Domine orações sagradas com áudio de pronúncia correta e transcrições fonéticas.",
     color: "text-accent",
   },
   {
     icon: Zap,
-    title: "Flashcards Interativos",
-    description: "Pratique com flashcards dinâmicos que se adaptam ao seu ritmo de aprendizado.",
+    title: "Flashcards Inteligentes",
+    description: "Sistema adaptativo que foca nos conteúdos que você mais precisa revisar para memorização eficaz.",
     color: "text-primary",
   },
   {
     icon: Users,
-    title: "Comunidade de Estudo",
-    description: "Conecte-se com outros estudantes e mestres em uma comunidade vibrante.",
+    title: "Biblioteca Unificada",
+    description: "Acesso completo a Odu, Rituais, Rezas e Invocações em uma única plataforma integrada.",
     color: "text-secondary",
   },
   {
     icon: Trophy,
-    title: "Gamificação Motivadora",
-    description: "Conquiste badges, suba de nível e acompanhe seu progresso de forma visual e envolvente.",
+    title: "Gamificação Completa",
+    description: "Conquiste badges específicos para cada tipo de conteúdo: Ritualista, Devoto, Invocador e Mestre dos Odu.",
     color: "text-accent",
   },
 ];
@@ -49,13 +49,13 @@ const Features = () => {
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
           <h2 className="text-4xl md:text-5xl font-bold">
-            Metodologias Científicas de{" "}
+            Biblioteca Completa de{" "}
             <span className="bg-gradient-primary bg-clip-text text-transparent">
-              Memorização
+              Conhecimento Yorubá
             </span>
           </h2>
           <p className="text-lg text-muted-foreground">
-            Combinamos tradição ancestral com neurociência moderna para criar a experiência de aprendizado mais eficaz
+            256 Odu Ifá + 50 Rituais + 30 Rezas + 20 Invocações. Tudo que você precisa em uma única plataforma.
           </p>
         </div>
 

@@ -30,6 +30,8 @@ import Changelog from "./pages/Changelog";
 import Referral from "./pages/Referral";
 import Familia from "./pages/Familia";
 import FamiliaAceitar from "./pages/FamiliaAceitar";
+import BibliotecaYoruba from "./pages/BibliotecaYoruba";
+import RitualStudy from "./pages/RitualStudy";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +62,8 @@ function AppContent() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/odu" element={<OduLibrary />} />
           <Route path="/odu/:id" element={<OduStudy />} />
+          <Route path="/biblioteca-yoruba" element={<BibliotecaYoruba />} />
+          <Route path="/ritual/:id" element={<RitualStudy />} />
           <Route path="/study" element={<StudySession />} />
           <Route path="/memory-palace" element={<MemoryPalace />} />
           <Route path="/tecnicas" element={<Tecnicas />} />

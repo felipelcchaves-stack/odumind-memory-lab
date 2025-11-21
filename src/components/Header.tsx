@@ -27,7 +27,7 @@ const Header = () => {
             <a href="#learning" className="text-sm font-medium hover:text-primary transition-smooth">
               Aprendizado
             </a>
-            <a href="/odu" className="text-sm font-medium hover:text-primary transition-smooth">
+            <a href="/biblioteca-yoruba" className="text-sm font-medium hover:text-primary transition-smooth">
               Biblioteca
             </a>
             <a href="#pricing" className="text-sm font-medium hover:text-primary transition-smooth">
@@ -64,7 +64,7 @@ const Header = () => {
               <a href="#learning" className="text-sm font-medium hover:text-primary transition-smooth">
                 Aprendizado
               </a>
-              <a href="/odu" className="text-sm font-medium hover:text-primary transition-smooth">
+              <a href="/biblioteca-yoruba" className="text-sm font-medium hover:text-primary transition-smooth">
                 Biblioteca
               </a>
               <a href="#pricing" className="text-sm font-medium hover:text-primary transition-smooth">

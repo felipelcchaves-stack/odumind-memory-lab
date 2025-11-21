@@ -32,31 +32,31 @@ const Hero = () => {
 
           {/* Main Heading */}
           <h1 className="text-5xl md:text-7xl font-bold leading-tight">
-            Memorize os{" "}
+            Domine os{" "}
             <span className="bg-gradient-hero bg-clip-text text-transparent">
-              256 Odu Ifá
+              256 Odu, Rituais & Rezas
             </span>
-            {" "}em 14 Dias (Ou Menos)
+            {" "}em 14 Dias
           </h1>
 
           {/* Subheading */}
           <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto">
-            Método aprovado por +2.500 babalaôs e estudantes. Combine sabedoria ancestral com ciência moderna.
+            Plataforma completa de memorização Yorubá. Método aprovado por +2.500 babalaôs e estudantes.
           </p>
 
           {/* Feature Pills */}
           <div className="flex flex-wrap justify-center gap-4 pt-4">
             <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border shadow-soft">
-              <Brain className="w-5 h-5 text-primary" />
-              <span className="text-sm font-medium">Mapas Mentais</span>
+              <BookOpen className="w-5 h-5 text-primary" />
+              <span className="text-sm font-medium">256 Odu Ifá</span>
             </div>
             <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border shadow-soft">
-              <BookOpen className="w-5 h-5 text-secondary" />
-              <span className="text-sm font-medium">Flashcards Interativos</span>
+              <Brain className="w-5 h-5 text-secondary" />
+              <span className="text-sm font-medium">50+ Rituais</span>
             </div>
             <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border shadow-soft">
               <Sparkles className="w-5 h-5 text-accent" />
-              <span className="text-sm font-medium">Gamificação</span>
+              <span className="text-sm font-medium">Rezas & Invocações</span>
             </div>
           </div>
 

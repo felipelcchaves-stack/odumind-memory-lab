@@ -27,7 +27,7 @@ export default function DashboardHeader() {
 
   const navItems = [
     { path: '/dashboard', icon: Home, label: 'Dashboard', priority: 'high' },
-    { path: '/odu', icon: BookOpen, label: 'Biblioteca', priority: 'high' },
+    { path: '/biblioteca-yoruba', icon: BookOpen, label: 'Biblioteca', priority: 'high' },
     { path: '/study', icon: Brain, label: 'Estudar', priority: 'high' },
     { path: '/indicar', icon: Gift, label: 'Indicar', priority: 'medium' },
     ...(isFamily() ? [{ path: '/familia', icon: Users, label: 'Família', priority: 'medium' as const }] : []),
