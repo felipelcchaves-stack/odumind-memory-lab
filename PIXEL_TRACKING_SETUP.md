@@ -1,228 +1,296 @@
-# 📊 Configuração de Pixel Tracking
+# 📊 Pixel Tracking Setup Guide - V2.2
 
-Este documento explica como configurar os pixels de rastreamento para Meta (Facebook/Instagram), Google Analytics 4, TikTok e LinkedIn.
+Este guia detalha a implementação completa do sistema de tracking de pixels (Meta, Google Analytics 4, TikTok, LinkedIn) no Isesemind.
 
-## 🎯 Pixels Implementados
+## ✅ Status da Implementação V2.2
 
-### 1. Meta Pixel (Facebook/Instagram)
+### Implementado:
+- ✅ Carregamento dinâmico de pixels do banco de dados (app_settings)
+- ✅ Meta Pixel (Facebook/Instagram)
+- ✅ Google Analytics 4
+- ✅ TikTok Pixel
+- ✅ LinkedIn Insight Tag
+- ✅ Eventos customizados (achievement_unlocked, referral_used, etc.)
+- ✅ Hook useTrackingEvents para eventos avançados
+- ✅ Integração completa com fluxos do app
 
-**Onde configurar:** `index.html` - linha 30
+### Novo Sistema de Tracking:
 
-```javascript
-// Substitua YOUR_PIXEL_ID pelo seu Pixel ID real
-fbq('init', 'YOUR_PIXEL_ID');
-fbq('track', 'PageView');
-```
-
-**Como obter:**
-1. Acesse o [Meta Events Manager](https://business.facebook.com/events_manager2)
-2. Crie um novo Pixel ou use um existente
-3. Copie o Pixel ID (formato: 15-17 dígitos)
-
-**Eventos rastreados:**
-- ✅ PageView (visualização de página)
-- ✅ CompleteRegistration (cadastro)
-- ✅ InitiateCheckout (início do checkout)
-- ✅ Purchase (compra concluída)
-- ✅ AddToCart (adição ao carrinho)
-- ✅ ViewContent (visualização de conteúdo)
+Os pixels são carregados **dinamicamente** do banco de dados através da tabela `app_settings`. Isso permite ativar/desativar tracking e atualizar IDs sem alterar código.
 
 ---
 
-### 2. Google Analytics 4
+## 🗄️ Configuração no Banco de Dados
 
-**Onde configurar:** `index.html` - linha 42
+### Tabela: `app_settings`
 
-```javascript
-// Substitua G-XXXXXXXXXX pelo seu Measurement ID
-gtag('config', 'G-XXXXXXXXXX');
-```
+Os pixels já estão configurados para carregar dinamicamente. Para ativar:
 
-**Como obter:**
-1. Acesse [Google Analytics](https://analytics.google.com/)
-2. Crie uma propriedade GA4
-3. Configure um Web Stream
-4. Copie o Measurement ID (formato: G-XXXXXXXXXX)
+1. Acesse **Lovable Cloud** → **Database** → **app_settings**
+2. Configure os seguintes registros:
 
-**Eventos rastreados:**
-- ✅ page_view
-- ✅ sign_up
-- ✅ begin_checkout
-- ✅ purchase
-- ✅ add_to_cart
-- ✅ view_item
+| key | value | category | is_public | description |
+|-----|-------|----------|-----------|-------------|
+| tracking_enabled | `true` | tracking | ✅ | Enable/disable all tracking pixels |
+| meta_pixel_id | `SEU_ID` | tracking | ✅ | Facebook/Instagram Pixel ID |
+| google_analytics_id | `G-XXXXXX` | tracking | ✅ | Google Analytics 4 Measurement ID |
+| tiktok_pixel_id | `SEU_ID` | tracking | ✅ | TikTok Pixel Code |
+| linkedin_partner_id | `SEU_ID` | tracking | ✅ | LinkedIn Partner ID |
 
----
+### Como Obter os IDs:
 
-### 3. TikTok Pixel
+#### 1. **Meta Pixel (Facebook/Instagram)**
+- Acesse: [Meta Events Manager](https://business.facebook.com/events_manager)
+- Copie o Pixel ID (formato: `123456789012345`)
+- Cole no campo `value` onde `key = 'meta_pixel_id'`
 
-**Onde configurar:** `index.html` - linha 49
+#### 2. **Google Analytics 4**
+- Acesse: [Google Analytics](https://analytics.google.com)
+- Admin → Data Streams → Copie o Measurement ID (formato: `G-XXXXXXXXXX`)
+- Cole no campo `value` onde `key = 'google_analytics_id'`
 
-```javascript
-// Substitua YOUR_PIXEL_CODE pelo seu Pixel Code
-ttq.load('YOUR_PIXEL_CODE');
-ttq.page();
-```
+#### 3. **TikTok Pixel**
+- Acesse: [TikTok Ads Manager](https://ads.tiktok.com)
+- Assets → Events → Copie o Pixel Code (formato: `ABCDEFGHIJKLMNOP`)
+- Cole no campo `value` onde `key = 'tiktok_pixel_id'`
 
-**Como obter:**
-1. Acesse o [TikTok Ads Manager](https://ads.tiktok.com/)
-2. Vá em Assets → Events
-3. Crie um novo Pixel
-4. Copie o Pixel Code
-
-**Eventos rastreados:**
-- ✅ PageView
-- ✅ CompleteRegistration
-- ✅ InitiateCheckout
-- ✅ PlaceAnOrder
-- ✅ AddToCart
-- ✅ ViewContent
+#### 4. **LinkedIn Insight Tag**
+- Acesse: [LinkedIn Campaign Manager](https://www.linkedin.com/campaignmanager)
+- Account Assets → Insight Tag → Copie o Partner ID (formato: `1234567`)
+- Cole no campo `value` onde `key = 'linkedin_partner_id'`
 
 ---
 
-### 4. LinkedIn Insight Tag
+## 📈 Eventos Rastreados
 
-**Onde configurar:** `index.html` - linha 59
+### Eventos Padrão (usePixelTracking):
+- `page_view` - Visualização de página (automático)
+- `sign_up` - Cadastro de novo usuário
+- `purchase` - Compra/assinatura confirmada
+- `begin_checkout` - Início do checkout
+- `add_to_cart` - Visualização de plano
+- `view_item` - Visualização de conteúdo
 
-```javascript
-// Substitua YOUR_PARTNER_ID pelo seu Partner ID
-_linkedin_partner_id = "YOUR_PARTNER_ID";
-```
-
-**Como obter:**
-1. Acesse o [LinkedIn Campaign Manager](https://www.linkedin.com/campaignmanager/)
-2. Vá em Account Assets → Insight Tag
-3. Copie o Partner ID
-
-**Eventos rastreados:**
-- ✅ PageView
-- ✅ Conversão de Signup
-- ✅ Conversão de Purchase
+### Eventos Customizados (useTrackingEvents - V2.2):
+- ✨ `achievement_unlocked` - Conquista desbloqueada/compartilhada
+- ✨ `referral_used` - Código de indicação utilizado
+- ✨ `study_session_completed` - Sessão de estudo finalizada
+- ✨ `odu_memorized` - Odu memorizado
+- ✨ `streak_milestone` - Marco de streak alcançado
 
 ---
 
-## 🚀 Como Usar no Código
+## 🔧 Uso no Código
 
-O hook `usePixelTracking` está disponível para rastrear eventos em toda a aplicação:
-
+### Hook: usePixelTracking
 ```typescript
 import { usePixelTracking } from '@/hooks/usePixelTracking';
 
-function Component() {
-  const { trackSignUp, trackPurchase, trackInitiateCheckout } = usePixelTracking();
+const { trackSignUp, trackPurchase, trackViewContent } = usePixelTracking();
 
-  const handleSignUp = () => {
-    // Seu código de cadastro
-    trackSignUp('email');
-  };
-
-  const handlePurchase = () => {
-    // Seu código de compra
-    trackPurchase(49.90, 'BRL', 'Premium');
-  };
-
-  return (
-    // Seu componente
-  );
-}
-```
-
----
-
-## 📍 Onde Adicionar Tracking
-
-### Já Implementado (Automático):
-- ✅ PageView - toda página visitada
-- ✅ ExitIntentPopup - captura de email
-
-### Para Implementar (Manual):
-
-**1. Página de Auth (`src/pages/Auth.tsx`)**
-```typescript
-const { trackSignUp } = usePixelTracking();
-
-// Após signup bem-sucedido
+// Exemplo: rastrear cadastro
 trackSignUp('email');
-```
 
-**2. Página de Subscription (`src/pages/Subscription.tsx`)**
-```typescript
-const { trackInitiateCheckout, trackAddToCart } = usePixelTracking();
-
-// Ao clicar para assinar
-trackAddToCart(planName, planValue);
-trackInitiateCheckout(planName, planValue);
-```
-
-**3. Página de Success (`src/pages/Success.tsx`)**
-```typescript
-const { trackPurchase } = usePixelTracking();
-
-// Após pagamento confirmado
+// Exemplo: rastrear compra
 trackPurchase(49.90, 'BRL', 'Premium');
 ```
 
-**4. Pricing Section (`src/components/Pricing.tsx`)**
+### Hook: useTrackingEvents (Novo!)
 ```typescript
-const { trackViewContent } = usePixelTracking();
+import { useTrackingEvents } from '@/hooks/useTrackingEvents';
 
-// Ao visualizar plano
-trackViewContent(planName, 'pricing');
+const { 
+  trackAchievementUnlocked, 
+  trackReferralUsed,
+  trackOduMemorized 
+} = useTrackingEvents();
+
+// Exemplo: rastrear conquista
+trackAchievementUnlocked('Primeiro Odu Memorizado', 50);
+
+// Exemplo: rastrear indicação
+trackReferralUsed('MARIA2024');
+
+// Exemplo: rastrear Odu memorizado
+trackOduMemorized(1, 'Eji Ogbe');
 ```
 
 ---
 
-## ✅ Checklist de Implementação
+## 📍 Onde os Eventos São Rastreados
 
-- [ ] Obter Pixel IDs de todos os canais
-- [ ] Substituir placeholders no `index.html`
-- [ ] Descomentar linhas de tracking no `index.html`
-- [ ] Adicionar tracking em Auth.tsx (signup)
-- [ ] Adicionar tracking em Subscription.tsx (checkout)
-- [ ] Adicionar tracking em Success.tsx (purchase)
-- [ ] Testar eventos no Facebook Events Manager
-- [ ] Testar eventos no Google Analytics Realtime
-- [ ] Testar eventos no TikTok Events Manager
-- [ ] Configurar conversões personalizadas (opcional)
+### ✅ Já Implementado:
+
+#### 1. **Auth.tsx**
+- `trackSignUp()` - Quando usuário cria conta (linha 103)
+
+#### 2. **Success.tsx**
+- `trackPurchase()` - Quando pagamento é confirmado (linhas 19-35)
+
+#### 3. **ShareAchievementDialog.tsx** (V2.2)
+- `trackAchievementUnlocked()` - Quando conquista é compartilhada (linhas 84, 89)
+
+### 🎯 Para Implementar Futuramente:
+
+#### 4. **Subscription.tsx**
+```typescript
+const { trackInitiateCheckout, trackAddToCart } = usePixelTracking();
+
+// Ao clicar em "Assinar"
+trackInitiateCheckout(planName, planValue);
+```
+
+#### 5. **Referral.tsx**
+```typescript
+const { trackReferralUsed } = useTrackingEvents();
+
+// Quando código é aplicado
+trackReferralUsed(referralCode);
+```
+
+#### 6. **StudySession.tsx**
+```typescript
+const { trackStudySessionCompleted } = useTrackingEvents();
+
+// Ao finalizar sessão
+trackStudySessionCompleted(duration, cardsStudied, accuracy);
+```
 
 ---
 
 ## 🧪 Como Testar
 
-### Meta Pixel
-1. Instale a [Meta Pixel Helper Extension](https://chrome.google.com/webstore/detail/meta-pixel-helper/fdgfkebogiimcoedlicjlajpkdmockpc)
-2. Navegue pelo site
-3. Veja os eventos sendo disparados no extension
+### 1. Meta Pixel Helper
+- Instale: [Meta Pixel Helper Extension](https://chrome.google.com/webstore/detail/meta-pixel-helper/)
+- Navegue pelo app
+- Verifique eventos no ícone da extensão
 
-### Google Analytics 4
-1. Acesse Google Analytics
-2. Vá em Realtime → Events
-3. Navegue pelo site e veja eventos em tempo real
+### 2. Google Analytics 4
+- Abra: [Google Analytics Realtime](https://analytics.google.com/analytics/web/#/realtime)
+- Execute ações no app
+- Veja eventos em tempo real
 
-### TikTok Pixel
-1. Acesse TikTok Events Manager
-2. Vá em Events → Test Events
-3. Digite a URL do site e teste eventos
+### 3. TikTok Events Manager
+- Acesse: [TikTok Events Manager](https://ads.tiktok.com/help/article)
+- Test Events → Verifique eventos recebidos
 
-### LinkedIn
-1. Acesse Campaign Manager
-2. Vá em Account Assets → Insight Tag
-3. Verifique status "Active" e "Seeing data"
+### 4. LinkedIn Insight Tag
+- Use: [LinkedIn Insight Tag Helper](https://www.linkedin.com/help/lms/answer/a427660)
 
----
-
-## 📝 Notas Importantes
-
-1. **GDPR/LGPD**: Considere adicionar um banner de cookies para conformidade com LGPD
-2. **Performance**: Os scripts são carregados de forma assíncrona para não impactar a performance
-3. **Debugging**: Os eventos têm `console.log()` para facilitar debug em desenvolvimento
-4. **Conversões**: Configure conversões personalizadas em cada plataforma para melhor tracking de ROI
+### 5. Console do Navegador
+```javascript
+// Verifique se os pixels foram carregados
+console.log(window.fbq); // Meta Pixel
+console.log(window.gtag); // Google Analytics
+console.log(window.ttq); // TikTok
+console.log(window.lintrk); // LinkedIn
+```
 
 ---
 
-## 🔗 Links Úteis
+## ⚠️ Notas Importantes
 
-- [Meta Pixel Documentation](https://developers.facebook.com/docs/meta-pixel/)
-- [Google Analytics 4 Setup](https://support.google.com/analytics/answer/9304153)
-- [TikTok Pixel Guide](https://ads.tiktok.com/help/article/standard-events-parameters)
-- [LinkedIn Insight Tag](https://www.linkedin.com/help/lms/answer/a417880)
+### GDPR/LGPD Compliance
+- ⚠️ **IMPORTANTE**: Adicione um banner de consentimento de cookies antes do lançamento
+- Respeite opt-out do usuário
+- Documente na Política de Privacidade
+
+### Performance
+- Pixels carregam **assincronamente** via Edge Function
+- Não bloqueiam renderização da página
+- Fallback automático se Edge Function falhar
+- Cache de 5 minutos para settings
+
+### Debugging
+- Logs de console mostram quais pixels foram carregados:
+  ```
+  Meta Pixel loaded: 123456789012345
+  Google Analytics loaded: G-XXXXXXXXXX
+  TikTok Pixel loaded: ABCDEFGHIJKLMNOP
+  LinkedIn Insight Tag loaded: 1234567
+  ```
+
+### Conversões
+- Configure conversões personalizadas em cada plataforma
+- Use valores monetários reais para ROI tracking
+- Acompanhe funil completo: View → Add to Cart → Purchase
+
+---
+
+## 🚀 Recursos V2.2 Completos
+
+### ✅ Implementado:
+
+#### 1. **Ranking de Indicadores** (`TopReferrers.tsx`)
+- Top 10 embaixadores com ranking
+- Medals para top 3 (🥇🥈🥉)
+- Dados reais do Supabase
+- Contadores de indicações e conversões
+
+#### 2. **Prova Social Dinâmica** (`DynamicSocialProof.tsx`)
+- Contadores em tempo real:
+  - 👥 Estudantes ativos
+  - 📖 Odu memorizados hoje
+  - 📈 Taxa de conclusão
+  - ⭐ Média de dias
+- Integração com banco de dados
+- Loading states elegantes
+
+#### 3. **Pixel Tracking Completo**
+- Carregamento dinâmico via DB
+- 4 plataformas integradas
+- Eventos customizados V2.2
+- Admin pode gerenciar IDs sem código
+- Edge Function: `get-public-settings`
+
+#### 4. **Landing Page Atualizada** (`Index.tsx`)
+- Nova ordem otimizada:
+  1. Hero
+  2. **Prova Social Dinâmica** (novo)
+  3. Testimonials
+  4. **Top Referrers** (novo)
+  5. Features
+  6. Comparison
+  7. Learning Path
+  8. FAQ
+  9. Pricing
+  10. Urgency
+  11. Exit Intent Popup
+
+---
+
+## 📊 Métricas de Sucesso V2.2
+
+### KPIs para Acompanhar:
+
+#### Conversão:
+- Taxa de conversão landing: **5% → 8%**
+- CAC (Custo de Aquisição): **R$ 50 → R$ 30**
+
+#### Viralidade:
+- Indicações por usuário: **0 → 2.5**
+- K-factor de viralidade: **0 → 1.2**
+
+#### Engajamento:
+- Conquistas compartilhadas por usuário: **0 → 3**
+- Alcance social: **+500% em 30 dias**
+
+---
+
+## 📚 Documentação Oficial
+
+- [Meta Pixel Documentation](https://developers.facebook.com/docs/meta-pixel)
+- [Google Analytics 4 Guide](https://support.google.com/analytics/answer/9304153)
+- [TikTok Pixel Setup](https://ads.tiktok.com/help/article/standard-mode-pixel-set-up)
+- [LinkedIn Insight Tag](https://www.linkedin.com/help/lms/answer/a418880)
+- [Lovable Cloud Docs](https://docs.lovable.dev/features/cloud)
+
+---
+
+## 🎯 Próximos Passos
+
+1. ✅ **Obter Pixel IDs** - Configure na tabela app_settings
+2. ✅ **Testar Eventos** - Use ferramentas de debug de cada plataforma
+3. ⏭️ **Implementar V2.3** - Sistema de Rituais
+4. ⏭️ **Implementar V3.0** - Planos Anuais + Upsells
+5. ⏭️ **Implementar V3.1** - Sistema de Missões Diárias
