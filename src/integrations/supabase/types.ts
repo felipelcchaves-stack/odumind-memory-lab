@@ -209,6 +209,42 @@ export type Database = {
         }
         Relationships: []
       }
+      content_types: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          descricao: string | null
+          icon: string
+          id: string
+          nome: string
+          ordem: number
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          icon: string
+          id?: string
+          nome: string
+          ordem?: number
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          icon?: string
+          id?: string
+          nome?: string
+          ordem?: number
+          slug?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       elaborative_notes: {
         Row: {
           created_at: string
@@ -901,6 +937,71 @@ export type Database = {
           },
         ]
       }
+      ritual_content: {
+        Row: {
+          audio_url: string | null
+          content_type_id: string | null
+          contexto_historico: string | null
+          created_at: string | null
+          dificuldade: string | null
+          exemplos_praticos: string | null
+          id: string
+          materiais_necessarios: string[] | null
+          nome: string
+          numero: number | null
+          odu_relacionados: string[] | null
+          tags: string[] | null
+          tempo_execucao: number | null
+          texto_principal: string
+          updated_at: string | null
+          verso_resumido: string | null
+        }
+        Insert: {
+          audio_url?: string | null
+          content_type_id?: string | null
+          contexto_historico?: string | null
+          created_at?: string | null
+          dificuldade?: string | null
+          exemplos_praticos?: string | null
+          id?: string
+          materiais_necessarios?: string[] | null
+          nome: string
+          numero?: number | null
+          odu_relacionados?: string[] | null
+          tags?: string[] | null
+          tempo_execucao?: number | null
+          texto_principal: string
+          updated_at?: string | null
+          verso_resumido?: string | null
+        }
+        Update: {
+          audio_url?: string | null
+          content_type_id?: string | null
+          contexto_historico?: string | null
+          created_at?: string | null
+          dificuldade?: string | null
+          exemplos_praticos?: string | null
+          id?: string
+          materiais_necessarios?: string[] | null
+          nome?: string
+          numero?: number | null
+          odu_relacionados?: string[] | null
+          tags?: string[] | null
+          tempo_execucao?: number | null
+          texto_principal?: string
+          updated_at?: string | null
+          verso_resumido?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ritual_content_content_type_id_fkey"
+            columns: ["content_type_id"]
+            isOneToOne: false
+            referencedRelation: "content_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       study_plan: {
         Row: {
           ativo: boolean
@@ -1208,6 +1309,53 @@ export type Database = {
           weak_odus?: string[] | null
         }
         Relationships: []
+      }
+      user_ritual_progress: {
+        Row: {
+          created_at: string | null
+          id: string
+          notas_pessoais: string | null
+          proxima_revisao: string | null
+          ritual_id: string | null
+          status: string | null
+          ultima_pratica: string | null
+          updated_at: string | null
+          user_id: string
+          vezes_praticado: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          notas_pessoais?: string | null
+          proxima_revisao?: string | null
+          ritual_id?: string | null
+          status?: string | null
+          ultima_pratica?: string | null
+          updated_at?: string | null
+          user_id: string
+          vezes_praticado?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          notas_pessoais?: string | null
+          proxima_revisao?: string | null
+          ritual_id?: string | null
+          status?: string | null
+          ultima_pratica?: string | null
+          updated_at?: string | null
+          user_id?: string
+          vezes_praticado?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_ritual_progress_ritual_id_fkey"
+            columns: ["ritual_id"]
+            isOneToOne: false
+            referencedRelation: "ritual_content"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
