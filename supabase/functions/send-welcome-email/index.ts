@@ -36,8 +36,10 @@ serve(async (req) => {
       );
     }
 
-    const siteUrl = Deno.env.get("SUPABASE_URL")?.replace('.supabase.co', '.lovable.app') || 'https://isesemind.lovable.app';
+    const siteUrl = 'https://isesemind.ileaseifatokun.com.br';
     const loginUrl = `${siteUrl}/auth`;
+    
+    logStep("URL de login configurada", { loginUrl });
 
     const emailHtml = `
 <!DOCTYPE html>
