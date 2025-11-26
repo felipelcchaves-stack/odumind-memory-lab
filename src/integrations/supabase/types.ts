@@ -1458,16 +1458,7 @@ export type Database = {
       }
     }
     Views: {
-      user_demographics_summary: {
-        Row: {
-          estado: string | null
-          faixa_etaria: string | null
-          pais: string | null
-          sexo: string | null
-          total_usuarios: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       calcular_proxima_revisao: {
@@ -1494,6 +1485,16 @@ export type Database = {
           stripe_subscription_id: string
           updated_at: string
           user_id: string
+        }[]
+      }
+      get_user_demographics_summary: {
+        Args: never
+        Returns: {
+          estado: string
+          faixa_etaria: string
+          pais: string
+          sexo: string
+          total_usuarios: number
         }[]
       }
       get_user_emails: {
