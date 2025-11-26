@@ -1,7 +1,10 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,6 +17,33 @@ serve(async (req) => {
   }
 
   try {
+    // Verificar autenticação
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      console.error("[generate-mnemonics] Missing authorization header");
+      return new Response(
+        JSON.stringify({ error: "Não autorizado. Faça login para continuar." }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verificar se o token é válido
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      console.error("[generate-mnemonics] Auth error:", authError?.message);
+      return new Response(
+        JSON.stringify({ error: "Token inválido ou expirado. Faça login novamente." }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`[generate-mnemonics] Authenticated user: ${user.id}`);
+
     const { oduNome, oduNumero, significado, verso } = await req.json();
 
     if (!LOVABLE_API_KEY) {
@@ -94,6 +124,8 @@ Não inclua nenhum texto adicional, apenas o JSON.`;
       console.error("Failed to parse AI response:", content);
       throw new Error("Erro ao processar resposta da IA");
     }
+
+    console.log(`[generate-mnemonics] Successfully generated mnemonics for user ${user.id}`);
 
     return new Response(JSON.stringify({ mnemonics }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
