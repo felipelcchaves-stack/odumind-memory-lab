@@ -11,15 +11,18 @@ const logStep = (step: string, details?: any) => {
   console.log(`[GURU-WEBHOOK] ${step}${detailsStr}`);
 };
 
-// Mapeamento de produtos GURU para planos do sistema
+// Mapeamento de produtos GURU para planos do sistema (NORMALIZADO)
+// Todos os planos GURU devem mapear para os nomes padrão do sistema
 const GURU_PRODUCT_MAPPING: Record<string, string> = {
-  // Adicione aqui os IDs dos produtos GURU e seus planos correspondentes
+  // Planos padrão
   'premium': 'Premium',
-  'akapo': 'Akapo',
-  'awo': 'Awo',
-  'egbe': 'Egbe',
-  'familia': 'Egbe',
-  'profissional': 'Awo',
+  'profissional': 'Profissional',
+  'familia': 'Família',
+  'family': 'Família',
+  // Nomes GURU -> Nomes do Sistema
+  'akapo': 'Premium',        // Akapo = Premium
+  'awo': 'Profissional',     // Awo = Profissional
+  'egbe': 'Família',         // Egbe = Família
 };
 
 // Função para gerar senha aleatória
