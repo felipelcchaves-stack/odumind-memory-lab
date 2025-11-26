@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shield, ShieldOff, Eye, Search, X, Edit, UserPlus, Settings, Download, Upload, CheckCircle2, Circle, RefreshCw } from 'lucide-react';
+import { Shield, ShieldOff, Eye, Search, X, Edit, UserPlus, Settings, Download, Upload, CheckCircle2, Circle, RefreshCw, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import UserEditDialog from './UserEditDialog';
 import UserRoleDialog from './UserRoleDialog';
@@ -46,6 +46,7 @@ export default function UserManagement() {
   const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
   const [permissionsUserId, setPermissionsUserId] = useState<string>('');
   const [permissionsUserName, setPermissionsUserName] = useState<string>('');
+  const [resendingPasswordFor, setResendingPasswordFor] = useState<string | null>(null);
 
   useEffect(() => {
     loadUsers();
@@ -322,6 +323,41 @@ export default function UserManagement() {
     loadUsers();
   };
 
+  const handleResendPassword = async (userId: string, email: string | undefined, name: string | undefined) => {
+    if (!email) {
+      toast.error('Usuário não possui email cadastrado');
+      return;
+    }
+
+    setResendingPasswordFor(userId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Sessão expirada. Faça login novamente.');
+        return;
+      }
+
+      const response = await supabase.functions.invoke('resend-user-password', {
+        body: { user_id: userId },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Erro ao reenviar senha');
+      }
+
+      if (response.data?.warning) {
+        toast.warning(response.data.warning);
+      } else {
+        toast.success(`Nova senha enviada para ${email}`);
+      }
+    } catch (error: any) {
+      console.error('Error resending password:', error);
+      toast.error(error.message || 'Erro ao reenviar senha');
+    } finally {
+      setResendingPasswordFor(null);
+    }
+  };
+
   return (
     <>
       <Card>
@@ -524,6 +560,15 @@ export default function UserManagement() {
                       >
                         <Shield className="h-4 w-4 mr-1" />
                         Alterar Perfil
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleResendPassword(user.user_id, user.email, user.nome)}
+                        disabled={resendingPasswordFor === user.user_id || !user.email}
+                      >
+                        <Mail className="h-4 w-4 mr-1" />
+                        {resendingPasswordFor === user.user_id ? 'Enviando...' : 'Reenviar Senha'}
                       </Button>
                       {userRole === 'colaborador' && (
                         <Button
