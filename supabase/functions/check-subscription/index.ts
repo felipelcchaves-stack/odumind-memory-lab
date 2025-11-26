@@ -106,6 +106,54 @@ serve(async (req) => {
       }
     });
 
+    // PRIMEIRO: Verificar se existe assinatura local via GURU
+    const { data: localSub, error: localError } = await supabaseAdmin
+      .from('subscriptions')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    
+    if (localError) {
+      logStep("ERROR checking local subscription", { error: localError });
+    }
+
+    // Se a assinatura é via GURU, NÃO sincronizar com Stripe - usar dados locais
+    if (localSub && localSub.payment_gateway === 'guru') {
+      logStep("Assinatura via GURU detectada - usando dados locais", {
+        status: localSub.status,
+        plan: localSub.plan_name,
+        guru_subscription_id: localSub.guru_subscription_id
+      });
+
+      const isActive = localSub.status === 'active' || localSub.status === 'trialing';
+      
+      // Verificar se o período expirou
+      if (localSub.current_period_end) {
+        const periodEnd = new Date(localSub.current_period_end);
+        const now = new Date();
+        
+        if (periodEnd < now && localSub.status === 'active') {
+          logStep("Período GURU expirado, mantendo status atual até próximo webhook", {
+            periodEnd: localSub.current_period_end,
+            now: now.toISOString()
+          });
+        }
+      }
+
+      return new Response(JSON.stringify({
+        subscribed: isActive,
+        status: localSub.status,
+        plan_name: localSub.plan_name,
+        current_period_end: localSub.current_period_end,
+        payment_gateway: 'guru',
+        guru_subscription_id: localSub.guru_subscription_id,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
+    // Se não é GURU, continuar com verificação Stripe
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", { 
       apiVersion: "2025-08-27.basil" 
     });
@@ -179,6 +227,31 @@ serve(async (req) => {
         }
       }
       
+      // Verificar se há subscription complimentary ou GURU ativa no banco local
+      if (localSub && localSub.status === 'active' && localSub.current_period_end) {
+        const validUntil = new Date(localSub.current_period_end);
+        const now = new Date();
+        
+        if (validUntil > now) {
+          logStep("Found valid local subscription (complimentary/other)", {
+            plan: localSub.plan_name,
+            validUntil: localSub.current_period_end,
+            gateway: localSub.payment_gateway
+          });
+          
+          return new Response(JSON.stringify({
+            subscribed: true,
+            status: 'active',
+            plan_name: localSub.plan_name,
+            current_period_end: localSub.current_period_end,
+            is_complimentary: !localSub.stripe_subscription_id && !localSub.guru_subscription_id
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          });
+        }
+      }
+      
       logStep("No customer and not family member, updating to free status");
       
       // Update subscription in database to free - use update first, then insert if not found
@@ -236,17 +309,6 @@ serve(async (req) => {
 
     if (subscriptions.data.length === 0) {
       logStep("No Stripe subscription found, checking local database");
-      
-      // Verificar se há subscription complimentary ativa no banco local
-      const { data: localSub, error: localError } = await supabaseAdmin
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      
-      if (localError) {
-        logStep("ERROR checking local subscription", { error: localError });
-      }
       
       // Se encontrou subscription local ativa E sem stripe_subscription_id = é complimentary
       if (localSub && 
@@ -397,6 +459,7 @@ serve(async (req) => {
       current_period_start: currentPeriodStart,
       current_period_end: currentPeriodEnd,
       cancel_at_period_end: subscription.cancel_at_period_end || false,
+      payment_gateway: 'stripe', // Marcar como Stripe
     };
 
     logStep("Subscription data to upsert", subscriptionData);
@@ -443,6 +506,7 @@ serve(async (req) => {
       plan_name: planName,
       current_period_end: subscriptionData.current_period_end,
       cancel_at_period_end: subscription.cancel_at_period_end,
+      payment_gateway: 'stripe',
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
