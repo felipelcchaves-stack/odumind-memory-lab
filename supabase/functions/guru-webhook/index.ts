@@ -51,6 +51,20 @@ function mapGuruProductToPlan(productId: string, productName: string): string {
   return 'Premium';
 }
 
+// Função para verificar se o evento indica cancelamento
+function isCancellationEvent(payload: any): boolean {
+  // Verificar campos específicos do GURU que indicam cancelamento
+  if (payload.cancel_at_cycle_end === true) return true;
+  if (payload.last_status === 'cancelled' || payload.last_status === 'canceled') return true;
+  if (payload.cancelled_by || payload.canceled_by) return true;
+  if (payload.subscription?.status === 'cancelled' || payload.subscription?.status === 'canceled') return true;
+  if (payload.subscription?.status === 'inactive') return true;
+  if (payload.status === 'cancelled' || payload.status === 'canceled') return true;
+  if (payload.status === 'inactive') return true;
+  
+  return false;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -61,11 +75,9 @@ serve(async (req) => {
 
     // PRIMEIRO: Parse do payload JSON
     const payload = await req.json();
-    logStep("Payload parseado", { 
-      event: payload.event || payload.type || payload.webhook_event,
-      hasApiToken: !!payload.api_token,
-      keys: Object.keys(payload)
-    });
+    
+    // Log completo do payload para debug
+    logStep("Payload completo recebido", payload);
 
     // EXTRAIR api_token DO CORPO JSON (não dos headers!)
     const guruToken = payload.api_token;
@@ -108,14 +120,26 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    // Extrair dados do webhook (a estrutura pode variar conforme o tipo de evento)
-    const eventType = payload.event || payload.type || payload.webhook_event;
+    // Extrair dados do webhook - PRIORIZAR webhook_type
+    const eventType = payload.webhook_type || payload.event || payload.type || payload.webhook_event;
     const buyerEmail = payload.contact?.email || payload.buyer?.email || payload.customer?.email || payload.email || payload.subscriber?.email;
     const buyerName = payload.contact?.name || payload.buyer?.name || payload.customer?.name || payload.name || payload.subscriber?.name || 'Usuário';
     const subscriptionId = payload.subscription?.id || payload.subscription_id || payload.id;
     const customerId = payload.contact?.id || payload.buyer?.id || payload.customer?.id || payload.customer_id;
     const productId = payload.product?.id || payload.product_id || payload.offer?.product_id;
     const productName = payload.product?.name || payload.product_name || payload.offer?.name || '';
+    
+    // Log de campos de cancelamento para debug
+    logStep("Verificando campos de cancelamento", {
+      webhook_type: payload.webhook_type,
+      event: payload.event,
+      type: payload.type,
+      cancel_at_cycle_end: payload.cancel_at_cycle_end,
+      last_status: payload.last_status,
+      cancelled_by: payload.cancelled_by,
+      subscription_status: payload.subscription?.status,
+      status: payload.status
+    });
     
     if (!buyerEmail) {
       logStep("ERRO: Email não encontrado no payload", { payloadKeys: Object.keys(payload) });
@@ -209,14 +233,17 @@ serve(async (req) => {
     }
 
     // Determinar o plano baseado no produto
-    const planName = mapGuruProductToPlan(productId, productName);
+    let planName = mapGuruProductToPlan(productId, productName);
     logStep("Plano mapeado", { productId, productName, planName });
 
     // Processar evento
     let subscriptionStatus = 'active';
     let shouldUpdateSubscription = true;
 
-    switch (eventType?.toLowerCase()) {
+    // Normalizar eventType para lowercase para comparação
+    const eventTypeLower = eventType?.toLowerCase() || '';
+
+    switch (eventTypeLower) {
       case 'purchase_created':
       case 'purchase.created':
       case 'purchase_approved':
@@ -230,7 +257,7 @@ serve(async (req) => {
       case 'abandoned_cart_recovered':
       case 'sale_approved':
         subscriptionStatus = 'active';
-        logStep("Processando ativação de assinatura");
+        logStep("Processando ativação de assinatura", { eventType: eventTypeLower });
         break;
 
       case 'subscription_canceled':
@@ -239,52 +266,92 @@ serve(async (req) => {
       case 'subscription.cancelled':
       case 'subscription_inactive':
       case 'subscription.inactive':
+      case 'subscription_deactivated':
+      case 'subscription.deactivated':
+      case 'canceled':
+      case 'cancelled':
         subscriptionStatus = 'canceled';
-        logStep("Processando cancelamento de assinatura");
+        planName = 'Gratuito'; // Resetar para plano gratuito
+        logStep("Processando CANCELAMENTO de assinatura", { eventType: eventTypeLower });
         break;
 
       case 'subscription_expired':
       case 'subscription.expired':
       case 'subscription_overdue':
       case 'subscription.overdue':
+      case 'payment_failed':
+      case 'payment.failed':
         subscriptionStatus = 'past_due';
-        logStep("Processando assinatura vencida/atrasada");
+        logStep("Processando assinatura vencida/atrasada", { eventType: eventTypeLower });
         break;
 
       case 'refund':
       case 'refund.created':
       case 'purchase_refunded':
       case 'purchase.refunded':
+      case 'chargeback':
+      case 'chargeback.created':
         subscriptionStatus = 'canceled';
-        logStep("Processando reembolso");
+        planName = 'Gratuito'; // Resetar para plano gratuito
+        logStep("Processando reembolso/chargeback", { eventType: eventTypeLower });
         break;
 
       default:
-        logStep("Evento não reconhecido, processando como ativação", { eventType });
-        // Processar eventos desconhecidos como ativação (melhor ter acesso do que não ter)
-        subscriptionStatus = 'active';
+        // FALLBACK: Verificar campos de cancelamento mesmo se eventType não for reconhecido
+        if (isCancellationEvent(payload)) {
+          subscriptionStatus = 'canceled';
+          planName = 'Gratuito';
+          logStep("Cancelamento detectado via campos do payload (fallback)", { eventType: eventTypeLower });
+        } else {
+          logStep("Evento não reconhecido, processando como ativação", { eventType: eventTypeLower });
+          subscriptionStatus = 'active';
+        }
     }
+
+    // Verificação adicional de cancelamento (double-check)
+    if (subscriptionStatus === 'active' && isCancellationEvent(payload)) {
+      subscriptionStatus = 'canceled';
+      planName = 'Gratuito';
+      logStep("CORREÇÃO: Cancelamento detectado via campos adicionais", {
+        cancel_at_cycle_end: payload.cancel_at_cycle_end,
+        last_status: payload.last_status
+      });
+    }
+
+    logStep("Status final determinado", { 
+      subscriptionStatus, 
+      planName,
+      eventType: eventTypeLower 
+    });
 
     if (shouldUpdateSubscription) {
       // Calcular período (30 dias para mensal, ajustar conforme necessário)
       const now = new Date();
       const periodEnd = new Date(now);
-      periodEnd.setDate(periodEnd.getDate() + 30);
+      
+      // Se cancelado, não estender o período
+      if (subscriptionStatus !== 'canceled') {
+        periodEnd.setDate(periodEnd.getDate() + 30);
+      }
 
       // Atualizar ou criar assinatura
+      const subscriptionData = {
+        user_id: userId,
+        status: subscriptionStatus,
+        plan_name: planName,
+        guru_subscription_id: subscriptionId?.toString() || null,
+        guru_customer_id: customerId?.toString() || null,
+        payment_gateway: 'guru',
+        current_period_start: now.toISOString(),
+        current_period_end: subscriptionStatus === 'canceled' ? now.toISOString() : periodEnd.toISOString(),
+        updated_at: now.toISOString(),
+      };
+
+      logStep("Dados de assinatura a salvar", subscriptionData);
+
       const { error: subscriptionError } = await supabaseAdmin
         .from('subscriptions')
-        .upsert({
-          user_id: userId,
-          status: subscriptionStatus,
-          plan_name: planName,
-          guru_subscription_id: subscriptionId?.toString() || null,
-          guru_customer_id: customerId?.toString() || null,
-          payment_gateway: 'guru',
-          current_period_start: now.toISOString(),
-          current_period_end: periodEnd.toISOString(),
-          updated_at: now.toISOString(),
-        }, {
+        .upsert(subscriptionData, {
           onConflict: 'user_id'
         });
 
