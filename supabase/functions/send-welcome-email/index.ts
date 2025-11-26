@@ -134,7 +134,7 @@ serve(async (req) => {
         "Authorization": `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "Isesemind <onboarding@resend.dev>",
+        from: "Isesemind <noreply@ileaseifatokun.com.br>",
         to: [email],
         subject: "🎉 Bem-vindo ao Isesemind - Seus dados de acesso",
         html: emailHtml,
