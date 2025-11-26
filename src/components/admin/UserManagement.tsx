@@ -190,9 +190,16 @@ export default function UserManagement() {
       if (activityFilter === 'inactive' && isActive) return false;
     }
 
-    // Plan filter
+    // Plan filter - aceita nomes alternativos (GURU usa nomes diferentes)
     if (planFilter !== 'all') {
-      if (user.plan_name !== planFilter) return false;
+      const planAliases: Record<string, string[]> = {
+        'Premium': ['Premium', 'Akapo'],
+        'Profissional': ['Profissional', 'Awo'],
+        'Família': ['Família', 'Egbe', 'Family'],
+        'Gratuito': ['Gratuito', 'free', 'Free'],
+      };
+      const acceptedPlans = planAliases[planFilter] || [planFilter];
+      if (!acceptedPlans.includes(user.plan_name || '')) return false;
     }
 
     return true;
