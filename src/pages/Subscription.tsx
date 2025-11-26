@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useGuruCheckout } from '@/hooks/useGuruCheckout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -99,6 +100,7 @@ export default function Subscription() {
     changeOwnSubscription,
     createRetentionOffer,
   } = useSubscription();
+  const { isGuruEnabled, openGuruCheckout, openMemberArea } = useGuruCheckout();
   const navigate = useNavigate();
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
   const [managingSubscription, setManagingSubscription] = useState(false);
@@ -309,11 +311,6 @@ export default function Subscription() {
       return;
     }
 
-    if (!stripeId) {
-      toast.error('ID do plano não configurado. Entre em contato com o suporte.');
-      return;
-    }
-
     setProcessingPlan(planId);
     
     try {
@@ -322,6 +319,21 @@ export default function Subscription() {
       if (plan) {
         const price = parseFloat(plan.price.replace('R$ ', '').replace(',', '.'));
         trackInitiateCheckout(plan.name, price);
+      }
+      
+      // Se GURU está habilitado, tenta usar checkout GURU primeiro
+      if (isGuruEnabled && plan) {
+        const opened = openGuruCheckout(plan.name, false);
+        if (opened) {
+          toast.success('Redirecionando para checkout...');
+          return;
+        }
+      }
+
+      // Fallback para Stripe
+      if (!stripeId) {
+        toast.error('Link de checkout não configurado. Entre em contato com o suporte.');
+        return;
       }
       
       // Use special checkout for family plan
@@ -347,6 +359,17 @@ export default function Subscription() {
     setManagingSubscription(true);
     
     try {
+      // Se GURU está habilitado e a assinatura é via GURU, abre área do membro GURU
+      if (isGuruEnabled && subscription?.payment_gateway === 'guru') {
+        const opened = openMemberArea();
+        if (opened) {
+          toast.success('Área do membro aberta em nova aba');
+          setManagingSubscription(false);
+          return;
+        }
+      }
+
+      // Fallback para portal Stripe
       const url = await openCustomerPortal();
       if (url) {
         window.open(url, '_blank');

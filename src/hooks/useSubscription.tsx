@@ -10,6 +10,9 @@ export interface SubscriptionData {
   stripe_customer_id?: string;
   stripe_subscription_id?: string;
   stripe_price_id?: string;
+  guru_subscription_id?: string;
+  guru_customer_id?: string;
+  payment_gateway?: 'stripe' | 'guru';
   current_period_end?: string;
   cancel_at_period_end?: boolean;
 }

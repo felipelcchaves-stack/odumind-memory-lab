@@ -6,6 +6,7 @@ import { Check, Crown, Sparkles, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePixelTracking } from "@/hooks/usePixelTracking";
+import { useGuruCheckout } from "@/hooks/useGuruCheckout";
 
 const monthlyPlans = [
   {
@@ -194,6 +195,7 @@ const Pricing = () => {
   const { user } = useAuth();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const { trackViewContent } = usePixelTracking();
+  const { isGuruEnabled, openGuruCheckout } = useGuruCheckout();
 
   const plans = billingCycle === 'monthly' ? monthlyPlans : annualPlans;
 
@@ -201,11 +203,20 @@ const Pricing = () => {
     // Track content view
     trackViewContent(planName, 'pricing_plan');
     
-    if (user) {
-      navigate('/subscription');
-    } else {
-      navigate('/auth');
+    // Se for plano gratuito, vai para auth/subscription
+    if (planName === "Gratuito") {
+      navigate(user ? '/subscription' : '/auth');
+      return;
     }
+
+    // Se GURU está habilitado e tem link configurado, abre direto
+    const isAnnual = billingCycle === 'annual';
+    if (isGuruEnabled && openGuruCheckout(planName, isAnnual)) {
+      return; // Sucesso - abriu checkout GURU
+    }
+
+    // Fallback: redireciona para página de subscription
+    navigate(user ? '/subscription' : '/auth');
   };
 
   return (
