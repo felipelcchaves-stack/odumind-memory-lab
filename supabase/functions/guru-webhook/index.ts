@@ -176,6 +176,36 @@ serve(async (req) => {
         .from('profiles')
         .update({ nome: buyerName })
         .eq('user_id', userId);
+
+      // Enviar e-mail de boas-vindas com os dados de acesso
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+        const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+        
+        const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-welcome-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+          },
+          body: JSON.stringify({
+            email: buyerEmail,
+            name: buyerName,
+            password: tempPassword,
+            planName: mapGuruProductToPlan(productId, productName),
+          }),
+        });
+
+        if (emailResponse.ok) {
+          logStep("E-mail de boas-vindas enviado com sucesso", { email: buyerEmail });
+        } else {
+          const emailError = await emailResponse.text();
+          logStep("Erro ao enviar e-mail de boas-vindas", { error: emailError });
+        }
+      } catch (emailError) {
+        logStep("Falha ao enviar e-mail de boas-vindas", { error: String(emailError) });
+        // Não falhar o webhook por causa do e-mail
+      }
     }
 
     // Determinar o plano baseado no produto
