@@ -14,7 +14,6 @@ const logStep = (step: string, details?: any) => {
 // Mapeamento de produtos GURU para planos do sistema
 const GURU_PRODUCT_MAPPING: Record<string, string> = {
   // Adicione aqui os IDs dos produtos GURU e seus planos correspondentes
-  // Exemplo: 'prod_guru_premium_mensal': 'Premium',
   'premium': 'Premium',
   'akapo': 'Akapo',
   'awo': 'Awo',
@@ -58,24 +57,42 @@ serve(async (req) => {
   }
 
   try {
-    logStep("Webhook recebido");
+    logStep("Webhook recebido", { method: req.method });
 
-    // Validar token da GURU
-    const guruToken = req.headers.get("x-guru-token") || req.headers.get("authorization");
+    // PRIMEIRO: Parse do payload JSON
+    const payload = await req.json();
+    logStep("Payload parseado", { 
+      event: payload.event || payload.type || payload.webhook_event,
+      hasApiToken: !!payload.api_token,
+      keys: Object.keys(payload)
+    });
+
+    // EXTRAIR api_token DO CORPO JSON (não dos headers!)
+    const guruToken = payload.api_token;
     const expectedToken = Deno.env.get("GURU_API_TOKEN");
     
     if (!expectedToken) {
-      logStep("ERRO: GURU_API_TOKEN não configurado");
+      logStep("ERRO: GURU_API_TOKEN não configurado no ambiente");
       return new Response(JSON.stringify({ error: "Configuração inválida" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
       });
     }
 
-    // A GURU pode enviar o token de diferentes formas
-    const tokenToValidate = guruToken?.replace("Bearer ", "").trim();
-    if (tokenToValidate !== expectedToken) {
-      logStep("ERRO: Token inválido", { received: tokenToValidate?.substring(0, 10) + "..." });
+    // Validar token
+    if (!guruToken) {
+      logStep("ERRO: api_token não encontrado no payload");
+      return new Response(JSON.stringify({ error: "Token não fornecido" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+      });
+    }
+
+    if (guruToken !== expectedToken) {
+      logStep("ERRO: Token inválido", { 
+        received: guruToken?.substring(0, 10) + "...",
+        expected: expectedToken?.substring(0, 10) + "..."
+      });
       return new Response(JSON.stringify({ error: "Token inválido" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 401,
@@ -83,13 +100,6 @@ serve(async (req) => {
     }
 
     logStep("Token validado com sucesso");
-
-    // Parse do payload
-    const payload = await req.json();
-    logStep("Payload recebido", { 
-      event: payload.event || payload.type,
-      email: payload.buyer?.email || payload.customer?.email || payload.email
-    });
 
     // Inicializar Supabase Admin Client
     const supabaseAdmin = createClient(
@@ -100,15 +110,15 @@ serve(async (req) => {
 
     // Extrair dados do webhook (a estrutura pode variar conforme o tipo de evento)
     const eventType = payload.event || payload.type || payload.webhook_event;
-    const buyerEmail = payload.buyer?.email || payload.customer?.email || payload.email || payload.subscriber?.email;
-    const buyerName = payload.buyer?.name || payload.customer?.name || payload.name || payload.subscriber?.name || 'Usuário';
+    const buyerEmail = payload.contact?.email || payload.buyer?.email || payload.customer?.email || payload.email || payload.subscriber?.email;
+    const buyerName = payload.contact?.name || payload.buyer?.name || payload.customer?.name || payload.name || payload.subscriber?.name || 'Usuário';
     const subscriptionId = payload.subscription?.id || payload.subscription_id || payload.id;
-    const customerId = payload.buyer?.id || payload.customer?.id || payload.customer_id;
+    const customerId = payload.contact?.id || payload.buyer?.id || payload.customer?.id || payload.customer_id;
     const productId = payload.product?.id || payload.product_id || payload.offer?.product_id;
     const productName = payload.product?.name || payload.product_name || payload.offer?.name || '';
     
     if (!buyerEmail) {
-      logStep("ERRO: Email não encontrado no payload");
+      logStep("ERRO: Email não encontrado no payload", { payloadKeys: Object.keys(payload) });
       return new Response(JSON.stringify({ error: "Email não encontrado" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 400,
@@ -161,12 +171,7 @@ serve(async (req) => {
       isNewUser = true;
       logStep("Novo usuário criado", { userId, email: buyerEmail });
 
-      // Enviar email de boas-vindas com senha temporária
-      // Nota: O Supabase enviará automaticamente um email de confirmação
-      // Você pode personalizar isso no painel do Supabase ou criar um template customizado
-      
-      // Criar perfil para o novo usuário (o trigger handle_new_user já faz isso,
-      // mas vamos garantir que o nome está correto)
+      // Atualizar perfil com o nome
       await supabaseAdmin
         .from('profiles')
         .update({ nome: buyerName })
@@ -192,6 +197,8 @@ serve(async (req) => {
       case 'subscription.active':
       case 'subscription_activated':
       case 'subscription.activated':
+      case 'abandoned_cart_recovered':
+      case 'sale_approved':
         subscriptionStatus = 'active';
         logStep("Processando ativação de assinatura");
         break;
@@ -223,8 +230,9 @@ serve(async (req) => {
         break;
 
       default:
-        logStep("Evento não processado", { eventType });
-        shouldUpdateSubscription = false;
+        logStep("Evento não reconhecido, processando como ativação", { eventType });
+        // Processar eventos desconhecidos como ativação (melhor ter acesso do que não ter)
+        subscriptionStatus = 'active';
     }
 
     if (shouldUpdateSubscription) {
