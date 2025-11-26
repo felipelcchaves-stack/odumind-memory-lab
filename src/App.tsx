@@ -44,6 +44,7 @@ import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 import AdminToolsPage from "./pages/admin/AdminToolsPage";
 import AdminChangelogPage from "./pages/admin/AdminChangelogPage";
 import AdminRestorePage from "./pages/admin/AdminRestorePage";
+import AdminGuruPage from "./pages/admin/AdminGuruPage";
 
 const queryClient = new QueryClient();
 
@@ -96,6 +97,7 @@ function AppContent() {
               <Route path="settings" element={<AdminSettingsPage />} />
             <Route path="tools" element={<AdminToolsPage />} />
             <Route path="changelog" element={<AdminChangelogPage />} />
+            <Route path="guru" element={<AdminGuruPage />} />
             <Route path="restore" element={<AdminRestorePage />} />
           </Route>
           <Route path="/profile" element={<Profile />} />

@@ -16,10 +16,12 @@ const routeNames: Record<string, string> = {
   rituais: "Rituais",
   users: "Usuários",
   analytics: "Analytics",
+  "advanced-analytics": "Analytics Avançadas",
   settings: "Configurações",
   tools: "Ferramentas",
   restore: "Restaurar",
   changelog: "Novidades",
+  guru: "GURU Checkout",
 };
 
 export function AdminBreadcrumbs() {
