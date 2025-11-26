@@ -1209,7 +1209,10 @@ export type Database = {
           created_at: string | null
           current_period_end: string | null
           current_period_start: string | null
+          guru_customer_id: string | null
+          guru_subscription_id: string | null
           id: string
+          payment_gateway: string | null
           plan_name: string
           status: string
           stripe_customer_id: string | null
@@ -1223,7 +1226,10 @@ export type Database = {
           created_at?: string | null
           current_period_end?: string | null
           current_period_start?: string | null
+          guru_customer_id?: string | null
+          guru_subscription_id?: string | null
           id?: string
+          payment_gateway?: string | null
           plan_name?: string
           status?: string
           stripe_customer_id?: string | null
@@ -1237,7 +1243,10 @@ export type Database = {
           created_at?: string | null
           current_period_end?: string | null
           current_period_start?: string | null
+          guru_customer_id?: string | null
+          guru_subscription_id?: string | null
           id?: string
+          payment_gateway?: string | null
           plan_name?: string
           status?: string
           stripe_customer_id?: string | null

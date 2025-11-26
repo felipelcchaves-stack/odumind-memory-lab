@@ -35,3 +35,6 @@ verify_jwt = true
 
 [functions.generate-marketing-insights]
 verify_jwt = true
+
+[functions.guru-webhook]
+verify_jwt = false
