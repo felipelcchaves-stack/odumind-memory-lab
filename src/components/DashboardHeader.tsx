@@ -43,8 +43,14 @@ export default function DashboardHeader() {
   const isActive = (path: string) => location.pathname === path;
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate('/');
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('[LOGOUT] Error during signout:', error);
+    } finally {
+      // Always navigate to landing page, even if signOut fails
+      navigate('/', { replace: true });
+    }
   };
 
   return (
