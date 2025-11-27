@@ -111,6 +111,16 @@ const AdminGuruPage = () => {
     try {
       setSaving(true);
 
+      // Obter usuário autenticado
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error("Você precisa estar logado para salvar configurações");
+        return;
+      }
+
+      console.log("[GURU] Salvando configurações como usuário:", user.id);
+
       // Update all settings
       const updates = [
         { key: "guru_enabled", value: guruEnabled ? "true" : "false" },
@@ -118,16 +128,44 @@ const AdminGuruPage = () => {
         ...Object.entries(checkoutLinks).map(([key, value]) => ({ key, value })),
       ];
 
-      for (const update of updates) {
-        const { error } = await supabase
-          .from("app_settings")
-          .update({ value: update.value, updated_at: new Date().toISOString() })
-          .eq("key", update.key);
+      let successCount = 0;
+      let failCount = 0;
 
-        if (error) throw error;
+      for (const update of updates) {
+        console.log(`[GURU] Atualizando ${update.key} = "${update.value}"`);
+        
+        const { data, error } = await supabase
+          .from("app_settings")
+          .update({ 
+            value: update.value, 
+            updated_at: new Date().toISOString(),
+            updated_by: user.id
+          })
+          .eq("key", update.key)
+          .select();
+
+        if (error) {
+          console.error(`[GURU] Erro ao atualizar ${update.key}:`, error);
+          failCount++;
+          continue;
+        }
+        
+        if (!data || data.length === 0) {
+          console.warn(`[GURU] Nenhuma linha afetada para ${update.key} - a chave pode não existir`);
+          failCount++;
+        } else {
+          console.log(`[GURU] ${update.key} atualizado com sucesso:`, data);
+          successCount++;
+        }
       }
 
-      toast.success("Configurações da GURU salvas com sucesso!");
+      if (failCount === 0) {
+        toast.success("Configurações da GURU salvas com sucesso!");
+      } else if (successCount > 0) {
+        toast.warning(`${successCount} configurações salvas, ${failCount} falharam`);
+      } else {
+        toast.error("Nenhuma configuração foi salva. Verifique se as chaves existem no banco.");
+      }
     } catch (error) {
       console.error("Error saving GURU settings:", error);
       toast.error("Erro ao salvar configurações");
