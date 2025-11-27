@@ -195,11 +195,11 @@ const Pricing = () => {
   const { user } = useAuth();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const { trackViewContent } = usePixelTracking();
-  const { isGuruEnabled, openGuruCheckout } = useGuruCheckout();
+  const { isGuruEnabled, openGuruCheckout, loading: guruLoading } = useGuruCheckout();
 
   const plans = billingCycle === 'monthly' ? monthlyPlans : annualPlans;
 
-  const handleCTAClick = (planName: string, price: string) => {
+  const handleCTAClick = async (planName: string, price: string) => {
     // Track content view
     trackViewContent(planName, 'pricing_plan');
     
@@ -209,12 +209,24 @@ const Pricing = () => {
       return;
     }
 
+    console.log('[PRICING] Estado GURU:', { isGuruEnabled, guruLoading });
+
+    // Se GURU está carregando, aguarda um pouco
+    if (guruLoading) {
+      console.log('[PRICING] GURU ainda carregando, aguardando...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
     // Se GURU está habilitado e tem link configurado, abre direto
     const isAnnual = billingCycle === 'annual';
+    console.log('[PRICING] Tentando abrir GURU para:', planName, 'Anual:', isAnnual);
+    
     if (isGuruEnabled && openGuruCheckout(planName, isAnnual)) {
+      console.log('[PRICING] GURU checkout aberto com sucesso');
       return; // Sucesso - abriu checkout GURU
     }
 
+    console.log('[PRICING] Fallback: redirecionando para subscription/auth');
     // Fallback: redireciona para página de subscription
     navigate(user ? '/subscription' : '/auth');
   };
