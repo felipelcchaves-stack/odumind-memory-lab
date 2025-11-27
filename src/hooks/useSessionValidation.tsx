@@ -9,10 +9,16 @@ export function useSessionValidation() {
   const navigate = useNavigate();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const isValidatingRef = useRef(false);
+  const isLoggingOutRef = useRef(false);
   const hasShownErrorRef = useRef(false);
 
   useEffect(() => {
+    // Reset logout flag when user changes
     if (!user) {
+      isLoggingOutRef.current = false;
+      hasShownErrorRef.current = false;
+      
+      // Clear interval if user is null
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
@@ -20,7 +26,50 @@ export function useSessionValidation() {
       return;
     }
 
+    const performLogout = async (showToast: boolean = false) => {
+      // Prevent multiple logout attempts
+      if (isLoggingOutRef.current) {
+        console.log('[SESSION-VALIDATION] Logout already in progress, skipping');
+        return;
+      }
+      
+      isLoggingOutRef.current = true;
+      
+      // Clear interval FIRST to prevent re-execution
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      
+      // Clear local storage
+      localStorage.removeItem('session_id');
+      
+      // Show toast only once if requested
+      if (showToast && !hasShownErrorRef.current) {
+        toast.error('Sua sessão foi encerrada', {
+          description: 'Você foi desconectado porque fez login em outro dispositivo.',
+          duration: 5000,
+        });
+        hasShownErrorRef.current = true;
+      }
+      
+      try {
+        await signOut();
+      } catch (err) {
+        console.error('[SESSION-VALIDATION] Error during signout:', err);
+      }
+      
+      // Navigate to landing page
+      navigate('/', { replace: true });
+    };
+
     const validateSession = async () => {
+      // Skip if already logging out
+      if (isLoggingOutRef.current) {
+        console.log('[SESSION-VALIDATION] Logout in progress, skipping validation');
+        return;
+      }
+      
       // Skip validation if login is in progress (within last 10 seconds)
       const loginInProgress = localStorage.getItem('login_in_progress');
       if (loginInProgress) {
@@ -42,15 +91,16 @@ export function useSessionValidation() {
         const { data: sessionData } = await supabase.auth.getSession();
         
         if (!sessionData.session) {
-          console.log('[SESSION-VALIDATION] No active session, forcing logout');
+          console.log('[SESSION-VALIDATION] No active session, navigating to landing');
+          isValidatingRef.current = false;
+          
+          // Just clear and navigate, don't call signOut on already-null session
           if (intervalRef.current) {
             clearInterval(intervalRef.current);
             intervalRef.current = null;
           }
           localStorage.removeItem('session_id');
-          await signOut();
-          navigate('/auth', { replace: true });
-          isValidatingRef.current = false;
+          navigate('/', { replace: true });
           return;
         }
 
@@ -59,13 +109,8 @@ export function useSessionValidation() {
         
         if (!storedSessionId) {
           console.log('[SESSION-VALIDATION] No session_id in localStorage, forcing logout');
-          if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
-          }
-          await signOut();
-          navigate('/auth', { replace: true });
           isValidatingRef.current = false;
+          await performLogout();
           return;
         }
 
@@ -83,60 +128,39 @@ export function useSessionValidation() {
           body: { session_id: storedSessionId }
         });
 
-        // Se houver erro na chamada da função (500, 401, etc)
+        // If there's an error calling the function (500, 401, etc)
         if (error) {
           console.error('[SESSION-VALIDATION] Error calling function:', error);
           
-          // Se for erro de autenticação ou token inválido, fazer logout silencioso
+          // If it's an auth error or invalid token, perform logout
           if (error.message?.includes('autenticado') || error.message?.includes('inválido') || error.message?.includes('expirado')) {
-            console.log('[SESSION-VALIDATION] Authentication error, forcing silent logout');
-            clearInterval(intervalRef.current!);
-            localStorage.removeItem('session_id');
-            await signOut();
-            navigate('/auth', { replace: true });
+            console.log('[SESSION-VALIDATION] Authentication error, forcing logout');
+            isValidatingRef.current = false;
+            await performLogout();
+            return;
           }
           
           isValidatingRef.current = false;
           return;
         }
 
-        // Se a resposta indicar que a sessão é inválida
+        // If the response indicates the session is invalid
         if (data && !data.valid) {
           console.log('[SESSION-VALIDATION] Session invalid, forcing logout');
-          clearInterval(intervalRef.current!);
-          localStorage.removeItem('session_id');
-          
-          // Show toast only once
-          if (!hasShownErrorRef.current) {
-            toast.error('Sua sessão foi encerrada', {
-              description: 'Você foi desconectado porque fez login em outro dispositivo.',
-              duration: 5000,
-            });
-            hasShownErrorRef.current = true;
-          }
-
-          await signOut();
-          navigate('/auth', { replace: true });
+          isValidatingRef.current = false;
+          await performLogout(true); // Show toast for this case
+          return;
         }
       } catch (err) {
         console.error('[SESSION-VALIDATION] Exception:', err);
-        // Em caso de exceção, limpar e fazer logout silencioso
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
-        }
-        localStorage.removeItem('session_id');
-        
-        // Fazer logout silencioso para limpar estado
-        try {
-          await signOut();
-          navigate('/auth', { replace: true });
-        } catch (signOutErr) {
-          console.error('[SESSION-VALIDATION] Error during signout:', signOutErr);
-        }
-      } finally {
         isValidatingRef.current = false;
+        
+        // On exception, perform logout silently
+        await performLogout();
+        return;
       }
+      
+      isValidatingRef.current = false;
     };
 
     // Validate after a short delay to allow session_id to be saved
@@ -147,13 +171,12 @@ export function useSessionValidation() {
     // Then validate every 60 seconds (reduced frequency)
     intervalRef.current = setInterval(validateSession, 60000);
 
+    // Single unified cleanup function
     return () => {
       clearTimeout(initialValidationTimeout);
-    };
-
-    return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
     };
   }, [user, signOut, navigate]);
