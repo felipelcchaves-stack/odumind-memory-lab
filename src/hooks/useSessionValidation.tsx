@@ -8,20 +8,25 @@ export function useSessionValidation() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isValidatingRef = useRef(false);
   const isLoggingOutRef = useRef(false);
   const hasShownErrorRef = useRef(false);
 
   useEffect(() => {
-    // Reset logout flag when user changes
+    // Reset flags and clear timers when user changes to null
     if (!user) {
       isLoggingOutRef.current = false;
       hasShownErrorRef.current = false;
       
-      // Clear interval if user is null
+      // Clear all timers
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
       }
       return;
     }
@@ -35,10 +40,14 @@ export function useSessionValidation() {
       
       isLoggingOutRef.current = true;
       
-      // Clear interval FIRST to prevent re-execution
+      // Clear all timers FIRST to prevent re-execution
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
       }
       
       // Clear local storage
@@ -53,8 +62,12 @@ export function useSessionValidation() {
         hasShownErrorRef.current = true;
       }
       
+      // Only call signOut if there's an active session
       try {
-        await signOut();
+        const { data } = await supabase.auth.getSession();
+        if (data.session) {
+          await signOut();
+        }
       } catch (err) {
         console.error('[SESSION-VALIDATION] Error during signout:', err);
       }
@@ -91,13 +104,17 @@ export function useSessionValidation() {
         const { data: sessionData } = await supabase.auth.getSession();
         
         if (!sessionData.session) {
-          console.log('[SESSION-VALIDATION] No active session, navigating to landing');
+          console.log('[SESSION-VALIDATION] No active session, clearing and navigating');
           isValidatingRef.current = false;
           
-          // Just clear and navigate, don't call signOut on already-null session
+          // Clear timers and local storage, navigate without calling signOut
           if (intervalRef.current) {
             clearInterval(intervalRef.current);
             intervalRef.current = null;
+          }
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
           }
           localStorage.removeItem('session_id');
           navigate('/', { replace: true });
@@ -164,16 +181,19 @@ export function useSessionValidation() {
     };
 
     // Validate after a short delay to allow session_id to be saved
-    const initialValidationTimeout = setTimeout(() => {
+    timeoutRef.current = setTimeout(() => {
       validateSession();
     }, 1000);
 
     // Then validate every 60 seconds (reduced frequency)
     intervalRef.current = setInterval(validateSession, 60000);
 
-    // Single unified cleanup function
+    // Unified cleanup function
     return () => {
-      clearTimeout(initialValidationTimeout);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
