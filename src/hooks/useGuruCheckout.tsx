@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface GuruCheckoutUrls {
@@ -23,11 +23,10 @@ export const useGuruCheckout = () => {
   });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadGuruSettings();
-  }, []);
-
-  const loadGuruSettings = async () => {
+  const loadGuruSettings = useCallback(async () => {
+    console.log('[GURU] Iniciando carregamento das configurações...');
+    setLoading(true);
+    
     try {
       const { data, error } = await supabase
         .from('app_settings')
@@ -36,16 +35,19 @@ export const useGuruCheckout = () => {
         .eq('is_public', true);
 
       if (error) {
-        console.error('Error loading GURU settings:', error);
+        console.error('[GURU] Erro ao carregar configurações:', error);
+        setLoading(false);
         return;
       }
+
+      console.log('[GURU] Dados recebidos do banco:', data);
 
       const settings: Record<string, string> = {};
       data?.forEach((s) => {
         settings[s.key] = s.value || '';
       });
 
-      setUrls({
+      const newUrls = {
         akapoMonthly: settings.guru_checkout_akapo_monthly || '',
         akapoAnnual: settings.guru_checkout_akapo_annual || '',
         awoMonthly: settings.guru_checkout_awo_monthly || '',
@@ -53,48 +55,84 @@ export const useGuruCheckout = () => {
         egbeMonthly: settings.guru_checkout_egbe_monthly || '',
         memberArea: settings.guru_member_area_url || '',
         enabled: settings.guru_enabled === 'true',
-      });
+      };
+
+      console.log('[GURU] Estado final das URLs:', newUrls);
+      setUrls(newUrls);
     } catch (error) {
-      console.error('Error loading GURU settings:', error);
+      console.error('[GURU] Erro ao carregar configurações:', error);
     } finally {
       setLoading(false);
+      console.log('[GURU] Carregamento finalizado');
     }
-  };
+  }, []);
 
-  const getCheckoutUrl = (planName: string, isAnnual: boolean = false): string | null => {
-    if (!urls.enabled) return null;
+  useEffect(() => {
+    loadGuruSettings();
+  }, [loadGuruSettings]);
+
+  const getCheckoutUrl = useCallback((planName: string, isAnnual: boolean = false): string | null => {
+    console.log('[GURU] getCheckoutUrl chamado:', { planName, isAnnual, enabled: urls.enabled, loading });
+    
+    if (!urls.enabled) {
+      console.log('[GURU] GURU não está habilitado, retornando null');
+      return null;
+    }
 
     const planLower = planName.toLowerCase();
+    let url: string | null = null;
     
     if (planLower.includes('akapo')) {
-      return isAnnual ? urls.akapoAnnual : urls.akapoMonthly;
-    }
-    if (planLower.includes('awo')) {
-      return isAnnual ? urls.awoAnnual : urls.awoMonthly;
-    }
-    if (planLower.includes('egbe') || planLower.includes('familia') || planLower.includes('família')) {
-      return urls.egbeMonthly;
+      url = isAnnual ? urls.akapoAnnual : urls.akapoMonthly;
+      console.log('[GURU] Plano Akapo detectado, URL:', url);
+    } else if (planLower.includes('awo')) {
+      url = isAnnual ? urls.awoAnnual : urls.awoMonthly;
+      console.log('[GURU] Plano Awo detectado, URL:', url);
+    } else if (planLower.includes('egbe') || planLower.includes('familia') || planLower.includes('família')) {
+      url = urls.egbeMonthly;
+      console.log('[GURU] Plano Egbe/Família detectado, URL:', url);
+    } else {
+      console.log('[GURU] Plano não reconhecido:', planName);
     }
 
-    return null;
-  };
+    return url && url.trim() !== '' ? url : null;
+  }, [urls, loading]);
 
-  const openGuruCheckout = (planName: string, isAnnual: boolean = false): boolean => {
+  const openGuruCheckout = useCallback((planName: string, isAnnual: boolean = false): boolean => {
+    console.log('[GURU] openGuruCheckout chamado:', { planName, isAnnual, loading, enabled: urls.enabled });
+    
+    if (loading) {
+      console.log('[GURU] Ainda carregando, não pode abrir checkout');
+      return false;
+    }
+    
+    if (!urls.enabled) {
+      console.log('[GURU] GURU desabilitado, não abrindo checkout');
+      return false;
+    }
+    
     const url = getCheckoutUrl(planName, isAnnual);
+    console.log('[GURU] URL obtida para checkout:', url);
+    
     if (url && url.trim() !== '') {
+      console.log('[GURU] Abrindo URL em nova aba:', url);
       window.open(url, '_blank');
       return true;
     }
+    
+    console.log('[GURU] URL inválida ou vazia, não abrindo checkout');
     return false;
-  };
+  }, [urls.enabled, loading, getCheckoutUrl]);
 
-  const openMemberArea = (): boolean => {
+  const openMemberArea = useCallback((): boolean => {
     if (urls.memberArea && urls.memberArea.trim() !== '') {
+      console.log('[GURU] Abrindo área do membro:', urls.memberArea);
       window.open(urls.memberArea, '_blank');
       return true;
     }
+    console.log('[GURU] URL da área do membro não configurada');
     return false;
-  };
+  }, [urls.memberArea]);
 
   return {
     urls,

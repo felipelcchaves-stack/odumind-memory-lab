@@ -100,7 +100,7 @@ export default function Subscription() {
     changeOwnSubscription,
     createRetentionOffer,
   } = useSubscription();
-  const { isGuruEnabled, openGuruCheckout, openMemberArea } = useGuruCheckout();
+  const { isGuruEnabled, openGuruCheckout, openMemberArea, loading: guruLoading } = useGuruCheckout();
   const navigate = useNavigate();
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
   const [managingSubscription, setManagingSubscription] = useState(false);
@@ -321,9 +321,20 @@ export default function Subscription() {
         trackInitiateCheckout(plan.name, price);
       }
       
+      console.log('[CHECKOUT] Estado GURU:', { isGuruEnabled, guruLoading });
+      
+      // Se GURU está carregando, aguarda um pouco
+      if (guruLoading) {
+        console.log('[CHECKOUT] GURU ainda carregando, aguardando...');
+        toast.info('Preparando checkout...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
       // Se GURU está habilitado, tenta usar checkout GURU primeiro
       if (isGuruEnabled && plan) {
+        console.log('[CHECKOUT] Tentando abrir GURU para:', plan.name);
         const opened = openGuruCheckout(plan.name, false);
+        console.log('[CHECKOUT] GURU abriu?', opened);
         if (opened) {
           toast.success('Redirecionando para checkout...');
           return;
@@ -331,6 +342,7 @@ export default function Subscription() {
       }
 
       // Fallback para Stripe
+      console.log('[CHECKOUT] Fallback para Stripe, stripeId:', stripeId);
       if (!stripeId) {
         toast.error('Link de checkout não configurado. Entre em contato com o suporte.');
         return;
