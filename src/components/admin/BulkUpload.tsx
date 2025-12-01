@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload, FileText, Download } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Upload, FileText, Download, AlertTriangle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import Papa from 'papaparse';
 
@@ -11,14 +13,69 @@ interface BulkUploadProps {
   onSuccess: () => void;
 }
 
+interface UploadResult {
+  success: number;
+  failed: number;
+  errors: string[];
+}
+
 export default function BulkUpload({ onSuccess }: BulkUploadProps) {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [result, setResult] = useState<UploadResult | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
+      setResult(null);
     }
+  };
+
+  const checkPermissions = async (): Promise<boolean> => {
+    if (!user) {
+      toast.error('Você precisa estar logado para fazer upload');
+      return false;
+    }
+
+    const { data: hasRole, error } = await supabase
+      .rpc('has_colaborador_role', { _user_id: user.id });
+    
+    if (error) {
+      console.error('Erro ao verificar permissões:', error);
+      toast.error('Erro ao verificar permissões');
+      return false;
+    }
+
+    if (!hasRole) {
+      toast.error('Você não tem permissão para adicionar Odu. Faça login como admin ou colaborador.');
+      return false;
+    }
+
+    return true;
+  };
+
+  const validateOduData = (row: any, index: number): { valid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+    const rowNum = index + 1;
+
+    // Check numero
+    const numero = parseInt(row.numero);
+    if (isNaN(numero) || numero < 1 || numero > 256) {
+      errors.push(`Linha ${rowNum}: Número inválido (${row.numero}). Deve ser entre 1 e 256.`);
+    }
+
+    // Check nome
+    if (!row.nome || row.nome.trim().length === 0) {
+      errors.push(`Linha ${rowNum}: Nome é obrigatório.`);
+    }
+
+    // Check texto_principal
+    if (!row.texto_principal || row.texto_principal.trim().length < 10) {
+      errors.push(`Linha ${rowNum}: Texto principal é obrigatório e deve ter pelo menos 10 caracteres.`);
+    }
+
+    return { valid: errors.length === 0, errors };
   };
 
   const handleUpload = async () => {
@@ -27,57 +84,124 @@ export default function BulkUpload({ onSuccess }: BulkUploadProps) {
       return;
     }
 
+    // Check permissions first
+    const hasPermission = await checkPermissions();
+    if (!hasPermission) return;
+
     setLoading(true);
+    setResult(null);
 
     try {
       const fileType = file.name.split('.').pop()?.toLowerCase();
 
+      let uploadResult: UploadResult;
       if (fileType === 'csv') {
-        await handleCSVUpload(file);
+        uploadResult = await handleCSVUpload(file);
       } else if (fileType === 'json') {
-        await handleJSONUpload(file);
+        uploadResult = await handleJSONUpload(file);
       } else {
         throw new Error('Formato de arquivo não suportado. Use CSV ou JSON.');
       }
 
-      toast.success('Upload concluído com sucesso!');
-      onSuccess();
-      setFile(null);
+      setResult(uploadResult);
+
+      if (uploadResult.success > 0) {
+        toast.success(`${uploadResult.success} Odu(s) adicionado(s) com sucesso!`);
+        if (uploadResult.failed === 0) {
+          onSuccess();
+          setFile(null);
+        }
+      }
+
+      if (uploadResult.failed > 0) {
+        toast.error(`${uploadResult.failed} Odu(s) falharam. Veja os detalhes abaixo.`);
+      }
     } catch (error: any) {
       console.error('Error uploading file:', error);
-      toast.error(error.message || 'Erro ao fazer upload');
+      
+      // Handle specific RLS errors
+      if (error?.code === '42501' || error?.message?.includes('policy')) {
+        toast.error('Sem permissão. Verifique se você está logado como admin ou colaborador.');
+      } else if (error?.code === '23505') {
+        toast.error('Erro: Número de Odu duplicado. Verifique se os números já existem no banco.');
+      } else {
+        toast.error(error.message || 'Erro ao fazer upload');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCSVUpload = (file: File) => {
+  const handleCSVUpload = (file: File): Promise<UploadResult> => {
     return new Promise((resolve, reject) => {
       Papa.parse(file, {
         header: true,
+        skipEmptyLines: true,
         complete: async (results) => {
           try {
-            const odus = results.data
-              .filter((row: any) => row.numero && row.nome)
-              .map((row: any) => ({
-                numero: parseInt(row.numero),
-                nome: row.nome,
-                texto_principal: row.texto_principal || '',
-                verso: row.verso || null,
-                verso_resumido: row.verso_resumido || null,
-                significado: row.significado || null,
-                exemplos_praticos: row.exemplos_praticos || null,
-                tags: row.tags ? row.tags.split(',').map((t: string) => t.trim()) : null,
-              }));
+            const uploadResult: UploadResult = { success: 0, failed: 0, errors: [] };
+            
+            // Validate all rows first
+            const validOdus: any[] = [];
+            results.data.forEach((row: any, index: number) => {
+              // Skip completely empty rows
+              if (!row.numero && !row.nome) return;
+              
+              const validation = validateOduData(row, index);
+              if (!validation.valid) {
+                uploadResult.failed++;
+                uploadResult.errors.push(...validation.errors);
+                return;
+              }
 
-            if (odus.length === 0) {
+              validOdus.push({
+                numero: parseInt(row.numero),
+                nome: row.nome.trim(),
+                texto_principal: row.texto_principal.trim(),
+                verso: row.verso?.trim() || null,
+                verso_resumido: row.verso_resumido?.trim() || null,
+                significado: row.significado?.trim() || null,
+                exemplos_praticos: row.exemplos_praticos?.trim() || null,
+                contexto_historico: row.contexto_historico?.trim() || null,
+                tags: row.tags ? row.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : null,
+              });
+            });
+
+            if (validOdus.length === 0) {
+              if (uploadResult.errors.length > 0) {
+                resolve(uploadResult);
+                return;
+              }
               throw new Error('Nenhum Odu válido encontrado no arquivo');
             }
 
-            const { error } = await supabase.from('odu').insert(odus);
-            if (error) throw error;
+            // Insert valid Odus one by one to get better error handling
+            for (const odu of validOdus) {
+              const { data, error } = await supabase
+                .from('odu')
+                .insert([odu])
+                .select();
 
-            resolve(odus.length);
+              if (error) {
+                uploadResult.failed++;
+                if (error.code === '23505') {
+                  uploadResult.errors.push(`Odu #${odu.numero} (${odu.nome}): Número já existe no banco.`);
+                } else if (error.code === '42501') {
+                  uploadResult.errors.push(`Odu #${odu.numero} (${odu.nome}): Sem permissão (RLS).`);
+                } else {
+                  uploadResult.errors.push(`Odu #${odu.numero} (${odu.nome}): ${error.message}`);
+                }
+                console.error(`Erro ao inserir Odu #${odu.numero}:`, error);
+              } else if (data && data.length > 0) {
+                uploadResult.success++;
+                console.log(`✅ Odu #${odu.numero} inserido com sucesso:`, data[0].id);
+              } else {
+                uploadResult.failed++;
+                uploadResult.errors.push(`Odu #${odu.numero} (${odu.nome}): Inserção não confirmada.`);
+              }
+            }
+
+            resolve(uploadResult);
           } catch (error) {
             reject(error);
           }
@@ -89,48 +213,89 @@ export default function BulkUpload({ onSuccess }: BulkUploadProps) {
     });
   };
 
-  const handleJSONUpload = async (file: File) => {
+  const handleJSONUpload = async (file: File): Promise<UploadResult> => {
     const text = await file.text();
     const data = JSON.parse(text);
+    const uploadResult: UploadResult = { success: 0, failed: 0, errors: [] };
 
-    const odus = (Array.isArray(data) ? data : [data])
-      .filter((row: any) => row.numero && row.nome)
-      .map((row: any) => ({
+    const rows = Array.isArray(data) ? data : [data];
+
+    // Validate all rows first
+    const validOdus: any[] = [];
+    rows.forEach((row: any, index: number) => {
+      // Skip completely empty rows
+      if (!row.numero && !row.nome) return;
+      
+      const validation = validateOduData(row, index);
+      if (!validation.valid) {
+        uploadResult.failed++;
+        uploadResult.errors.push(...validation.errors);
+        return;
+      }
+
+      validOdus.push({
         numero: parseInt(row.numero),
-        nome: row.nome,
-        texto_principal: row.texto_principal || '',
-        verso: row.verso || null,
-        verso_resumido: row.verso_resumido || null,
-        significado: row.significado || null,
-        exemplos_praticos: row.exemplos_praticos || null,
-        tags: Array.isArray(row.tags) ? row.tags : null,
-      }));
+        nome: row.nome.trim(),
+        texto_principal: row.texto_principal.trim(),
+        verso: row.verso?.trim() || null,
+        verso_resumido: row.verso_resumido?.trim() || null,
+        significado: row.significado?.trim() || null,
+        exemplos_praticos: row.exemplos_praticos?.trim() || null,
+        contexto_historico: row.contexto_historico?.trim() || null,
+        tags: Array.isArray(row.tags) ? row.tags.filter(Boolean) : null,
+      });
+    });
 
-    if (odus.length === 0) {
+    if (validOdus.length === 0 && uploadResult.errors.length === 0) {
       throw new Error('Nenhum Odu válido encontrado no arquivo');
     }
 
-    const { error } = await supabase.from('odu').insert(odus);
-    if (error) throw error;
+    // Insert valid Odus one by one
+    for (const odu of validOdus) {
+      const { data, error } = await supabase
+        .from('odu')
+        .insert([odu])
+        .select();
 
-    return odus.length;
+      if (error) {
+        uploadResult.failed++;
+        if (error.code === '23505') {
+          uploadResult.errors.push(`Odu #${odu.numero} (${odu.nome}): Número já existe no banco.`);
+        } else if (error.code === '42501') {
+          uploadResult.errors.push(`Odu #${odu.numero} (${odu.nome}): Sem permissão (RLS).`);
+        } else {
+          uploadResult.errors.push(`Odu #${odu.numero} (${odu.nome}): ${error.message}`);
+        }
+        console.error(`Erro ao inserir Odu #${odu.numero}:`, error);
+      } else if (data && data.length > 0) {
+        uploadResult.success++;
+        console.log(`✅ Odu #${odu.numero} inserido com sucesso:`, data[0].id);
+      } else {
+        uploadResult.failed++;
+        uploadResult.errors.push(`Odu #${odu.numero} (${odu.nome}): Inserção não confirmada.`);
+      }
+    }
+
+    return uploadResult;
   };
 
   const downloadTemplate = () => {
     const template = [
       {
         numero: 1,
-        nome: 'Exemplo Odu',
-        texto_principal: 'Texto principal do Odu',
+        nome: 'Nome do Odu',
+        texto_principal: 'Texto principal do Odu (obrigatório, mínimo 10 caracteres)',
         verso: 'Verso do Odu (opcional)',
+        verso_resumido: 'Verso resumido para flashcards (opcional)',
         significado: 'Significado do Odu (opcional)',
         exemplos_praticos: 'Exemplos práticos (opcional)',
+        contexto_historico: 'Contexto histórico (opcional)',
         tags: 'tag1,tag2,tag3',
       },
     ];
 
     const csv = Papa.unparse(template);
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -155,16 +320,22 @@ export default function BulkUpload({ onSuccess }: BulkUploadProps) {
               <strong>nome</strong>: Nome do Odu *
             </li>
             <li>
-              <strong>texto_principal</strong>: Texto principal *
+              <strong>texto_principal</strong>: Texto principal (mín. 10 caracteres) *
             </li>
             <li>
               <strong>verso</strong>: Verso (opcional)
+            </li>
+            <li>
+              <strong>verso_resumido</strong>: Verso resumido para flashcards (opcional)
             </li>
             <li>
               <strong>significado</strong>: Significado (opcional)
             </li>
             <li>
               <strong>exemplos_praticos</strong>: Exemplos práticos (opcional)
+            </li>
+            <li>
+              <strong>contexto_historico</strong>: Contexto histórico (opcional)
             </li>
             <li>
               <strong>tags</strong>: Tags separadas por vírgula (opcional)
@@ -207,10 +378,39 @@ export default function BulkUpload({ onSuccess }: BulkUploadProps) {
         </Button>
       </div>
 
+      {/* Results Display */}
+      {result && (
+        <div className="space-y-3">
+          {result.success > 0 && (
+            <Alert className="border-green-500 bg-green-50 dark:bg-green-950/20">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800 dark:text-green-200">
+                {result.success} Odu(s) adicionado(s) com sucesso!
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {result.errors.length > 0 && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <p className="font-semibold mb-2">{result.failed} erro(s) encontrado(s):</p>
+                <ul className="list-disc list-inside text-sm space-y-1 max-h-40 overflow-y-auto">
+                  {result.errors.map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
+      )}
+
       <div className="p-4 border border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-900 rounded-lg">
         <p className="text-sm text-yellow-800 dark:text-yellow-200">
           <strong>Atenção:</strong> O upload em massa irá adicionar os Odu ao banco de dados.
           Certifique-se de que os números não estão duplicados para evitar erros.
+          Cada Odu é inserido individualmente para melhor controle de erros.
         </p>
       </div>
     </div>
