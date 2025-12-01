@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useAdmin } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -88,6 +89,7 @@ export default function StudySession() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { hasActiveSubscription, loading: subscriptionLoading } = useSubscription();
+  const { isAdmin, isColaborador } = useAdmin();
   
   // Core session state
   const [availableOdus, setAvailableOdus] = useState<Odu[]>([]);
@@ -251,14 +253,13 @@ export default function StudySession() {
       const isActiveSubscription = hasActiveSubscription();
       const currentLimit = progress?.currentLimit || FREE_LIMIT;
       
-      // Determinar limite baseado em assinatura e progresso
-      let oduLimit = isActiveSubscription ? 256 : currentLimit;
+      // Verificar se tem acesso total (assinante, admin ou colaborador)
+      const hasFullAccess = isActiveSubscription || isAdmin || isColaborador;
       
-      // Fetch all Odus até o limite
+      // Fetch ALL Odus ordenados por número
       const { data: allOdus } = await supabase
         .from("odu")
         .select("*")
-        .lte("numero", oduLimit)
         .order("numero", { ascending: true });
 
       if (!allOdus || allOdus.length === 0) {
@@ -266,8 +267,19 @@ export default function StudySession() {
         return;
       }
 
+      // Aplicar limite de QUANTIDADE (não filtro por campo numero)
+      // Assinantes, admins e colaboradores têm acesso a todos
+      const accessibleOdus = hasFullAccess ? allOdus : allOdus.slice(0, currentLimit);
+      
+      console.log('📊 Sessão de Estudo:', {
+        totalOdus: allOdus.length,
+        limiteAtual: currentLimit,
+        hasFullAccess,
+        odusDisponiveis: accessibleOdus.length
+      });
+
       // Criar mix intercalado inteligente
-      const interleavedOdus = await createInterleavedMix(user.id, allOdus);
+      const interleavedOdus = await createInterleavedMix(user.id, accessibleOdus);
       
       // Priorizar Odus
       const prioritizedOdus = await prioritizeOdusForReview(user.id, interleavedOdus, userProfile);
