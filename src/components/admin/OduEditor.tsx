@@ -21,8 +21,8 @@ import ImageUploader from './ImageUploader';
 const oduSchema = z.object({
   numero: z.number()
     .int({ message: "Número deve ser um inteiro" })
-    .min(1, { message: "Número deve ser no mínimo 1" })
-    .max(256, { message: "Número deve ser no máximo 256" }),
+    .min(1, { message: "Número deve ser no mínimo 1" }),
+  // Sem limite máximo - permite Odus além de 256
   nome: z.string()
     .trim()
     .min(1, { message: "Nome é obrigatório" })
@@ -96,9 +96,25 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
   const exemplosQuillRef = useRef<ReactQuill>(null);
   const contextoQuillRef = useRef<ReactQuill>(null);
 
+  // Busca próximo número disponível
+  const fetchNextOduNumber = async () => {
+    const { data } = await supabase
+      .from('odu')
+      .select('numero')
+      .order('numero', { ascending: false })
+      .limit(1);
+    
+    return (data?.[0]?.numero || 0) + 1;
+  };
+
   useEffect(() => {
     if (oduId && oduId !== 'new') {
       loadOdu();
+    } else if (oduId === 'new') {
+      // Auto-preencher número para novo Odu
+      fetchNextOduNumber().then(nextNum => {
+        setFormData(prev => ({ ...prev, numero: nextNum.toString() }));
+      });
     }
   }, [oduId]);
 
@@ -507,15 +523,33 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="numero">Número *</Label>
-              <Input
-                id="numero"
-                type="number"
-                value={formData.numero}
-                onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
-                required
-                min="1"
-                max="256"
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="numero"
+                  type="number"
+                  value={formData.numero}
+                  onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
+                  required
+                  min="1"
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    const nextNum = await fetchNextOduNumber();
+                    setFormData({ ...formData, numero: nextNum.toString() });
+                    toast.success(`Próximo número disponível: ${nextNum}`);
+                  }}
+                  title="Usar próximo número disponível"
+                >
+                  Auto
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Número incremental automático (sem limite)
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -651,35 +685,20 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
               key={`significado-${oduId || 'new'}`}
               ref={significadoQuillRef}
               theme="snow"
+              className="min-h-[150px] border border-input rounded-md"
               value={formData.significado || ''}
               onChange={(value) => {
                 const sanitized = sanitizeQuillHtml(value);
                 setFormData({ ...formData, significado: sanitized });
               }}
               modules={{
+                toolbar: [
+                  ['bold', 'italic', 'underline'],
+                  [{ list: 'ordered' }, { list: 'bullet' }],
+                  ['clean'],
+                ],
                 clipboard: {
                   matchVisual: false,
-                  matchers: [
-                    ['*', (node: any, delta: any) => {
-                      if (delta.ops) {
-                        delta.ops = delta.ops.map((op: any) => {
-                          if (op.insert && typeof op.insert === 'string') {
-                            let text = op.insert;
-                            text = text
-                              .replace(/&lt;/g, '<')
-                              .replace(/&gt;/g, '>')
-                              .replace(/&amp;/g, '&')
-                              .replace(/&quot;/g, '"')
-                              .replace(/&#039;/g, "'")
-                              .replace(/&nbsp;/g, ' ');
-                            return { ...op, insert: text };
-                          }
-                          return op;
-                        });
-                      }
-                      return delta;
-                    }]
-                  ]
                 },
               }}
             />
@@ -732,35 +751,20 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
               key={`exemplos-${oduId || 'new'}`}
               ref={exemplosQuillRef}
               theme="snow"
+              className="min-h-[150px] border border-input rounded-md"
               value={formData.exemplos_praticos || ''}
               onChange={(value) => {
                 const sanitized = sanitizeQuillHtml(value);
                 setFormData({ ...formData, exemplos_praticos: sanitized });
               }}
               modules={{
+                toolbar: [
+                  ['bold', 'italic', 'underline'],
+                  [{ list: 'ordered' }, { list: 'bullet' }],
+                  ['clean'],
+                ],
                 clipboard: {
                   matchVisual: false,
-                  matchers: [
-                    ['*', (node: any, delta: any) => {
-                      if (delta.ops) {
-                        delta.ops = delta.ops.map((op: any) => {
-                          if (op.insert && typeof op.insert === 'string') {
-                            let text = op.insert;
-                            text = text
-                              .replace(/&lt;/g, '<')
-                              .replace(/&gt;/g, '>')
-                              .replace(/&amp;/g, '&')
-                              .replace(/&quot;/g, '"')
-                              .replace(/&#039;/g, "'")
-                              .replace(/&nbsp;/g, ' ');
-                            return { ...op, insert: text };
-                          }
-                          return op;
-                        });
-                      }
-                      return delta;
-                    }]
-                  ]
                 },
               }}
             />
@@ -799,35 +803,20 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
                 key={`contexto-${oduId || 'new'}`}
                 ref={contextoQuillRef}
                 theme="snow"
+                className="min-h-[150px] border border-input rounded-md"
                 value={formData.contexto_historico || ''}
                 onChange={(value) => {
                   const sanitized = sanitizeQuillHtml(value);
                   setFormData({ ...formData, contexto_historico: sanitized });
                 }}
                 modules={{
+                  toolbar: [
+                    ['bold', 'italic', 'underline'],
+                    [{ list: 'ordered' }, { list: 'bullet' }],
+                    ['clean'],
+                  ],
                   clipboard: {
                     matchVisual: false,
-                    matchers: [
-                      ['*', (node: any, delta: any) => {
-                        if (delta.ops) {
-                          delta.ops = delta.ops.map((op: any) => {
-                            if (op.insert && typeof op.insert === 'string') {
-                              let text = op.insert;
-                              text = text
-                                .replace(/&lt;/g, '<')
-                                .replace(/&gt;/g, '>')
-                                .replace(/&amp;/g, '&')
-                                .replace(/&quot;/g, '"')
-                                .replace(/&#039;/g, "'")
-                                .replace(/&nbsp;/g, ' ');
-                              return { ...op, insert: text };
-                            }
-                            return op;
-                          });
-                        }
-                        return delta;
-                      }]
-                    ]
                   },
                 }}
               />
