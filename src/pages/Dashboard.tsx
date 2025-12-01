@@ -37,6 +37,7 @@ import { DashboardTour } from '@/components/DashboardTour';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, HelpCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { useContentFeatures } from '@/hooks/useContentFeatures';
 
 interface ProfileData {
   xp: number;
@@ -93,6 +94,7 @@ export default function Dashboard() {
   const [showGlossary, setShowGlossary] = useState(false);
   const [runTour, setRunTour] = useState(false);
   const { simplifiedMode } = useAccessibility();
+  const { isFeatureEnabled } = useContentFeatures();
   
   // Inicia o tour se há flag do onboarding
   useEffect(() => {
@@ -183,8 +185,8 @@ export default function Dashboard() {
     const streak = profile.streak;
     const reviewsToday = stats.reviewTodayCount;
 
-    // Incentivar exploração de rituais se tem progresso em Odu mas não praticou rituais
-    if (memorizedPercentage > 10 && stats.rituaisPraticados === 0) {
+    // Incentivar exploração de rituais se tem progresso em Odu mas não praticou rituais (only if rituais is enabled)
+    if (isFeatureEnabled('rituais') && memorizedPercentage > 10 && stats.rituaisPraticados === 0) {
       return "🕯️ Que tal explorar os Rituais sagrados agora? Você já domina os Odu!";
     }
 
@@ -865,7 +867,7 @@ export default function Dashboard() {
             >
               <CardContent className="pt-8 pb-8 text-center">
                 <BookOpen className="h-12 w-12 text-primary mx-auto mb-4" />
-                <p className="font-bold text-xl mb-2">256 Odu Ifá</p>
+                <p className="font-bold text-xl mb-2">{stats?.totalOdus || 0} Odu Ifá</p>
                 <p className="text-base text-muted-foreground mb-3">Explore os Odu sagrados</p>
                 <div className="mt-4 p-2 bg-primary/10 rounded">
                   <p className="text-lg font-semibold">{stats?.memorizedCount || 0} dominados</p>
@@ -873,47 +875,53 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card 
-              className="cursor-pointer hover:shadow-xl transition-all hover:scale-105 border-2"
-              onClick={() => navigate('/biblioteca-yoruba?tab=rituais')}
-            >
-              <CardContent className="pt-8 pb-8 text-center">
-                <Flame className="h-12 w-12 text-orange-500 mx-auto mb-4" />
-                <p className="font-bold text-xl mb-2">{stats?.totalRituais || 0}+ Rituais</p>
-                <p className="text-base text-muted-foreground mb-3">Práticas sagradas</p>
-                <div className="mt-4 p-2 bg-orange-500/10 rounded">
-                  <p className="text-lg font-semibold">{stats?.rituaisPraticados || 0} praticados</p>
-                </div>
-              </CardContent>
-            </Card>
+            {isFeatureEnabled('rituais') && (
+              <Card 
+                className="cursor-pointer hover:shadow-xl transition-all hover:scale-105 border-2"
+                onClick={() => navigate('/biblioteca-yoruba?tab=rituais')}
+              >
+                <CardContent className="pt-8 pb-8 text-center">
+                  <Flame className="h-12 w-12 text-orange-500 mx-auto mb-4" />
+                  <p className="font-bold text-xl mb-2">{stats?.totalRituais || 0}+ Rituais</p>
+                  <p className="text-base text-muted-foreground mb-3">Práticas sagradas</p>
+                  <div className="mt-4 p-2 bg-orange-500/10 rounded">
+                    <p className="text-lg font-semibold">{stats?.rituaisPraticados || 0} praticados</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-            <Card 
-              className="cursor-pointer hover:shadow-xl transition-all hover:scale-105 border-2"
-              onClick={() => navigate('/biblioteca-yoruba?tab=rezas')}
-            >
-              <CardContent className="pt-8 pb-8 text-center">
-                <Heart className="h-12 w-12 text-red-500 mx-auto mb-4" />
-                <p className="font-bold text-xl mb-2">{stats?.totalRezas || 0}+ Rezas</p>
-                <p className="text-base text-muted-foreground mb-3">Orações Yorubá</p>
-                <div className="mt-4 p-2 bg-red-500/10 rounded">
-                  <p className="text-lg font-semibold">{stats?.rezasAprendidas || 0} aprendidas</p>
-                </div>
-              </CardContent>
-            </Card>
+            {isFeatureEnabled('rezas') && (
+              <Card 
+                className="cursor-pointer hover:shadow-xl transition-all hover:scale-105 border-2"
+                onClick={() => navigate('/biblioteca-yoruba?tab=rezas')}
+              >
+                <CardContent className="pt-8 pb-8 text-center">
+                  <Heart className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                  <p className="font-bold text-xl mb-2">{stats?.totalRezas || 0}+ Rezas</p>
+                  <p className="text-base text-muted-foreground mb-3">Orações Yorubá</p>
+                  <div className="mt-4 p-2 bg-red-500/10 rounded">
+                    <p className="text-lg font-semibold">{stats?.rezasAprendidas || 0} aprendidas</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-            <Card 
-              className="cursor-pointer hover:shadow-xl transition-all hover:scale-105 border-2"
-              onClick={() => navigate('/biblioteca-yoruba?tab=invocacoes')}
-            >
-              <CardContent className="pt-8 pb-8 text-center">
-                <Sparkles className="h-12 w-12 text-purple-500 mx-auto mb-4" />
-                <p className="font-bold text-xl mb-2">{stats?.totalInvocacoes || 0}+ Invocações</p>
-                <p className="text-base text-muted-foreground mb-3">Chamados sagrados</p>
-                <div className="mt-4 p-2 bg-purple-500/10 rounded">
-                  <p className="text-lg font-semibold">{stats?.invocacoesPraticadas || 0} praticadas</p>
-                </div>
-              </CardContent>
-            </Card>
+            {isFeatureEnabled('invocacoes') && (
+              <Card 
+                className="cursor-pointer hover:shadow-xl transition-all hover:scale-105 border-2"
+                onClick={() => navigate('/biblioteca-yoruba?tab=invocacoes')}
+              >
+                <CardContent className="pt-8 pb-8 text-center">
+                  <Sparkles className="h-12 w-12 text-purple-500 mx-auto mb-4" />
+                  <p className="font-bold text-xl mb-2">{stats?.totalInvocacoes || 0}+ Invocações</p>
+                  <p className="text-base text-muted-foreground mb-3">Chamados sagrados</p>
+                  <div className="mt-4 p-2 bg-purple-500/10 rounded">
+                    <p className="text-lg font-semibold">{stats?.invocacoesPraticadas || 0} praticadas</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </main>

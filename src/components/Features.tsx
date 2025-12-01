@@ -2,47 +2,109 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Brain, BookOpen, Target, Zap, Users, Trophy } from "lucide-react";
 import memoryIllustration from "@/assets/memory-illustration.jpg";
 import flashcardsIllustration from "@/assets/flashcards-illustration.jpg";
-
-const features = [
-  {
-    icon: Brain,
-    title: "256 Odu Ifá Completos",
-    description: "Memorize todos os Odu sagrados com mapas mentais inteligentes e repetição espaçada científica.",
-    color: "text-primary",
-  },
-  {
-    icon: BookOpen,
-    title: "50+ Rituais Tradicionais",
-    description: "Aprenda e pratique rituais yorubá autênticos com passo a passo detalhado e materiais necessários.",
-    color: "text-secondary",
-  },
-  {
-    icon: Target,
-    title: "Rezas & Invocações",
-    description: "Domine orações sagradas com áudio de pronúncia correta e transcrições fonéticas.",
-    color: "text-accent",
-  },
-  {
-    icon: Zap,
-    title: "Flashcards Inteligentes",
-    description: "Sistema adaptativo que foca nos conteúdos que você mais precisa revisar para memorização eficaz.",
-    color: "text-primary",
-  },
-  {
-    icon: Users,
-    title: "Biblioteca Unificada",
-    description: "Acesso completo a Odu, Rituais, Rezas e Invocações em uma única plataforma integrada.",
-    color: "text-secondary",
-  },
-  {
-    icon: Trophy,
-    title: "Gamificação Completa",
-    description: "Conquiste badges específicos para cada tipo de conteúdo: Ritualista, Devoto, Invocador e Mestre dos Odu.",
-    color: "text-accent",
-  },
-];
+import { useContentFeatures } from "@/hooks/useContentFeatures";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Features = () => {
+  const { features, loading, isFeatureEnabled, getFeatureCount } = useContentFeatures();
+
+  // Build dynamic features based on what's enabled
+  const getFeaturesList = () => {
+    const baseFeatures = [
+      {
+        icon: Brain,
+        title: `${getFeatureCount('odu')} Odu Ifá Completos`,
+        description: "Memorize todos os Odu sagrados com mapas mentais inteligentes e repetição espaçada científica.",
+        color: "text-primary",
+        enabled: true, // Odu is always enabled
+      },
+    ];
+
+    if (isFeatureEnabled('rituais')) {
+      baseFeatures.push({
+        icon: BookOpen,
+        title: `${getFeatureCount('rituais')}+ Rituais Tradicionais`,
+        description: "Aprenda e pratique rituais yorubá autênticos com passo a passo detalhado e materiais necessários.",
+        color: "text-secondary",
+        enabled: true,
+      });
+    }
+
+    if (isFeatureEnabled('rezas') || isFeatureEnabled('invocacoes')) {
+      baseFeatures.push({
+        icon: Target,
+        title: "Rezas & Invocações",
+        description: "Domine orações sagradas com áudio de pronúncia correta e transcrições fonéticas.",
+        color: "text-accent",
+        enabled: true,
+      });
+    }
+
+    // Always show these core features
+    baseFeatures.push(
+      {
+        icon: Zap,
+        title: "Flashcards Inteligentes",
+        description: "Sistema adaptativo que foca nos conteúdos que você mais precisa revisar para memorização eficaz.",
+        color: "text-primary",
+        enabled: true,
+      },
+      {
+        icon: Users,
+        title: "Biblioteca Unificada",
+        description: "Acesso completo a Odu, Rituais, Rezas e Invocações em uma única plataforma integrada.",
+        color: "text-secondary",
+        enabled: true,
+      },
+      {
+        icon: Trophy,
+        title: "Gamificação Completa",
+        description: "Conquiste badges específicos para cada tipo de conteúdo: Ritualista, Devoto, Invocador e Mestre dos Odu.",
+        color: "text-accent",
+        enabled: true,
+      }
+    );
+
+    return baseFeatures;
+  };
+
+  // Build dynamic subtitle text
+  const getSubtitleText = () => {
+    const parts = [`${getFeatureCount('odu')} Odu Ifá`];
+    
+    if (isFeatureEnabled('rituais')) {
+      parts.push(`${getFeatureCount('rituais')} Rituais`);
+    }
+    if (isFeatureEnabled('rezas')) {
+      parts.push(`${getFeatureCount('rezas')} Rezas`);
+    }
+    if (isFeatureEnabled('invocacoes')) {
+      parts.push(`${getFeatureCount('invocacoes')} Invocações`);
+    }
+
+    return parts.join(' + ') + '. Tudo que você precisa em uma única plataforma.';
+  };
+
+  const featuresList = getFeaturesList();
+
+  if (loading) {
+    return (
+      <section className="py-24 px-4 bg-muted/30">
+        <div className="container mx-auto">
+          <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
+            <Skeleton className="h-12 w-3/4 mx-auto" />
+            <Skeleton className="h-6 w-1/2 mx-auto" />
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Skeleton key={i} className="h-48" />
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="py-24 px-4 bg-muted/30">
       <div className="container mx-auto">
@@ -55,13 +117,13 @@ const Features = () => {
             </span>
           </h2>
           <p className="text-lg text-muted-foreground">
-            256 Odu Ifá + 50 Rituais + 30 Rezas + 20 Invocações. Tudo que você precisa em uma única plataforma.
+            {getSubtitleText()}
           </p>
         </div>
 
         {/* Feature Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-20">
-          {features.map((feature, index) => (
+          {featuresList.map((feature, index) => (
             <Card
               key={index}
               className="border-2 hover:border-primary/50 transition-smooth hover:shadow-medium group"

@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, Scroll, Users, BarChart3, Settings, Wrench, History, Megaphone, TrendingUp, CreditCard } from "lucide-react";
+import { LayoutDashboard, FileText, Scroll, Users, BarChart3, Settings, Wrench, History, Megaphone, TrendingUp, CreditCard, ToggleRight } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
   Sidebar,
@@ -58,6 +58,7 @@ export function AdminSidebar({ isAdmin }: AdminSidebarProps) {
     {
       label: "Sistema",
       items: [
+        { title: "Funcionalidades", url: "/admin/features", icon: ToggleRight, adminOnly: true },
         { title: "Configurações", url: "/admin/settings", icon: Settings, adminOnly: true },
         { title: "GURU Checkout", url: "/admin/guru", icon: CreditCard, adminOnly: true },
         { title: "Ferramentas", url: "/admin/tools", icon: Wrench, permission: "tools" as const },
