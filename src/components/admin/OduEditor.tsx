@@ -290,15 +290,44 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
         console.log('✅ ODU ATUALIZADO COM SUCESSO:', data[0]);
         toast.success('Odu atualizado com sucesso');
       } else {
-        // Create new
+        // Create new - use .select() to confirm insertion
         console.log('🔍 CRIANDO NOVO ODU:', oduData);
-        const { error } = await supabase.from('odu').insert([oduData]);
+        const { data, error } = await supabase
+          .from('odu')
+          .insert([oduData])
+          .select();
 
         if (error) {
-          console.error('❌ ERRO AO CRIAR ODU:', error);
-          throw error;
+          console.error('❌ ERRO AO CRIAR ODU:', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+          });
+          
+          // Handle specific errors
+          if (error.code === '23505') {
+            setUpdateError(`Odu #${oduData.numero} já existe no banco de dados.`);
+            toast.error(`Odu #${oduData.numero} já existe. Use um número diferente.`);
+          } else if (error.code === '42501' || error.message?.includes('policy')) {
+            setUpdateError('Sem permissão para criar Odu. Verifique suas permissões.');
+            toast.error('Sem permissão. Faça login como admin ou colaborador.');
+          } else {
+            throw error;
+          }
+          setLoading(false);
+          return;
         }
-        console.log('✅ ODU CRIADO COM SUCESSO');
+
+        if (!data || data.length === 0) {
+          console.warn('⚠️ INSERT NÃO RETORNOU DADOS - Possível problema de RLS');
+          setUpdateError('Inserção não confirmada. Verifique suas permissões.');
+          toast.error('Inserção falhou. Verifique se você tem permissão.');
+          setLoading(false);
+          return;
+        }
+
+        console.log('✅ ODU CRIADO COM SUCESSO:', data[0]);
         toast.success('Odu criado com sucesso');
       }
 
