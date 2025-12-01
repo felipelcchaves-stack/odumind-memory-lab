@@ -89,7 +89,7 @@ export default function StudySession() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { hasActiveSubscription, loading: subscriptionLoading } = useSubscription();
-  const { isAdmin, isColaborador } = useAdmin();
+  const { isAdmin, isColaborador, loading: adminLoading } = useAdmin();
   
   // Core session state
   const [availableOdus, setAvailableOdus] = useState<Odu[]>([]);
@@ -139,15 +139,26 @@ export default function StudySession() {
     proxima_revisao: string;
     odu: { numero: number; nome: string };
   } | null>(null);
+  
+  // Track total Odus in database for low-odu mode detection
+  const [totalOdusInDb, setTotalOdusInDb] = useState(0);
+  const isLowOduMode = totalOdusInDb > 0 && totalOdusInDb < 5;
 
   useEffect(() => {
     if (!user) {
       navigate("/");
       return;
     }
+    
+    // Wait for admin role check to complete before initializing
+    if (adminLoading) {
+      console.log('⏳ Aguardando verificação de roles...');
+      return;
+    }
 
+    console.log('✅ Roles carregadas:', { isAdmin, isColaborador });
     initializeSession();
-  }, [user]);
+  }, [user, adminLoading]);
 
   // Auto-save session on unmount or page close
   useEffect(() => {
@@ -206,7 +217,8 @@ export default function StudySession() {
       const progress = await calculateUnlockProgress(user.id);
       setUnlockProgress(progress);
       
-      await fetchOdusForReview(progress);
+      // Pass admin status directly to avoid race condition
+      await fetchOdusForReview(progress, isAdmin, isColaborador);
     } catch (error) {
       console.error("Error initializing session:", error);
       toast.error("Erro ao inicializar sessão");
@@ -246,15 +258,19 @@ export default function StudySession() {
     }
   }
 
-  async function fetchOdusForReview(progress?: UnlockProgress | null) {
+  async function fetchOdusForReview(
+    progress?: UnlockProgress | null,
+    adminStatus?: boolean,
+    colaboradorStatus?: boolean
+  ) {
     if (!user) return;
 
     try {
       const isActiveSubscription = hasActiveSubscription();
       const currentLimit = progress?.currentLimit || FREE_LIMIT;
       
-      // Verificar se tem acesso total (assinante, admin ou colaborador)
-      const hasFullAccess = isActiveSubscription || isAdmin || isColaborador;
+      // Use passed admin status to avoid race condition with useAdmin hook
+      const hasFullAccess = isActiveSubscription || adminStatus || colaboradorStatus;
       
       // Fetch ALL Odus ordenados por número
       const { data: allOdus } = await supabase
@@ -264,18 +280,25 @@ export default function StudySession() {
 
       if (!allOdus || allOdus.length === 0) {
         setLoading(false);
+        setTotalOdusInDb(0);
         return;
       }
+
+      // Store total for low-odu mode detection
+      setTotalOdusInDb(allOdus.length);
 
       // Aplicar limite de QUANTIDADE (não filtro por campo numero)
       // Assinantes, admins e colaboradores têm acesso a todos
       const accessibleOdus = hasFullAccess ? allOdus : allOdus.slice(0, currentLimit);
       
       console.log('📊 Sessão de Estudo:', {
-        totalOdus: allOdus.length,
+        totalOdusNoBanco: allOdus.length,
         limiteAtual: currentLimit,
         hasFullAccess,
-        odusDisponiveis: accessibleOdus.length
+        isAdmin: adminStatus,
+        isColaborador: colaboradorStatus,
+        odusDisponiveis: accessibleOdus.length,
+        modoTeste: allOdus.length < 5
       });
 
       // Criar mix intercalado inteligente
@@ -290,7 +313,7 @@ export default function StudySession() {
         const nextReviewData = await fetchNextReviewDate();
         setNextReview(nextReviewData);
       } else {
-        selectRandomOdu(prioritizedOdus);
+        selectRandomOdu(prioritizedOdus, allOdus.length);
       }
     } catch (error) {
       console.error("Error fetching Odus for review:", error);
@@ -300,36 +323,51 @@ export default function StudySession() {
     }
   }
 
-  async function selectRandomOdu(odusPool?: Odu[]) {
+  async function selectRandomOdu(odusPool?: Odu[], totalInDb?: number) {
     let pool = odusPool || availableOdus;
+    const totalOdus = totalInDb || totalOdusInDb;
+    const lowOduMode = totalOdus > 0 && totalOdus < 5;
     
     console.log('📊 selectRandomOdu - Estado:', {
       poolLength: pool.length,
+      totalOdusInDb: totalOdus,
       isRecycling,
       studiedInSession: studiedInSession.size,
-      mode
+      mode,
+      lowOduMode
     });
     
-    // Se não há Odus disponíveis, reciclar ao invés de terminar
+    // Se não há Odus disponíveis
     if (pool.length === 0 && !isRecycling) {
+      // In low-odu mode, automatically recycle without error
+      if (lowOduMode && studiedInSession.size > 0) {
+        console.log("📚 Modo poucos Odus: reciclando automaticamente...");
+        setIsLoadingNext(true);
+        await recycleStudiedOdus();
+        setIsLoadingNext(false);
+        return;
+      }
+      
       console.log("Pool vazio, aguardando reciclagem...");
       setIsLoadingNext(true);
       await recycleStudiedOdus();
       setIsLoadingNext(false);
-      return; // recycleStudiedOdus já chama selectRandomOdu
+      return;
     }
     
-    // ✅ AGUARDAR pré-carregamento quando crítico (pool < 4)
-    if (pool.length <= 3 && !isRecycling && user) {
+    // Only try to preload if there are more Odus in DB than in current pool
+    // Skip preloading in low-odu mode to avoid unnecessary fetches
+    if (pool.length <= 3 && !isRecycling && user && !lowOduMode && pool.length < totalOdus) {
       console.log("Pool crítico, aguardando pré-carregamento...");
       setIsLoadingNext(true);
       const loaded = await preloadMoreOdus();
       setIsLoadingNext(false);
       
-      // Atualizar pool com os novos Odus
       if (loaded) {
         pool = availableOdus;
       }
+    } else if (pool.length <= 3 && lowOduMode) {
+      console.log('📊 Poucos Odus cadastrados, usando todos disponíveis sem pré-carregar');
     }
     
     if (pool.length === 0) {
@@ -370,10 +408,11 @@ export default function StudySession() {
         });
     }
     
-    // ✅ VERIFICAR: Se pool < 4, forçar flashcard (quiz precisa de 4 Odus)
+    // Force flashcard mode when pool < 4 (quiz needs 4 options)
+    // Also force flashcard in low-odu mode for simplicity
     const selectedMode = (Math.random() > 0.5 ? "flashcard" : "quiz") as StudyMode;
-    if (selectedMode === "quiz" && pool.length < 4) {
-      console.log("⚠️ Pool < 4, forçando flashcard mode");
+    if (selectedMode === "quiz" && (pool.length < 4 || lowOduMode)) {
+      console.log("⚠️ Pool < 4 ou modo poucos Odus, forçando flashcard mode");
       setMode("flashcard");
     } else {
       setMode(selectedMode);
@@ -869,7 +908,7 @@ export default function StudySession() {
 
   const sessionDuration = Date.now() - sessionStats.startTime;
 
-  if (loading || subscriptionLoading) {
+  if (loading || subscriptionLoading || adminLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -1049,6 +1088,17 @@ export default function StudySession() {
         <div className="mb-4 flex justify-center">
           <StoryModeToggle enabled={storyMode} onChange={setStoryMode} />
         </div>
+
+        {/* Low Odu Mode Alert */}
+        {isLowOduMode && (
+          <Alert className="mb-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20">
+            <Brain className="h-4 w-4" />
+            <AlertDescription className="ml-2">
+              📚 Sistema em modo de teste com {totalOdusInDb} Odu(s) cadastrado(s). 
+              Os mesmos Odus serão reciclados automaticamente para prática contínua.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Header with Session Stats */}
         <div className="mb-8">
