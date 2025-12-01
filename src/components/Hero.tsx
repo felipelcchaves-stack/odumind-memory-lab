@@ -2,21 +2,15 @@ import { Button } from "@/components/ui/button";
 import { BookOpen, Brain, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import heroPattern from "@/assets/hero-pattern.jpg";
-
 const Hero = () => {
   const navigate = useNavigate();
-
-  return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+  return <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background Pattern */}
-      <div 
-        className="absolute inset-0 z-0 opacity-10"
-        style={{
-          backgroundImage: `url(${heroPattern})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
-      />
+      <div className="absolute inset-0 z-0 opacity-10" style={{
+      backgroundImage: `url(${heroPattern})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center'
+    }} />
       
       {/* Gradient Overlay */}
       <div className="absolute inset-0 z-0 bg-gradient-to-br from-background via-background/95 to-primary/5" />
@@ -40,9 +34,7 @@ const Hero = () => {
           </h1>
 
           {/* Subheading */}
-          <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto">
-            Plataforma completa de memorização Yorubá. Método aprovado por +2.500 babalaôs e estudantes.
-          </p>
+          <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto">Plataforma completa de memorização Yorubá. Método aprovado por +2.500 Babalawo, Iyanifa, Awo e estudantes.</p>
 
           {/* Feature Pills */}
           <div className="flex flex-wrap justify-center gap-4 pt-4">
@@ -98,9 +90,9 @@ const Hero = () => {
 
       {/* Floating Elements */}
       <div className="absolute top-20 left-10 w-20 h-20 bg-primary/10 rounded-full blur-3xl animate-float" />
-      <div className="absolute bottom-20 right-10 w-32 h-32 bg-secondary/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
-    </section>
-  );
+      <div className="absolute bottom-20 right-10 w-32 h-32 bg-secondary/10 rounded-full blur-3xl animate-float" style={{
+      animationDelay: '1s'
+    }} />
+    </section>;
 };
-
 export default Hero;
