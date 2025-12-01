@@ -59,10 +59,10 @@ export default function BulkUpload({ onSuccess }: BulkUploadProps) {
     const errors: string[] = [];
     const rowNum = index + 1;
 
-    // Check numero
+    // Check numero - sem limite máximo
     const numero = parseInt(row.numero);
-    if (isNaN(numero) || numero < 1 || numero > 256) {
-      errors.push(`Linha ${rowNum}: Número inválido (${row.numero}). Deve ser entre 1 e 256.`);
+    if (isNaN(numero) || numero < 1) {
+      errors.push(`Linha ${rowNum}: Número inválido (${row.numero}). Deve ser um número positivo.`);
     }
 
     // Check nome
