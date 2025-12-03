@@ -2,8 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useChangelog } from '@/hooks/useChangelog';
-import ChangelogModal from '@/components/ChangelogModal';
+// Changelog modal removido - já está no App.tsx
 import ProductTour from '@/components/ProductTour';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -88,7 +87,7 @@ export default function Dashboard() {
   const { isProfileComplete, loading: profileLoading, refetch: refetchProfile } = useProfileCompletion();
   const [achievementsHistory, setAchievementsHistory] = useState<any[]>([]);
   const hasScheduledNotifications = useRef(false);
-  const { showModal, latestChangelog, markAsViewed, setShowModal } = useChangelog();
+  // Changelog removido - gerenciado globalmente no App.tsx
   const [hasCompletedFirstStudy, setHasCompletedFirstStudy] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showGlossary, setShowGlossary] = useState(false);
@@ -110,14 +109,7 @@ export default function Dashboard() {
     }
   }, [loading]);
 
-  // Debug log para changelog
-  useEffect(() => {
-    console.log('[Dashboard] Estado do changelog:', { 
-      showModal, 
-      hasChangelog: !!latestChangelog,
-      version: latestChangelog?.version
-    });
-  }, [showModal, latestChangelog]);
+  // Debug log de changelog removido - gerenciado no App.tsx
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -929,13 +921,7 @@ export default function Dashboard() {
       {/* Notification Prompt */}
       <NotificationPrompt />
       
-      {/* Changelog Modal */}
-      <ChangelogModal 
-        open={showModal}
-        onClose={() => setShowModal(false)}
-        changelog={latestChangelog}
-        onMarkAsViewed={markAsViewed}
-      />
+      {/* Changelog Modal removido - gerenciado globalmente no App.tsx */}
       
       {/* FASE 3: Glossário Flutuante */}
       <GlossaryDialog open={showGlossary} onOpenChange={setShowGlossary} />

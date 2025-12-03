@@ -22,14 +22,16 @@ export const useChangelog = () => {
   const [showModal, setShowModal] = useState(false);
   const [latestChangelog, setLatestChangelog] = useState<ChangelogVersion | null>(null);
   const [hasUnreadChangelog, setHasUnreadChangelog] = useState(false);
+  const [hasChecked, setHasChecked] = useState(false);
   const { user, session } = useAuth();
 
   useEffect(() => {
-    if (user) {
+    if (user && !hasChecked) {
       console.log('[Changelog] Usuário detectado, verificando novidades...');
       checkForNewChangelog();
+      setHasChecked(true);
     }
-  }, [user]);
+  }, [user, hasChecked]);
 
   const checkForNewChangelog = async () => {
     if (!user) return;
