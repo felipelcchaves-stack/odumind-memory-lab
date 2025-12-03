@@ -104,28 +104,15 @@ const Flashcard = memo(function Flashcard({
           msUserSelect: "none",
         }}
       >
-        <CardHeader>
-          <div className="flex items-center justify-between mb-4">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between mb-2">
             {!hideNumber && (
               <Badge variant="outline" className="text-xs px-2 py-0.5 text-muted-foreground">
                 #{numero}
               </Badge>
             )}
-            <MemorizationStatusBadge status={status as 'nao_estudado' | 'estudando' | 'memorizado'} />
-          </div>
-          <CardTitle className="text-xl md:text-2xl font-bold mb-4 break-words hyphens-auto">{nome}</CardTitle>
-          
-          <div className="flex items-center gap-2 flex-wrap justify-between">
             <div className="flex items-center gap-2">
-              {currentRevisoes > 0 && !isMemorized && (
-                  <Badge 
-                    variant="outline" 
-                    className={`${getStrengthBg(currentStrength)} ${getStrengthColor(currentStrength)}`}
-                  >
-                    Você sabe: {currentStrength}%
-                  </Badge>
-                )}
-              </div>
+              <MemorizationStatusBadge status={status as 'nao_estudado' | 'estudando' | 'memorizado'} />
               <Button
                 variant="ghost"
                 size="sm"
@@ -137,77 +124,87 @@ const Flashcard = memo(function Flashcard({
                 <RotateCcw className="h-4 w-4" />
               </Button>
             </div>
-
-          <div className="text-sm text-muted-foreground mt-4">
-            Clique para revelar o conteúdo completo
           </div>
+          <CardTitle className="text-xl md:text-2xl font-bold break-words hyphens-auto">{nome}</CardTitle>
           
-          {significado && (
-            <div className="mt-4 p-4 bg-muted/50 rounded-lg">
-              <p className="text-sm text-muted-foreground mb-1">💡 Significado:</p>
-              <SafeHtmlRenderer
-                html={significado}
-                className="font-medium text-sm prose prose-sm dark:prose-invert max-w-none break-words"
-              />
-            </div>
+          {currentRevisoes > 0 && !isMemorized && (
+            <Badge 
+              variant="outline" 
+              className={`mt-2 w-fit ${getStrengthBg(currentStrength)} ${getStrengthColor(currentStrength)}`}
+            >
+              Você sabe: {currentStrength}%
+            </Badge>
           )}
         </CardHeader>
 
-        <CardContent className="space-y-6">
-          {!isFlipped ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground text-lg mb-4">
-                Clique para revelar o conteúdo
-              </p>
-              <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
-                <RotateCcw className="h-8 w-8 text-primary animate-pulse" />
-              </div>
-            </div>
-          ) : (
-            <ScrollArea className="max-h-[45vh] md:max-h-[55vh] pr-2">
-              <div className="space-y-4">
-                {versoResumido && (
-                  <div className="bg-primary/10 dark:bg-primary/5 rounded-lg p-3 md:p-4 border-l-4 border-primary mb-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Sparkles className="h-4 w-4 text-primary animate-pulse flex-shrink-0" />
-                      <h4 className="font-semibold text-sm">Verso para Memorização:</h4>
-                    </div>
-                    <p className="text-sm md:text-base italic font-medium break-words">"{versoResumido}"</p>
-                  </div>
-                )}
-
-                <div>
-                  <h4 className="font-semibold mb-2">Texto Principal:</h4>
+        <CardContent className="pt-2 flex-1 overflow-hidden">
+          <ScrollArea className="h-[calc(100vh-400px)] md:h-[calc(100vh-380px)]">
+            <div className="pr-3 space-y-4">
+              {/* Significado - agora dentro do scroll */}
+              {significado && (
+                <div className="p-3 md:p-4 bg-muted/50 rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-1">💡 Significado:</p>
                   <SafeHtmlRenderer
-                    html={texto}
-                    className="text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none break-words overflow-wrap-anywhere"
+                    html={significado}
+                    className="font-medium text-sm prose prose-sm dark:prose-invert max-w-none break-words"
                   />
                 </div>
+              )}
 
-                {verso && (
-                  <div>
-                    <h4 className="font-semibold mb-2">Verso Completo:</h4>
-                    <SafeHtmlRenderer
-                      html={verso}
-                      className="border-l-4 border-primary pl-4 italic text-muted-foreground prose prose-sm dark:prose-invert max-w-none break-words"
-                    />
-                  </div>
-                )}
-
-                {/* Progress indicator */}
-                <div className={`p-3 rounded-lg ${getStrengthBg(currentStrength)}`}>
-                  <div className="flex items-center justify-between text-sm flex-wrap gap-2">
-                    <span className={`font-medium ${getStrengthColor(currentStrength)}`}>
-                      {currentStrength >= 61 ? "🟢 Você domina bem" : currentStrength >= 31 ? "🟡 Progredindo" : "🔴 Começando"}
-                    </span>
-                    <span className={`${getStrengthColor(currentStrength)}`}>
-                      {currentRevisoes > 0 ? `Você sabe ${currentStrength}%` : "Primeira vez"}
-                    </span>
+              {!isFlipped ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground text-base mb-4">
+                    Clique para revelar o conteúdo
+                  </p>
+                  <div className="w-14 h-14 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
+                    <RotateCcw className="h-6 w-6 text-primary animate-pulse" />
                   </div>
                 </div>
-              </div>
-            </ScrollArea>
-          )}
+              ) : (
+                <div className="space-y-4">
+                  {versoResumido && (
+                    <div className="bg-primary/10 dark:bg-primary/5 rounded-lg p-3 md:p-4 border-l-4 border-primary">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Sparkles className="h-4 w-4 text-primary animate-pulse flex-shrink-0" />
+                        <h4 className="font-semibold text-sm">Verso para Memorização:</h4>
+                      </div>
+                      <p className="text-sm md:text-base italic font-medium break-words">"{versoResumido}"</p>
+                    </div>
+                  )}
+
+                  <div>
+                    <h4 className="font-semibold mb-2">Texto Principal:</h4>
+                    <SafeHtmlRenderer
+                      html={texto}
+                      className="text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none break-words overflow-wrap-anywhere"
+                    />
+                  </div>
+
+                  {verso && (
+                    <div>
+                      <h4 className="font-semibold mb-2">Verso Completo:</h4>
+                      <SafeHtmlRenderer
+                        html={verso}
+                        className="border-l-4 border-primary pl-4 italic text-muted-foreground prose prose-sm dark:prose-invert max-w-none break-words"
+                      />
+                    </div>
+                  )}
+
+                  {/* Progress indicator */}
+                  <div className={`p-3 rounded-lg ${getStrengthBg(currentStrength)}`}>
+                    <div className="flex items-center justify-between text-sm flex-wrap gap-2">
+                      <span className={`font-medium ${getStrengthColor(currentStrength)}`}>
+                        {currentStrength >= 61 ? "🟢 Você domina bem" : currentStrength >= 31 ? "🟡 Progredindo" : "🔴 Começando"}
+                      </span>
+                      <span className={`${getStrengthColor(currentStrength)}`}>
+                        {currentRevisoes > 0 ? `Você sabe ${currentStrength}%` : "Primeira vez"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
         </CardContent>
       </Card>
 
