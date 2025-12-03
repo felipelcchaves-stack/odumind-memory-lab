@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { AlertCircle } from 'lucide-react';
-import { OnboardingModal } from '@/components/OnboardingModal';
 
 interface ProfileCompletionModalProps {
   open: boolean;
@@ -23,7 +22,6 @@ const BRAZIL_STATES = [
 export function ProfileCompletionModal({ open, onComplete }: ProfileCompletionModalProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const [formData, setFormData] = useState({
     pais: 'Brasil',
     estado: '',
@@ -57,8 +55,8 @@ export function ProfileCompletionModal({ open, onComplete }: ProfileCompletionMo
 
       toast.success('Perfil completado com sucesso!');
       
-      // Mostra o onboarding após completar o perfil
-      setShowOnboarding(true);
+      // Chama onComplete diretamente - ProfileCompletionChecker vai mostrar OnboardingModal
+      onComplete();
     } catch (error) {
       console.error('Error completing profile:', error);
       toast.error('Erro ao salvar informações do perfil');
@@ -66,21 +64,6 @@ export function ProfileCompletionModal({ open, onComplete }: ProfileCompletionMo
       setLoading(false);
     }
   };
-
-  const handleOnboardingComplete = () => {
-    setShowOnboarding(false);
-    onComplete();
-  };
-
-  // Mostra onboarding se o perfil foi completado
-  if (showOnboarding) {
-    return (
-      <OnboardingModal 
-        open={showOnboarding}
-        onComplete={handleOnboardingComplete}
-      />
-    );
-  }
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>

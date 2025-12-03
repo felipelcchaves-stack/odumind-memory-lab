@@ -79,8 +79,13 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
     setLoading(true);
     
     try {
-      // NÃO marca onboarding como completo aqui
-      // O DashboardTour vai marcar quando o usuário completar o tour
+      // ✅ MARCAR onboarding como completo NO BANCO antes de fechar
+      const { error } = await supabase
+        .from('profiles')
+        .update({ onboarding_completed: true })
+        .eq('user_id', user?.id);
+      
+      if (error) throw error;
       
       // Celebração com confetti
       confetti({
@@ -91,7 +96,7 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
 
       toast.success('🎉 Agora vamos conhecer o Dashboard!');
       
-      // Sinaliza para iniciar o tour do dashboard
+      // Sinaliza para iniciar o tour do dashboard (opcional)
       localStorage.setItem('start_dashboard_tour', 'true');
       
       // Aguarda um pouco antes de fechar o modal
