@@ -1083,7 +1083,7 @@ export default function StudySession() {
           onComplete={() => setShowXPNotification(false)} 
         />
       
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 pb-28 md:pb-8">
         {/* Story Mode Toggle */}
         <div className="mb-4 flex justify-center">
           <StoryModeToggle enabled={storyMode} onChange={setStoryMode} />

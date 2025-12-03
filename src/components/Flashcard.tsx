@@ -209,28 +209,31 @@ const Flashcard = memo(function Flashcard({
       </Card>
 
       {isFlipped && (
-        <div className="mt-6 space-y-3">
+        <div className="mt-6 space-y-3 pb-4">
           <p className="text-center text-sm text-muted-foreground">
             Quão fácil foi memorizar este Odu?
           </p>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2 md:gap-3">
             <Button
               variant="outline"
-              className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+              size="lg"
+              className="h-12 md:h-10 text-sm border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
               onClick={() => onRate(1)}
             >
               Difícil
             </Button>
             <Button
               variant="outline"
-              className="border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white"
+              size="lg"
+              className="h-12 md:h-10 text-sm border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white"
               onClick={() => onRate(3)}
             >
               Médio
             </Button>
             <Button
               variant="outline"
-              className="border-green-500 text-green-500 hover:bg-green-500 hover:text-white"
+              size="lg"
+              className="h-12 md:h-10 text-sm border-green-500 text-green-500 hover:bg-green-500 hover:text-white"
               onClick={() => onRate(5)}
             >
               Fácil
