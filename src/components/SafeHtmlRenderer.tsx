@@ -77,7 +77,7 @@ export function SafeHtmlRenderer({ html, className }: SafeHtmlRendererProps) {
   
   return (
     <div
-      className={className}
+      className={`break-words ${className || ''}`}
       dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
     />
   );

@@ -7,6 +7,31 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* Utilitário para quebra de palavras longas */
+.overflow-wrap-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Garantir que tabelas dentro de prose não quebrem o layout */
+.prose table {
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* Ajuste de prose para mobile */
+@media (max-width: 640px) {
+  .prose {
+    font-size: 0.875rem;
+    line-height: 1.6;
+  }
+  
+  .prose h1, .prose h2, .prose h3, .prose h4 {
+    word-break: break-word;
+  }
+}
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */

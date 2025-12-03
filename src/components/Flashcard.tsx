@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { RotateCcw, Sparkles } from "lucide-react";
 import MemorizationStatusBadge from "@/components/MemorizationStatusBadge";
 import MilestoneCelebration from "@/components/MilestoneCelebration";
@@ -92,7 +93,7 @@ const Flashcard = memo(function Flashcard({
       )}
 
       <Card 
-        className={`min-h-[400px] cursor-pointer transition-all hover:shadow-lg ${
+        className={`min-h-[400px] max-h-[calc(100vh-220px)] overflow-hidden cursor-pointer transition-all hover:shadow-lg ${
           currentMilestone ? 'animate-scale-in' : ''
         }`}
         onClick={() => setIsFlipped(!isFlipped)}
@@ -112,7 +113,7 @@ const Flashcard = memo(function Flashcard({
             )}
             <MemorizationStatusBadge status={status as 'nao_estudado' | 'estudando' | 'memorizado'} />
           </div>
-          <CardTitle className="text-2xl font-bold mb-4">{nome}</CardTitle>
+          <CardTitle className="text-xl md:text-2xl font-bold mb-4 break-words hyphens-auto">{nome}</CardTitle>
           
           <div className="flex items-center gap-2 flex-wrap justify-between">
             <div className="flex items-center gap-2">
@@ -146,7 +147,7 @@ const Flashcard = memo(function Flashcard({
               <p className="text-sm text-muted-foreground mb-1">💡 Significado:</p>
               <SafeHtmlRenderer
                 html={significado}
-                className="font-medium text-sm prose prose-sm dark:prose-invert max-w-none"
+                className="font-medium text-sm prose prose-sm dark:prose-invert max-w-none break-words"
               />
             </div>
           )}
@@ -163,47 +164,49 @@ const Flashcard = memo(function Flashcard({
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              {versoResumido && (
-                <div className="bg-primary/10 dark:bg-primary/5 rounded-lg p-4 border-l-4 border-primary mb-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="h-4 w-4 text-primary animate-pulse" />
-                    <h4 className="font-semibold text-sm">Verso para Memorização:</h4>
+            <ScrollArea className="max-h-[45vh] md:max-h-[55vh] pr-2">
+              <div className="space-y-4">
+                {versoResumido && (
+                  <div className="bg-primary/10 dark:bg-primary/5 rounded-lg p-3 md:p-4 border-l-4 border-primary mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sparkles className="h-4 w-4 text-primary animate-pulse flex-shrink-0" />
+                      <h4 className="font-semibold text-sm">Verso para Memorização:</h4>
+                    </div>
+                    <p className="text-sm md:text-base italic font-medium break-words">"{versoResumido}"</p>
                   </div>
-                  <p className="text-base italic font-medium">"{versoResumido}"</p>
-                </div>
-              )}
+                )}
 
-              <div>
-                <h4 className="font-semibold mb-2">Texto Principal:</h4>
-              <SafeHtmlRenderer
-                html={texto}
-                className="text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none"
-              />
-              </div>
-
-              {verso && (
                 <div>
-                  <h4 className="font-semibold mb-2">Verso Completo:</h4>
-              <SafeHtmlRenderer
-                html={verso}
-                className="border-l-4 border-primary pl-4 italic text-muted-foreground prose prose-sm dark:prose-invert"
-              />
+                  <h4 className="font-semibold mb-2">Texto Principal:</h4>
+                  <SafeHtmlRenderer
+                    html={texto}
+                    className="text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none break-words overflow-wrap-anywhere"
+                  />
                 </div>
-              )}
 
-              {/* Progress indicator */}
-              <div className={`p-3 rounded-lg ${getStrengthBg(currentStrength)}`}>
-                <div className="flex items-center justify-between text-sm">
-                  <span className={`font-medium ${getStrengthColor(currentStrength)}`}>
-                    {currentStrength >= 61 ? "🟢 Você domina bem" : currentStrength >= 31 ? "🟡 Progredindo" : "🔴 Começando"}
-                  </span>
-                  <span className={`${getStrengthColor(currentStrength)}`}>
-                    {currentRevisoes > 0 ? `Você sabe ${currentStrength}%` : "Primeira vez"}
-                  </span>
+                {verso && (
+                  <div>
+                    <h4 className="font-semibold mb-2">Verso Completo:</h4>
+                    <SafeHtmlRenderer
+                      html={verso}
+                      className="border-l-4 border-primary pl-4 italic text-muted-foreground prose prose-sm dark:prose-invert max-w-none break-words"
+                    />
+                  </div>
+                )}
+
+                {/* Progress indicator */}
+                <div className={`p-3 rounded-lg ${getStrengthBg(currentStrength)}`}>
+                  <div className="flex items-center justify-between text-sm flex-wrap gap-2">
+                    <span className={`font-medium ${getStrengthColor(currentStrength)}`}>
+                      {currentStrength >= 61 ? "🟢 Você domina bem" : currentStrength >= 31 ? "🟡 Progredindo" : "🔴 Começando"}
+                    </span>
+                    <span className={`${getStrengthColor(currentStrength)}`}>
+                      {currentRevisoes > 0 ? `Você sabe ${currentStrength}%` : "Primeira vez"}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            </ScrollArea>
           )}
         </CardContent>
       </Card>
