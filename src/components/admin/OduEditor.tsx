@@ -17,6 +17,7 @@ import './quill-custom.css';
 import { z } from 'zod';
 import { sanitizeQuillHtml } from '@/lib/markdownUtils';
 import ImageUploader from './ImageUploader';
+import { formatSignificado } from '@/lib/significadoFormatter';
 
 const oduSchema = z.object({
   numero: z.number()
@@ -250,7 +251,7 @@ export default function OduEditor({ oduId, onSaved, onCancel }: OduEditorProps) 
         texto_principal: validation.data.texto_principal,
         verso: validation.data.verso ?? null,
         verso_resumido: formData.verso_resumido || null,
-        significado: validation.data.significado ?? null,
+        significado: formatSignificado(validation.data.significado) ?? null,
         exemplos_praticos: validation.data.exemplos_praticos ?? null,
         tags: validation.data.tags ?? null,
         contexto_historico: formData.contexto_historico || null,

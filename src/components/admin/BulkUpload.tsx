@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, FileText, Download, AlertTriangle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import Papa from 'papaparse';
+import { formatSignificado } from '@/lib/significadoFormatter';
 
 interface BulkUploadProps {
   onSuccess: () => void;
@@ -160,7 +161,7 @@ export default function BulkUpload({ onSuccess }: BulkUploadProps) {
                 texto_principal: row.texto_principal.trim(),
                 verso: row.verso?.trim() || null,
                 verso_resumido: row.verso_resumido?.trim() || null,
-                significado: row.significado?.trim() || null,
+                significado: formatSignificado(row.significado?.trim()),
                 exemplos_praticos: row.exemplos_praticos?.trim() || null,
                 contexto_historico: row.contexto_historico?.trim() || null,
                 tags: row.tags ? row.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : null,
@@ -239,7 +240,7 @@ export default function BulkUpload({ onSuccess }: BulkUploadProps) {
         texto_principal: row.texto_principal.trim(),
         verso: row.verso?.trim() || null,
         verso_resumido: row.verso_resumido?.trim() || null,
-        significado: row.significado?.trim() || null,
+        significado: formatSignificado(row.significado?.trim()),
         exemplos_praticos: row.exemplos_praticos?.trim() || null,
         contexto_historico: row.contexto_historico?.trim() || null,
         tags: Array.isArray(row.tags) ? row.tags.filter(Boolean) : null,
