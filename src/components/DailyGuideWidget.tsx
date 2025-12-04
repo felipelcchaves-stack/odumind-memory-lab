@@ -1,7 +1,8 @@
-import { CheckCircle, Circle } from 'lucide-react';
+import { CheckCircle, Circle, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
+import { useCurrentPhase } from '@/hooks/useCurrentPhase';
 
 interface DailyGuideWidgetProps {
   reviewCount: number;
@@ -17,6 +18,37 @@ export function DailyGuideWidget({
   hasPracticedPrayer 
 }: DailyGuideWidgetProps) {
   const navigate = useNavigate();
+  const { currentPhase, hasStartedJourney, loading } = useCurrentPhase();
+
+  const getMainCTA = () => {
+    if (!hasStartedJourney) {
+      return {
+        label: '🚀 Iniciar Jornada',
+        action: () => navigate('/caminho-ifa'),
+      };
+    }
+
+    if (reviewCount > 0 && currentPhase) {
+      return {
+        label: `📖 Revisar ${reviewCount} Odu`,
+        action: () => navigate(`/study?fase=${currentPhase.slug}`),
+      };
+    }
+
+    if (currentPhase && currentPhase.status !== 'completed') {
+      return {
+        label: `📚 Continuar: ${currentPhase.nome}`,
+        action: () => navigate(`/study?fase=${currentPhase.slug}`),
+      };
+    }
+
+    return {
+      label: '🗺️ Ver Caminho de Ifá',
+      action: () => navigate('/caminho-ifa'),
+    };
+  };
+
+  const mainCTA = getMainCTA();
 
   return (
     <Card className="border-2 border-blue-300 bg-blue-50 dark:bg-blue-950 dark:border-blue-700">
@@ -26,6 +58,20 @@ export function DailyGuideWidget({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Fase Atual */}
+        {currentPhase && !loading && (
+          <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 mb-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+              <MapPin className="h-4 w-4" />
+              Fase Atual
+            </div>
+            <p className="font-semibold text-foreground">{currentPhase.nome}</p>
+            <p className="text-sm text-muted-foreground">
+              {currentPhase.memorizedCount}/{currentPhase.totalCount} Odus ({currentPhase.completionPercentage}%)
+            </p>
+          </div>
+        )}
+
         <div className="space-y-3">
           <div className="flex items-center gap-3 p-3 rounded-lg bg-background/50">
             {hasStudiedToday && reviewCount === 0 ? (
@@ -60,10 +106,22 @@ export function DailyGuideWidget({
         <Button 
           size="lg" 
           className="w-full text-lg font-semibold" 
-          onClick={() => reviewCount > 0 ? navigate('/study') : navigate('/biblioteca-yoruba')}
+          onClick={mainCTA.action}
+          disabled={loading}
         >
-          {reviewCount > 0 ? '🚀 Começar Revisões' : '📚 Explorar Conteúdo'}
+          {mainCTA.label}
         </Button>
+
+        {hasStartedJourney && (
+          <Button 
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={() => navigate('/caminho-ifa')}
+          >
+            🗺️ Ver Mapa do Caminho
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

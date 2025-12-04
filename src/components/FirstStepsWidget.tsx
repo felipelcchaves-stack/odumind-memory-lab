@@ -1,7 +1,8 @@
-import { CheckCircle, Circle } from 'lucide-react';
+import { CheckCircle, Circle, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
+import { useCurrentPhase } from '@/hooks/useCurrentPhase';
 
 interface FirstStepsWidgetProps {
   hasCompletedFirstStudy: boolean;
@@ -10,6 +11,12 @@ interface FirstStepsWidgetProps {
 
 export function FirstStepsWidget({ hasCompletedFirstStudy, onStartStudy }: FirstStepsWidgetProps) {
   const navigate = useNavigate();
+  const { currentPhase, hasStartedJourney, totalPhasesCompleted } = useCurrentPhase();
+
+  // Navega para o Caminho de Ifá ao clicar em "Começar"
+  const handleStartJourney = () => {
+    navigate('/caminho-ifa');
+  };
 
   return (
     <Card className="border-primary shadow-medium bg-gradient-to-br from-primary/5 to-secondary/5">
@@ -25,25 +32,29 @@ export function FirstStepsWidget({ hasCompletedFirstStudy, onStartStudy }: First
             <span className="font-medium">1. Cadastro completo ✓</span>
           </div>
           
-          <div className={`flex items-center gap-3 p-2 rounded-lg ${hasCompletedFirstStudy ? 'bg-background/50' : 'bg-primary/10'}`}>
-            {hasCompletedFirstStudy ? (
+          <div className={`flex items-center gap-3 p-2 rounded-lg ${hasStartedJourney ? 'bg-background/50' : 'bg-primary/10'}`}>
+            {hasStartedJourney ? (
               <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
             ) : (
               <Circle className="h-5 w-5 text-muted-foreground flex-shrink-0" />
             )}
-            <span className={hasCompletedFirstStudy ? 'font-medium' : 'font-semibold'}>
-              2. Faça seu primeiro estudo
+            <span className={hasStartedJourney ? 'font-medium' : 'font-semibold'}>
+              2. Iniciar o Caminho de Ifá
             </span>
           </div>
 
           <div className="flex items-center gap-3 p-2 rounded-lg bg-background/50">
-            <Circle className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-            <span>3. Explorar os 256 Odu e 50+ Rituais</span>
+            {totalPhasesCompleted > 0 ? (
+              <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+            ) : (
+              <Circle className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+            )}
+            <span>3. Completar primeira fase</span>
           </div>
 
           <div className="flex items-center gap-3 p-2 rounded-lg bg-background/50">
             <Circle className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-            <span>4. Praticar seu primeiro Ritual</span>
+            <span>4. Explorar Rituais e Rezas</span>
           </div>
 
           <div className="flex items-center gap-3 p-2 rounded-lg bg-background/50">
@@ -52,30 +63,54 @@ export function FirstStepsWidget({ hasCompletedFirstStudy, onStartStudy }: First
           </div>
         </div>
 
-        {!hasCompletedFirstStudy ? (
+        {!hasStartedJourney ? (
           <Button 
             size="lg" 
             className="w-full mt-4 text-lg font-semibold" 
-            onClick={onStartStudy}
+            onClick={handleStartJourney}
           >
-            🚀 Começar Meu Primeiro Estudo
+            🚀 Iniciar Caminho de Ifá
           </Button>
         ) : (
           <div className="space-y-2 mt-4">
+            {/* Fase atual */}
+            {currentPhase && (
+              <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 mb-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MapPin className="h-4 w-4" />
+                  Sua Fase Atual
+                </div>
+                <p className="font-semibold">{currentPhase.nome}</p>
+                <p className="text-sm text-muted-foreground">
+                  {currentPhase.completionPercentage}% concluído
+                </p>
+              </div>
+            )}
+            
+            <Button 
+              className="w-full"
+              onClick={() => currentPhase 
+                ? navigate(`/study?fase=${currentPhase.slug}`)
+                : navigate('/caminho-ifa')
+              }
+            >
+              📚 Continuar Estudando
+            </Button>
+            
             <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={() => navigate('/caminho-ifa')}
+              >
+                🗺️ Ver Caminho
+              </Button>
               <Button 
                 variant="outline" 
                 className="flex-1"
                 onClick={() => navigate('/biblioteca-yoruba')}
               >
-                📚 Ver Biblioteca
-              </Button>
-              <Button 
-                variant="outline" 
-                className="flex-1"
-                onClick={() => navigate('/settings')}
-              >
-                ⚙️ Configurar
+                📖 Biblioteca
               </Button>
             </div>
             <Button 

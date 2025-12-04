@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -85,11 +85,24 @@ type StudyMode = "flashcard" | "quiz";
 
 const FREE_LIMIT = 5; // Limite para usuários gratuitos (agora progressivo)
 
+interface PhaseInfo {
+  id: string;
+  nome: string;
+  slug: string;
+  odus_incluidos: number[];
+}
+
 export default function StudySession() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { hasActiveSubscription, loading: subscriptionLoading } = useSubscription();
   const { isAdmin, isColaborador, loading: adminLoading } = useAdmin();
+  
+  // Phase context - now required
+  const faseSlug = searchParams.get('fase');
+  const [currentPhaseInfo, setCurrentPhaseInfo] = useState<PhaseInfo | null>(null);
+  const [phaseLoading, setPhaseLoading] = useState(true);
   
   // Core session state
   const [availableOdus, setAvailableOdus] = useState<Odu[]>([]);
@@ -144,21 +157,67 @@ export default function StudySession() {
   const [totalOdusInDb, setTotalOdusInDb] = useState(0);
   const isLowOduMode = totalOdusInDb > 0 && totalOdusInDb < 5;
 
+  // Load phase info from slug
+  useEffect(() => {
+    async function loadPhaseInfo() {
+      if (!faseSlug) {
+        setPhaseLoading(false);
+        return;
+      }
+
+      try {
+        const { data: phase, error } = await supabase
+          .from('learning_phases')
+          .select('id, nome, slug, odus_incluidos')
+          .eq('slug', faseSlug)
+          .single();
+
+        if (error || !phase) {
+          console.error('Fase não encontrada:', faseSlug);
+          toast.error('Fase não encontrada');
+          navigate('/caminho-ifa');
+          return;
+        }
+
+        setCurrentPhaseInfo(phase);
+      } catch (err) {
+        console.error('Erro ao carregar fase:', err);
+      } finally {
+        setPhaseLoading(false);
+      }
+    }
+
+    loadPhaseInfo();
+  }, [faseSlug, navigate]);
+
+  // Redirect if no phase parameter
+  useEffect(() => {
+    if (!phaseLoading && !faseSlug && user) {
+      toast.info('Selecione uma fase no Caminho de Ifá para estudar');
+      navigate('/caminho-ifa');
+    }
+  }, [phaseLoading, faseSlug, user, navigate]);
+
   useEffect(() => {
     if (!user) {
       navigate("/");
       return;
     }
     
-    // Wait for admin role check to complete before initializing
-    if (adminLoading) {
-      console.log('⏳ Aguardando verificação de roles...');
+    // Wait for admin role check and phase to load
+    if (adminLoading || phaseLoading) {
+      console.log('⏳ Aguardando verificação de roles ou fase...');
       return;
     }
 
-    console.log('✅ Roles carregadas:', { isAdmin, isColaborador });
+    // Only initialize if we have a valid phase
+    if (!currentPhaseInfo) {
+      return;
+    }
+
+    console.log('✅ Roles carregadas:', { isAdmin, isColaborador, fase: currentPhaseInfo.nome });
     initializeSession();
-  }, [user, adminLoading]);
+  }, [user, adminLoading, phaseLoading, currentPhaseInfo]);
 
   // Auto-save session on unmount or page close
   useEffect(() => {
@@ -287,18 +346,32 @@ export default function StudySession() {
       // Store total for low-odu mode detection
       setTotalOdusInDb(allOdus.length);
 
+      // NOVO: Filtrar por fase se tiver parâmetro
+      let phaseOdus = allOdus;
+      if (currentPhaseInfo && currentPhaseInfo.odus_incluidos.length > 0) {
+        phaseOdus = allOdus.filter(odu => 
+          currentPhaseInfo.odus_incluidos.includes(odu.numero)
+        );
+        console.log(`📌 Filtrando por fase "${currentPhaseInfo.nome}":`, {
+          odusNaFase: currentPhaseInfo.odus_incluidos,
+          odusEncontrados: phaseOdus.length,
+        });
+      }
+
       // Aplicar limite de QUANTIDADE (não filtro por campo numero)
-      // Assinantes, admins e colaboradores têm acesso a todos
-      const accessibleOdus = hasFullAccess ? allOdus : allOdus.slice(0, currentLimit);
+      // Assinantes, admins e colaboradores têm acesso a todos os da fase
+      const accessibleOdus = hasFullAccess ? phaseOdus : phaseOdus.slice(0, currentLimit);
       
       console.log('📊 Sessão de Estudo:', {
         totalOdusNoBanco: allOdus.length,
+        odusNaFase: phaseOdus.length,
+        faseAtual: currentPhaseInfo?.nome || 'N/A',
         limiteAtual: currentLimit,
         hasFullAccess,
         isAdmin: adminStatus,
         isColaborador: colaboradorStatus,
         odusDisponiveis: accessibleOdus.length,
-        modoTeste: allOdus.length < 5
+        modoTeste: phaseOdus.length < 5
       });
 
       // Criar mix intercalado inteligente
@@ -313,7 +386,7 @@ export default function StudySession() {
         const nextReviewData = await fetchNextReviewDate();
         setNextReview(nextReviewData);
       } else {
-        selectRandomOdu(prioritizedOdus, allOdus.length);
+        selectRandomOdu(prioritizedOdus, phaseOdus.length);
       }
     } catch (error) {
       console.error("Error fetching Odus for review:", error);
@@ -942,8 +1015,8 @@ export default function StudySession() {
               <Button onClick={() => navigate("/subscription")} className="w-full">
                 Ver Planos
               </Button>
-              <Button onClick={() => navigate("/dashboard")} variant="outline" className="w-full">
-                Voltar ao Dashboard
+              <Button onClick={() => navigate("/caminho-ifa")} variant="outline" className="w-full">
+                Voltar ao Caminho de Ifá
               </Button>
             </div>
           </CardContent>
@@ -991,11 +1064,11 @@ export default function StudySession() {
             )}
             
             <div className="space-y-2">
-              <Button onClick={() => navigate("/odu")} className="w-full">
-                Explorar Biblioteca
+              <Button onClick={() => navigate("/caminho-ifa")} className="w-full">
+                Continuar no Caminho de Ifá
               </Button>
-              <Button onClick={() => navigate("/dashboard")} variant="outline" className="w-full">
-                Voltar ao Dashboard
+              <Button onClick={() => navigate("/biblioteca-yoruba")} variant="outline" className="w-full">
+                Explorar Biblioteca
               </Button>
             </div>
           </CardContent>
@@ -1039,11 +1112,11 @@ export default function StudySession() {
               {user && <BadgesDisplay userId={user.id} compact />}
             </div>
             <div className="space-y-2">
-              <Button onClick={() => navigate("/dashboard")} className="w-full" variant="hero" size="lg">
-                Voltar ao Dashboard
+              <Button onClick={() => navigate("/caminho-ifa")} className="w-full" variant="hero" size="lg">
+                Continuar no Caminho
               </Button>
-              <Button onClick={() => window.location.reload()} className="w-full" variant="outline" size="lg">
-                Nova Sessão
+              <Button onClick={() => currentPhaseInfo ? navigate(`/study?fase=${currentPhaseInfo.slug}`) : window.location.reload()} className="w-full" variant="outline" size="lg">
+                Nova Sessão nesta Fase
               </Button>
             </div>
           </CardContent>
@@ -1062,10 +1135,10 @@ export default function StudySession() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-muted-foreground text-center">
-              Não há Odus disponíveis para estudo no momento.
+              Não há Odus disponíveis para estudo nesta fase.
             </p>
-            <Button onClick={() => navigate("/dashboard")} className="w-full">
-              Voltar ao Dashboard
+            <Button onClick={() => navigate("/caminho-ifa")} className="w-full">
+              Voltar ao Caminho de Ifá
             </Button>
           </CardContent>
         </Card>
@@ -1102,10 +1175,25 @@ export default function StudySession() {
 
         {/* Header with Session Stats */}
         <div className="mb-8">
-          <Button variant="ghost" onClick={() => navigate("/dashboard")} className="mb-4">
+          <Button variant="ghost" onClick={() => navigate("/caminho-ifa")} className="mb-4">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar ao Dashboard
+            Voltar ao Caminho de Ifá
           </Button>
+
+          {/* Phase Context Badge */}
+          {currentPhaseInfo && (
+            <div className="mb-4 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="text-xl">{currentPhaseInfo.nome.includes('Oju') ? '📖' : '👨‍👩‍👧‍👦'}</span>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Estudando na Fase</p>
+                  <p className="font-semibold text-lg">{currentPhaseInfo.nome}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Progress Indicator */}
           {availableOdus.length > 0 && (
