@@ -7,6 +7,11 @@
  * - "Ifa diz" 
  * - "IFÁ diz"
  * - "IFA diz"
+ * 
+ * Garante que sempre haja DUAS quebras de linha antes de "Ifá diz":
+ * - Se não houver quebra: adiciona \n\n
+ * - Se houver apenas uma quebra (\n): converte para \n\n
+ * - Se já houver duas quebras (\n\n): mantém como está
  */
 export function formatSignificado(text: string | null | undefined): string | null {
   if (!text || typeof text !== 'string') return null;
@@ -17,25 +22,52 @@ export function formatSignificado(text: string | null | undefined): string | nul
   // Detecta se é HTML ou texto puro
   const isHtml = /<[^>]+>/.test(trimmed);
   
-  // Regex para detectar variações de "Ifá diz" (case insensitive)
-  // Captura "Ifá diz", "Ifa diz", "IFÁ diz", "IFA diz"
-  const ifaDizPattern = /(Ifá\s+diz|Ifa\s+diz|IFÁ\s+diz|IFA\s+diz)/gi;
+  // Padrão para detectar variações de "Ifá diz" (case insensitive)
+  const ifaDizVariants = '(Ifá\\s+diz|Ifa\\s+diz|IFÁ\\s+diz|IFA\\s+diz)';
   
   let result = trimmed;
   
   if (isHtml) {
-    // Para HTML: adiciona <br><br> antes de "Ifá diz" se não houver já
-    // Não adiciona se já tiver <br>, <p>, </p> antes
-    const htmlBreakPattern = /(?<!<br\s*\/?\>\s*)(?<!<br\s*\/?\>\s*<br\s*\/?\>\s*)(?<!<\/p>\s*)(?<!<p>\s*)(Ifá\s+diz|Ifa\s+diz|IFÁ\s+diz|IFA\s+diz)/gi;
-    result = result.replace(htmlBreakPattern, '<br><br>$1');
+    // Para HTML: garantir <br><br> antes de "Ifá diz"
+    
+    // ETAPA 1: Normalizar - converter qualquer combinação de <br> antes de "Ifá diz" para marcador
+    // Isso captura: <br>Ifá, <br><br>Ifá, <br/><br/>Ifá, etc.
+    result = result.replace(
+      new RegExp(`(<br\\s*\\/?>\\s*)+${ifaDizVariants}`, 'gi'),
+      '{{BREAK_MARKER}}$1'
+    );
+    
+    // ETAPA 2: Adicionar marcador onde não há nenhuma quebra antes de "Ifá diz"
+    result = result.replace(
+      new RegExp(`(?<!>)(?<!{{BREAK_MARKER}})${ifaDizVariants}`, 'gi'),
+      '{{BREAK_MARKER}}$1'
+    );
+    
+    // ETAPA 3: Substituir todos os marcadores por <br><br>
+    result = result.replace(/{{BREAK_MARKER}}/g, '<br><br>');
+    
   } else {
-    // Para texto puro: adiciona \n\n antes de "Ifá diz" se não houver já
-    // Não adiciona se já tiver quebra de linha antes
-    const textBreakPattern = /(?<!\n\n)(?<!\n)(Ifá\s+diz|Ifa\s+diz|IFÁ\s+diz|IFA\s+diz)/gi;
-    result = result.replace(textBreakPattern, '\n\n$1');
+    // Para texto puro: garantir \n\n antes de "Ifá diz"
+    
+    // ETAPA 1: Normalizar - converter qualquer quantidade de \n antes de "Ifá diz" para marcador
+    // Isso captura: \nIfá, \n\nIfá, \n\n\nIfá, etc.
+    result = result.replace(
+      new RegExp(`\\n+${ifaDizVariants}`, 'gi'),
+      '{{BREAK_MARKER}}$1'
+    );
+    
+    // ETAPA 2: Adicionar marcador onde não há nenhuma quebra antes de "Ifá diz"
+    // (exceto no início do texto ou após marcador já colocado)
+    result = result.replace(
+      new RegExp(`(?<!\\n)(?<!{{BREAK_MARKER}})${ifaDizVariants}`, 'gi'),
+      '{{BREAK_MARKER}}$1'
+    );
+    
+    // ETAPA 3: Substituir todos os marcadores por \n\n
+    result = result.replace(/{{BREAK_MARKER}}/g, '\n\n');
   }
   
-  // Remove quebras duplicadas no início do texto
+  // Limpar quebras duplicadas no início do texto
   result = result.replace(/^(<br\s*\/?\>\s*)+/i, '');
   result = result.replace(/^\n+/, '');
   
@@ -43,7 +75,7 @@ export function formatSignificado(text: string | null | undefined): string | nul
 }
 
 /**
- * Verifica se o texto contém "Ifá diz" sem quebra de linha antes
+ * Verifica se o texto contém "Ifá diz" sem quebra de linha dupla antes
  * Útil para identificar registros que precisam de formatação
  */
 export function needsSignificadoFormatting(text: string | null | undefined): boolean {
@@ -52,16 +84,20 @@ export function needsSignificadoFormatting(text: string | null | undefined): boo
   const trimmed = text.trim();
   if (!trimmed) return false;
   
-  // Verifica se contém "Ifá diz" sem quebra adequada antes
+  const ifaDizVariants = '(Ifá\\s+diz|Ifa\\s+diz|IFÁ\\s+diz|IFA\\s+diz)';
+  
+  // Verifica se contém "Ifá diz" sem quebra dupla adequada antes
   const isHtml = /<[^>]+>/.test(trimmed);
   
   if (isHtml) {
-    // Para HTML: verifica se há "Ifá diz" sem <br><br> ou </p> antes
-    const needsBreak = /(?<!<br\s*\/?\>\s*<br\s*\/?\>\s*)(?<!<\/p>\s*)(Ifá\s+diz|Ifa\s+diz|IFÁ\s+diz|IFA\s+diz)/gi;
-    return needsBreak.test(trimmed);
+    // Para HTML: verifica se há "Ifá diz" sem <br><br> antes
+    // Captura casos com apenas um <br> ou nenhum
+    const singleBreakPattern = new RegExp(`(?<!<br\\s*\\/?>\\s*<br\\s*\\/?>\\s*)${ifaDizVariants}`, 'gi');
+    return singleBreakPattern.test(trimmed);
   } else {
     // Para texto puro: verifica se há "Ifá diz" sem \n\n antes
-    const needsBreak = /(?<!\n\n)(Ifá\s+diz|Ifa\s+diz|IFÁ\s+diz|IFA\s+diz)/gi;
-    return needsBreak.test(trimmed);
+    // Captura casos com apenas um \n ou nenhum
+    const singleBreakPattern = new RegExp(`(?<!\\n\\n)${ifaDizVariants}`, 'gi');
+    return singleBreakPattern.test(trimmed);
   }
 }
