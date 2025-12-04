@@ -24,6 +24,7 @@ interface LearningJourneyProps {
   selectedPhaseOdus: OduWithStatus[];
   loadingOdus: boolean;
   onStartStudy: (phaseSlug: string) => void;
+  onStartReview: (phaseSlug: string) => void;
 }
 
 export function LearningJourney({
@@ -35,6 +36,7 @@ export function LearningJourney({
   selectedPhaseOdus,
   loadingOdus,
   onStartStudy,
+  onStartReview,
 }: LearningJourneyProps) {
   
   if (loading) {
@@ -111,11 +113,12 @@ export function LearningJourney({
           {selectedPhase?.phase.id === ojuOdu.phase.id && (
             <Card className="mt-3">
               <CardContent className="pt-4">
-                <FamilyOduGrid
+              <FamilyOduGrid
                   phaseProgress={ojuOdu}
                   odus={selectedPhaseOdus}
                   loading={loadingOdus}
                   onStartStudy={() => onStartStudy(ojuOdu.phase.slug)}
+                  onStartReview={() => onStartReview(ojuOdu.phase.slug)}
                 />
               </CardContent>
             </Card>
@@ -153,11 +156,12 @@ export function LearningJourney({
         {selectedPhase && selectedPhase.phase.slug !== 'oju-odu' && (
           <Card className="mt-3 animate-in fade-in slide-in-from-top-4 duration-300">
             <CardContent className="pt-4">
-              <FamilyOduGrid
+            <FamilyOduGrid
                 phaseProgress={selectedPhase}
                 odus={selectedPhaseOdus}
                 loading={loadingOdus}
                 onStartStudy={() => onStartStudy(selectedPhase.phase.slug)}
+                onStartReview={() => onStartReview(selectedPhase.phase.slug)}
               />
             </CardContent>
           </Card>
