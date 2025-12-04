@@ -70,6 +70,16 @@ export function SafeHtmlRenderer({ html, className }: SafeHtmlRendererProps) {
     iterations++;
   }
   
+  // Detectar se o conteúdo é texto puro (sem tags HTML)
+  const hasHtmlTags = /<[a-z][\s\S]*>/i.test(decoded);
+  
+  // Se for texto puro, converter quebras de linha para <br>
+  if (!hasHtmlTags) {
+    decoded = decoded
+      .replace(/\n\n/g, '<br><br>')  // Quebras duplas primeiro
+      .replace(/\n/g, '<br>');        // Depois quebras simples
+  }
+  
   // Sanitizar o HTML para prevenir XSS
   const sanitizedHtml = DOMPurify.sanitize(decoded, {
     USE_PROFILES: { html: true }
