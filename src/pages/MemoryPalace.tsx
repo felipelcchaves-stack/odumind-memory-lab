@@ -9,11 +9,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Home, MapPin, Plus, Loader2, ArrowLeft, Lightbulb, GraduationCap, Briefcase } from "lucide-react";
+import { Home, MapPin, Plus, Loader2, ArrowLeft, Lightbulb, GraduationCap, Briefcase, Lock } from "lucide-react";
 import { ProtectedContent } from "@/components/ProtectedContent";
 import { getAllTemplates, getTemplateById, type PalaceTemplate } from "@/lib/memoryPalaceTemplates";
 import DashboardHeader from "@/components/DashboardHeader";
+import { useTechniqueUnlock } from "@/hooks/useTechniqueUnlock";
 
 interface PalacePosition {
   id: string;
@@ -36,6 +38,8 @@ interface Odu {
 export default function MemoryPalace() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { loading: unlockLoading, isTechniqueUnlocked, getTechniqueProgress } = useTechniqueUnlock();
+  
   const [loading, setLoading] = useState(true);
   const [palaceData, setPalaceData] = useState<PalacePosition[]>([]);
   const [allOdus, setAllOdus] = useState<Odu[]>([]);
@@ -47,6 +51,8 @@ export default function MemoryPalace() {
   
   const templates = getAllTemplates();
   const currentTemplate = getTemplateById(selectedTemplate);
+  const isUnlocked = isTechniqueUnlocked('memory-palace');
+  const progress = getTechniqueProgress('memory-palace');
 
   useEffect(() => {
     if (!user) {
@@ -180,11 +186,52 @@ export default function MemoryPalace() {
   const usedOduIds = palaceData.map(p => p.odu_id);
   const availableOdus = allOdus.filter(odu => !usedOduIds.includes(odu.id));
 
-  if (loading) {
+  // Loading state
+  if (loading || unlockLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
+    );
+  }
+
+  // Locked state - technique not unlocked
+  if (!isUnlocked) {
+    return (
+      <ProtectedContent>
+        <div className="min-h-screen bg-background">
+          <DashboardHeader />
+          <div className="flex flex-col items-center justify-center h-[70vh] p-4">
+            <Card className="max-w-md w-full text-center p-8">
+              <div className="bg-muted rounded-full p-6 w-fit mx-auto mb-6">
+                <Lock className="h-12 w-12 text-muted-foreground" />
+              </div>
+              <h1 className="text-2xl font-bold mb-2">Técnica Bloqueada</h1>
+              <p className="text-muted-foreground mb-6">
+                O Palácio da Memória é uma técnica avançada. Continue estudando para desbloqueá-la!
+              </p>
+              
+              {progress && (
+                <div className="space-y-3 mb-6">
+                  <Progress value={progress.progress} className="h-3" />
+                  <p className="text-sm text-muted-foreground">
+                    {progress.requirementLabel}
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <Button onClick={() => navigate('/study')} className="w-full">
+                  Continuar Estudando
+                </Button>
+                <Button variant="outline" onClick={() => navigate('/tecnicas')} className="w-full">
+                  Ver Todas as Técnicas
+                </Button>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </ProtectedContent>
     );
   }
 
