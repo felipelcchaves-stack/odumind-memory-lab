@@ -8,6 +8,7 @@ const corsHeaders = {
 
 /**
  * Formata o campo significado adicionando quebras de linha antes de "Ifá diz"
+ * Garante que sempre haja DUAS quebras de linha antes de "Ifá diz"
  */
 function formatSignificado(text: string | null): string | null {
   if (!text || typeof text !== 'string') return null;
@@ -18,19 +19,49 @@ function formatSignificado(text: string | null): string | null {
   // Detecta se é HTML ou texto puro
   const isHtml = /<[^>]+>/.test(trimmed);
   
+  // Padrão para detectar variações de "Ifá diz"
+  const ifaDizVariants = '(Ifá\\s+diz|Ifa\\s+diz|IFÁ\\s+diz|IFA\\s+diz)';
+  
   let result = trimmed;
   
   if (isHtml) {
-    // Para HTML: adiciona <br><br> antes de "Ifá diz" se não houver já
-    const htmlBreakPattern = /(?<!<br\s*\/?\>\s*)(?<!<br\s*\/?\>\s*<br\s*\/?\>\s*)(?<!<\/p>\s*)(?<!<p>\s*)(Ifá\s+diz|Ifa\s+diz|IFÁ\s+diz|IFA\s+diz)/gi;
-    result = result.replace(htmlBreakPattern, '<br><br>$1');
+    // Para HTML: garantir <br><br> antes de "Ifá diz"
+    
+    // ETAPA 1: Normalizar - converter qualquer combinação de <br> antes de "Ifá diz" para marcador
+    result = result.replace(
+      new RegExp(`(<br\\s*\\/?>\\s*)+${ifaDizVariants}`, 'gi'),
+      '{{BREAK_MARKER}}$1'
+    );
+    
+    // ETAPA 2: Adicionar marcador onde não há nenhuma quebra antes de "Ifá diz"
+    result = result.replace(
+      new RegExp(`(?<!>)(?<!{{BREAK_MARKER}})${ifaDizVariants}`, 'gi'),
+      '{{BREAK_MARKER}}$1'
+    );
+    
+    // ETAPA 3: Substituir todos os marcadores por <br><br>
+    result = result.replace(/{{BREAK_MARKER}}/g, '<br><br>');
+    
   } else {
-    // Para texto puro: adiciona \n\n antes de "Ifá diz" se não houver já
-    const textBreakPattern = /(?<!\n\n)(?<!\n)(Ifá\s+diz|Ifa\s+diz|IFÁ\s+diz|IFA\s+diz)/gi;
-    result = result.replace(textBreakPattern, '\n\n$1');
+    // Para texto puro: garantir \n\n antes de "Ifá diz"
+    
+    // ETAPA 1: Normalizar - converter qualquer quantidade de \n antes de "Ifá diz" para marcador
+    result = result.replace(
+      new RegExp(`\\n+${ifaDizVariants}`, 'gi'),
+      '{{BREAK_MARKER}}$1'
+    );
+    
+    // ETAPA 2: Adicionar marcador onde não há nenhuma quebra antes de "Ifá diz"
+    result = result.replace(
+      new RegExp(`(?<!\\n)(?<!{{BREAK_MARKER}})${ifaDizVariants}`, 'gi'),
+      '{{BREAK_MARKER}}$1'
+    );
+    
+    // ETAPA 3: Substituir todos os marcadores por \n\n
+    result = result.replace(/{{BREAK_MARKER}}/g, '\n\n');
   }
   
-  // Remove quebras duplicadas no início do texto
+  // Limpar quebras duplicadas no início do texto
   result = result.replace(/^(<br\s*\/?\>\s*)+/i, '');
   result = result.replace(/^\n+/, '');
   
@@ -104,7 +135,7 @@ serve(async (req) => {
 
     let updated = 0;
     let skipped = 0;
-    let errors: string[] = [];
+    const errors: string[] = [];
 
     for (const odu of odus || []) {
       const original = odu.significado;
@@ -112,6 +143,8 @@ serve(async (req) => {
 
       // Só atualiza se houve mudança
       if (formatted !== original && formatted !== null) {
+        console.log(`[FIX-SIGNIFICADO] Atualizando Odu #${odu.numero} - diferença detectada`);
+        
         const { error: updateError } = await supabaseAdmin
           .from('odu')
           .update({ significado: formatted })
