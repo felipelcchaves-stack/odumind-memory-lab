@@ -761,7 +761,7 @@ export type Database = {
         Row: {
           change_description: string | null
           edited_at: string
-          edited_by: string
+          edited_by: string | null
           exemplos_praticos: string | null
           id: string
           nome: string
@@ -775,7 +775,7 @@ export type Database = {
         Insert: {
           change_description?: string | null
           edited_at?: string
-          edited_by: string
+          edited_by?: string | null
           exemplos_praticos?: string | null
           id?: string
           nome: string
@@ -789,7 +789,7 @@ export type Database = {
         Update: {
           change_description?: string | null
           edited_at?: string
-          edited_by?: string
+          edited_by?: string | null
           exemplos_praticos?: string | null
           id?: string
           nome?: string
