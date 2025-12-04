@@ -33,6 +33,7 @@ import Familia from "./pages/Familia";
 import FamiliaAceitar from "./pages/FamiliaAceitar";
 import BibliotecaYoruba from "./pages/BibliotecaYoruba";
 import RitualStudy from "./pages/RitualStudy";
+import CaminhoIfa from "./pages/CaminhoIfa";
 import { AdminLayout } from "./components/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminOduPage from "./pages/admin/AdminOduPage";
@@ -79,6 +80,7 @@ function AppContent() {
           <Route path="/odu/:id" element={<OduStudy />} />
           <Route path="/biblioteca-yoruba" element={<BibliotecaYoruba />} />
           <Route path="/ritual/:id" element={<RitualStudy />} />
+          <Route path="/caminho-ifa" element={<CaminhoIfa />} />
           <Route path="/study" element={<StudySession />} />
           <Route path="/memory-palace" element={<MemoryPalace />} />
           <Route path="/tecnicas" element={<Tecnicas />} />
