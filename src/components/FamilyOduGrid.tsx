@@ -4,14 +4,16 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CheckCircle2, Circle, Clock, BookOpen, Play } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, BookOpen, Play, RotateCcw } from 'lucide-react';
 import { OduWithStatus, PhaseProgress } from '@/hooks/useLearningPhases';
+import { usePhaseReviews } from '@/hooks/usePhaseReviews';
 
 interface FamilyOduGridProps {
   phaseProgress: PhaseProgress;
   odus: OduWithStatus[];
   loading?: boolean;
   onStartStudy?: () => void;
+  onStartReview?: () => void;
 }
 
 const statusConfig = {
@@ -35,8 +37,9 @@ const statusConfig = {
   },
 };
 
-export function FamilyOduGrid({ phaseProgress, odus, loading, onStartStudy }: FamilyOduGridProps) {
+export function FamilyOduGrid({ phaseProgress, odus, loading, onStartStudy, onStartReview }: FamilyOduGridProps) {
   const navigate = useNavigate();
+  const { pendingReviews, loading: reviewsLoading } = usePhaseReviews(phaseProgress.phase.slug);
 
   if (loading) {
     return (
@@ -86,6 +89,14 @@ export function FamilyOduGrid({ phaseProgress, odus, loading, onStartStudy }: Fa
               );
             })}
           </div>
+          
+          {/* Botão de Revisão - só aparece se há revisões pendentes */}
+          {!reviewsLoading && pendingReviews > 0 && onStartReview && (
+            <Button onClick={onStartReview} size="sm" variant="outline" className="gap-2 border-amber-500/50 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30">
+              <RotateCcw className="h-4 w-4" />
+              Revisar ({pendingReviews})
+            </Button>
+          )}
           
           {onStartStudy && (
             <Button onClick={onStartStudy} size="sm" className="gap-2">

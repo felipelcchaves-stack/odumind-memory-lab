@@ -79,6 +79,11 @@ export default function CaminhoIfa() {
     navigate(`/study?fase=${phaseSlug}`);
   }, [navigate]);
 
+  const handleStartReview = useCallback((phaseSlug: string) => {
+    // Navigate to study session in review mode
+    navigate(`/study?fase=${phaseSlug}&mode=review`);
+  }, [navigate]);
+
   const overallProgress = getOverallProgress();
 
   if (authLoading) {
@@ -122,6 +127,7 @@ export default function CaminhoIfa() {
             selectedPhaseOdus={selectedPhaseOdus}
             loadingOdus={loadingOdus}
             onStartStudy={handleStartStudy}
+            onStartReview={handleStartReview}
           />
         </main>
       </div>
