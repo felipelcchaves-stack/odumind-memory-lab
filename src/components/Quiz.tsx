@@ -3,15 +3,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-// Limites de caracteres para truncamento
+// Limites de caracteres para truncamento (desktop)
 const CHAR_LIMITS = {
   verso: 120,
   context: 150,
   option: 80,
 };
 
-// Componente de texto truncável
+// Limites reduzidos para mobile (70% do desktop)
+const MOBILE_CHAR_LIMITS = {
+  verso: 84,
+  context: 105,
+  option: 56,
+};
+
+// Componente de texto truncável com suporte mobile
 function TruncatableText({ 
   text, 
   limit, 
@@ -22,23 +30,31 @@ function TruncatableText({
   className?: string;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const shouldTruncate = text.length > limit;
+  const isMobile = useIsMobile();
+  
+  // Aplica limite adaptativo baseado no device
+  const adaptiveLimit = isMobile ? Math.floor(limit * 0.7) : limit;
+  const shouldTruncate = text.length > adaptiveLimit;
   
   if (!shouldTruncate) {
-    return <span className={className}>{text}</span>;
+    return (
+      <span className={`break-words whitespace-normal overflow-wrap-anywhere ${className}`}>
+        {text}
+      </span>
+    );
   }
   
-  const displayText = isExpanded ? text : text.slice(0, limit) + "...";
+  const displayText = isExpanded ? text : text.slice(0, adaptiveLimit) + "...";
   
   return (
-    <span className={className}>
+    <span className={`break-words whitespace-normal overflow-wrap-anywhere block max-w-full ${className}`}>
       {displayText}
       <button
         onClick={(e) => {
           e.stopPropagation();
           setIsExpanded(!isExpanded);
         }}
-        className="inline-flex items-center ml-1 text-primary hover:underline text-sm font-medium"
+        className="inline-flex items-center ml-1 text-primary hover:underline text-sm font-medium min-h-[44px] md:min-h-0 touch-manipulation"
       >
         {isExpanded ? (
           <>Ver menos <ChevronUp className="h-3 w-3 ml-0.5" /></>
@@ -89,9 +105,9 @@ const Quiz = memo(function Quiz({ question, onAnswer }: QuizProps) {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
-      <Card className="min-h-[400px]">
-        <CardHeader>
+    <div className="w-full max-w-2xl mx-auto overflow-hidden">
+      <Card className="min-h-[400px] overflow-hidden">
+        <CardHeader className="overflow-x-hidden">
           <div className="flex items-center justify-between mb-4">
             <Badge variant="secondary">Quiz</Badge>
             <Badge variant="outline">
@@ -132,7 +148,7 @@ const Quiz = memo(function Quiz({ question, onAnswer }: QuizProps) {
           </CardTitle>
         </CardHeader>
 
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 overflow-x-hidden">
           {question.options.map((option, index) => {
             const isSelected = selectedAnswer === option;
             const isCorrect = option === question.correctAnswer;
