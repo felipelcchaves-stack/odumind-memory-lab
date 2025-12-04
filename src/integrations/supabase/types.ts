@@ -1257,6 +1257,33 @@ export type Database = {
         }
         Relationships: []
       }
+      technique_unlock_progress: {
+        Row: {
+          created_at: string | null
+          id: string
+          technique_id: string
+          unlocked: boolean | null
+          unlocked_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          technique_id: string
+          unlocked?: boolean | null
+          unlocked_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          technique_id?: string
+          unlocked?: boolean | null
+          unlocked_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       unlock_progress: {
         Row: {
           created_at: string
