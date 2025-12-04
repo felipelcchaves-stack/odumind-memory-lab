@@ -101,6 +101,8 @@ export default function StudySession() {
   
   // Phase context - now required
   const faseSlug = searchParams.get('fase');
+  const sessionMode = searchParams.get('mode'); // 'review' = só revisões pendentes
+  const isReviewOnlyMode = sessionMode === 'review';
   const [currentPhaseInfo, setCurrentPhaseInfo] = useState<PhaseInfo | null>(null);
   const [phaseLoading, setPhaseLoading] = useState(true);
   
@@ -360,12 +362,32 @@ export default function StudySession() {
 
       // Aplicar limite de QUANTIDADE (não filtro por campo numero)
       // Assinantes, admins e colaboradores têm acesso a todos os da fase
-      const accessibleOdus = hasFullAccess ? phaseOdus : phaseOdus.slice(0, currentLimit);
+      let accessibleOdus = hasFullAccess ? phaseOdus : phaseOdus.slice(0, currentLimit);
+      
+      // MODO REVISÃO: Filtrar apenas Odus com revisão pendente
+      if (isReviewOnlyMode) {
+        const now = new Date().toISOString();
+        const { data: pendingReviews } = await supabase
+          .from('memorizacao')
+          .select('odu_id')
+          .eq('user_id', user.id)
+          .lte('proxima_revisao', now)
+          .not('proxima_revisao', 'is', null);
+        
+        const pendingOduIds = new Set((pendingReviews || []).map(r => r.odu_id));
+        accessibleOdus = accessibleOdus.filter(odu => pendingOduIds.has(odu.id));
+        
+        console.log('📖 Modo Revisão:', {
+          totalPendentes: pendingOduIds.size,
+          odusParaRevisar: accessibleOdus.length,
+        });
+      }
       
       console.log('📊 Sessão de Estudo:', {
         totalOdusNoBanco: allOdus.length,
         odusNaFase: phaseOdus.length,
         faseAtual: currentPhaseInfo?.nome || 'N/A',
+        modoRevisao: isReviewOnlyMode,
         limiteAtual: currentLimit,
         hasFullAccess,
         isAdmin: adminStatus,
@@ -1182,14 +1204,21 @@ export default function StudySession() {
 
           {/* Phase Context Badge */}
           {currentPhaseInfo && (
-            <div className="mb-4 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+            <div className={`mb-4 p-4 border rounded-lg ${isReviewOnlyMode ? 'bg-amber-500/10 border-amber-500/30' : 'bg-primary/5 border-primary/20'}`}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-xl">{currentPhaseInfo.nome.includes('Oju') ? '📖' : '👨‍👩‍👧‍👦'}</span>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isReviewOnlyMode ? 'bg-amber-500/20' : 'bg-primary/10'}`}>
+                  <span className="text-xl">{isReviewOnlyMode ? '📖' : (currentPhaseInfo.nome.includes('Oju') ? '📖' : '👨‍👩‍👧‍👦')}</span>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Estudando na Fase</p>
+                  <p className="text-sm text-muted-foreground">
+                    {isReviewOnlyMode ? 'Revisando na Fase' : 'Estudando na Fase'}
+                  </p>
                   <p className="font-semibold text-lg">{currentPhaseInfo.nome}</p>
+                  {isReviewOnlyMode && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                      Modo Revisão: Apenas Odus que precisam ser revisados
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
