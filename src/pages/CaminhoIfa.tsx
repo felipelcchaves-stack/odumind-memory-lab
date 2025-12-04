@@ -4,6 +4,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import DashboardHeader from '@/components/DashboardHeader';
 import { LearningJourney } from '@/components/LearningJourney';
 import { useLearningPhases, PhaseProgress, OduWithStatus } from '@/hooks/useLearningPhases';
+import { useGlobalReviews } from '@/hooks/usePhaseReviews';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { RotateCcw } from 'lucide-react';
 
 export default function CaminhoIfa() {
   const { user, loading: authLoading } = useAuth();
@@ -17,6 +21,8 @@ export default function CaminhoIfa() {
     getOverallProgress,
     refresh 
   } = useLearningPhases();
+  
+  const { pendingReviews, loading: reviewsLoading } = useGlobalReviews();
 
   const [selectedPhase, setSelectedPhase] = useState<PhaseProgress | null>(null);
   const [selectedPhaseOdus, setSelectedPhaseOdus] = useState<OduWithStatus[]>([]);
@@ -108,9 +114,24 @@ export default function CaminhoIfa() {
         <main className="container mx-auto px-4 py-6 pb-24">
           {/* Page Header */}
           <div className="mb-6">
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-              Caminho de Ifá
-            </h1>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+                Caminho de Ifá
+              </h1>
+              
+              {/* Badge de Revisões Pendentes */}
+              {!reviewsLoading && pendingReviews > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 border-amber-500 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/50 animate-pulse"
+                  onClick={() => navigate('/caminho-ifa')}
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  <span className="font-semibold">{pendingReviews}</span> revisões pendentes
+                </Button>
+              )}
+            </div>
             <p className="text-muted-foreground">
               Sua jornada estruturada para memorizar os 256 Odu. 
               Complete cada fase antes de avançar para a próxima.
