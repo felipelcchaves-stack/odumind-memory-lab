@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Home, BookOpen, Brain, Shield, Settings, LogOut, Sun, Moon, User, Crown, BarChart3, Edit, Landmark, Lightbulb, Sparkles, Gift, Users } from 'lucide-react';
+import { Home, BookOpen, Brain, Shield, Settings, LogOut, Sun, Moon, User, Crown, BarChart3, Edit, Landmark, Lightbulb, Sparkles, Gift, Users, Map } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 export default function DashboardHeader() {
@@ -31,6 +31,7 @@ export default function DashboardHeader() {
 
   const navItems = [
     { path: '/dashboard', icon: Home, label: 'Dashboard', priority: 'high' },
+    { path: '/caminho-ifa', icon: Map, label: 'Caminho', priority: 'high' },
     { path: '/biblioteca-yoruba', icon: BookOpen, label: 'Biblioteca', priority: 'high' },
     { path: '/study', icon: Brain, label: 'Estudar', priority: 'high' },
     { path: '/indicar', icon: Gift, label: 'Indicar', priority: 'medium' },

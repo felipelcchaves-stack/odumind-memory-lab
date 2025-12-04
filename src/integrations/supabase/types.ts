@@ -468,6 +468,56 @@ export type Database = {
         }
         Relationships: []
       }
+      learning_phases: {
+        Row: {
+          cor: string
+          created_at: string | null
+          descricao: string | null
+          icone: string
+          id: string
+          nome: string
+          odus_incluidos: number[]
+          ordem: number
+          prerequisito_fase_id: string | null
+          prerequisito_percentual: number | null
+          slug: string
+        }
+        Insert: {
+          cor: string
+          created_at?: string | null
+          descricao?: string | null
+          icone: string
+          id?: string
+          nome: string
+          odus_incluidos?: number[]
+          ordem: number
+          prerequisito_fase_id?: string | null
+          prerequisito_percentual?: number | null
+          slug: string
+        }
+        Update: {
+          cor?: string
+          created_at?: string | null
+          descricao?: string | null
+          icone?: string
+          id?: string
+          nome?: string
+          odus_incluidos?: number[]
+          ordem?: number
+          prerequisito_fase_id?: string | null
+          prerequisito_percentual?: number | null
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_phases_prerequisito_fase_id_fkey"
+            columns: ["prerequisito_fase_id"]
+            isOneToOne: false
+            referencedRelation: "learning_phases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       memorizacao: {
         Row: {
           consecutive_correct: number | null
@@ -1390,6 +1440,50 @@ export type Database = {
           weak_odus?: string[] | null
         }
         Relationships: []
+      }
+      user_phase_progress: {
+        Row: {
+          certificate_url: string | null
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          phase_id: string
+          started_at: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          certificate_url?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          phase_id: string
+          started_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          certificate_url?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          phase_id?: string
+          started_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_phase_progress_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "learning_phases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_ritual_progress: {
         Row: {

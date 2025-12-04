@@ -37,6 +37,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ChevronDown, HelpCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useContentFeatures } from '@/hooks/useContentFeatures';
+import { CaminhoIfaMiniMap } from '@/components/CaminhoIfaMiniMap';
 
 interface ProfileData {
   xp: number;
@@ -548,13 +549,18 @@ export default function Dashboard() {
         </Card>
 
         {/* FASE 5: Daily Guide Widget (Onboarding Permanente) */}
-        <div className="mb-8" data-tour="daily-guide">
-          <DailyGuideWidget
-            reviewCount={stats?.reviewTodayCount || 0}
-            hasStudiedToday={false}
-            hasExploredRitual={false}
-            hasPracticedPrayer={false}
-          />
+        <div className="grid gap-6 md:grid-cols-2 mb-8">
+          <div data-tour="daily-guide">
+            <DailyGuideWidget
+              reviewCount={stats?.reviewTodayCount || 0}
+              hasStudiedToday={false}
+              hasExploredRitual={false}
+              hasPracticedPrayer={false}
+            />
+          </div>
+          
+          {/* Caminho de Ifá Mini Map */}
+          <CaminhoIfaMiniMap />
         </div>
 
         {/* FASE 3: Cards de Stats com Legendas Claras */}
