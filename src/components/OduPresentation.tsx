@@ -8,6 +8,8 @@ import { Sparkles, BookOpen, Clock, ArrowRight, Eye } from "lucide-react";
 import { SafeHtmlRenderer } from "@/components/SafeHtmlRenderer";
 import { motion, AnimatePresence } from "framer-motion";
 import { OduAudioPlayer } from "@/components/OduAudioPlayer";
+import { OduAudioPlayerWithSync } from "@/components/OduAudioPlayerWithSync";
+import { SyncedTextHighlighter } from "@/components/SyncedTextHighlighter";
 
 interface OduPresentationProps {
   oduId: string;
@@ -37,6 +39,11 @@ export default function OduPresentation({
   const [timeRemaining, setTimeRemaining] = useState(minReadingTime);
   const [canProceed, setCanProceed] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
+  
+  // Audio sync states for verso
+  const [versoCurrentTime, setVersoCurrentTime] = useState(0);
+  const [versoDuration, setVersoDuration] = useState(0);
+  const [isVersoPlaying, setIsVersoPlaying] = useState(false);
 
   // Timer countdown
   useEffect(() => {
@@ -166,7 +173,7 @@ export default function OduPresentation({
                     </motion.div>
                   )}
 
-                  {/* Verso resumido para memorização */}
+                  {/* Verso resumido para memorização com texto sincronizado */}
                   {verso_resumido && (
                     <motion.div
                       initial={{ opacity: 0, x: -20 }}
@@ -174,22 +181,44 @@ export default function OduPresentation({
                       transition={{ delay: 0.2 }}
                       className="p-4 bg-primary/10 dark:bg-primary/5 rounded-lg border-l-4 border-primary"
                     >
-                      <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center justify-between gap-2 mb-3">
                         <div className="flex items-center gap-2">
                           <Sparkles className="h-4 w-4 text-primary animate-pulse" />
                           <h4 className="font-semibold text-primary">Verso para Memorização</h4>
                         </div>
-                        <OduAudioPlayer 
+                      </div>
+                      
+                      {/* Synced text highlighter */}
+                      {versoDuration > 0 && (isVersoPlaying || versoCurrentTime > 0) ? (
+                        <SyncedTextHighlighter
+                          text={verso_resumido}
+                          isPlaying={isVersoPlaying}
+                          currentTime={versoCurrentTime}
+                          duration={versoDuration}
+                          className="italic font-medium"
+                        />
+                      ) : (
+                        <p className="text-lg italic font-medium text-foreground">
+                          "{verso_resumido}"
+                        </p>
+                      )}
+                      
+                      {/* Audio player with sync */}
+                      <div className="mt-3 flex items-center gap-3">
+                        <OduAudioPlayerWithSync 
                           oduId={oduId} 
-                          audioType="verso_resumido" 
-                          variant="icon"
+                          audioType="verso_resumido"
+                          label="Ouvir e Acompanhar"
+                          onTimeUpdate={(time, dur) => {
+                            setVersoCurrentTime(time);
+                            setVersoDuration(dur);
+                          }}
+                          onPlayingChange={setIsVersoPlaying}
                         />
                       </div>
-                      <p className="text-lg italic font-medium text-foreground">
-                        "{verso_resumido}"
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        💡 Memorize este verso - ele resume a essência do Odu
+                      
+                      <p className="text-xs text-muted-foreground mt-3">
+                        💡 Clique em "Ouvir e Acompanhar" para ver o texto grifado conforme a leitura
                       </p>
                     </motion.div>
                   )}
