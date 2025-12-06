@@ -7,8 +7,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sparkles, BookOpen, Clock, ArrowRight, Eye } from "lucide-react";
 import { SafeHtmlRenderer } from "@/components/SafeHtmlRenderer";
 import { motion, AnimatePresence } from "framer-motion";
+import { OduAudioPlayer } from "@/components/OduAudioPlayer";
 
 interface OduPresentationProps {
+  oduId: string;
   numero: number;
   nome: string;
   texto_principal: string;
@@ -21,6 +23,7 @@ interface OduPresentationProps {
 }
 
 export default function OduPresentation({
+  oduId,
   numero,
   nome,
   texto_principal,
@@ -123,8 +126,15 @@ export default function OduPresentation({
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                   <BookOpen className="h-6 w-6 text-primary" />
                 </div>
-                <div>
-                  <CardTitle className="text-2xl md:text-3xl font-bold">{nome}</CardTitle>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-2xl md:text-3xl font-bold">{nome}</CardTitle>
+                    <OduAudioPlayer 
+                      oduId={oduId} 
+                      audioType="nome" 
+                      variant="icon"
+                    />
+                  </div>
                   <p className="text-sm text-muted-foreground mt-1">
                     Odu #{numero} • Leia com atenção antes de praticar
                   </p>
@@ -164,9 +174,16 @@ export default function OduPresentation({
                       transition={{ delay: 0.2 }}
                       className="p-4 bg-primary/10 dark:bg-primary/5 rounded-lg border-l-4 border-primary"
                     >
-                      <div className="flex items-center gap-2 mb-2">
-                        <Sparkles className="h-4 w-4 text-primary animate-pulse" />
-                        <h4 className="font-semibold text-primary">Verso para Memorização</h4>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+                          <h4 className="font-semibold text-primary">Verso para Memorização</h4>
+                        </div>
+                        <OduAudioPlayer 
+                          oduId={oduId} 
+                          audioType="verso_resumido" 
+                          variant="icon"
+                        />
                       </div>
                       <p className="text-lg italic font-medium text-foreground">
                         "{verso_resumido}"

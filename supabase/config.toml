@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.send-welcome-email]
 verify_jwt = false
+
+[functions.generate-odu-audio]
+verify_jwt = false
