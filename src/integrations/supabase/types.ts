@@ -757,6 +757,47 @@ export type Database = {
         }
         Relationships: []
       }
+      odu_audio: {
+        Row: {
+          audio_type: string
+          audio_url: string
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          odu_id: string
+          updated_at: string
+          voice_id: string | null
+        }
+        Insert: {
+          audio_type?: string
+          audio_url: string
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          odu_id: string
+          updated_at?: string
+          voice_id?: string | null
+        }
+        Update: {
+          audio_type?: string
+          audio_url?: string
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          odu_id?: string
+          updated_at?: string
+          voice_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "odu_audio_odu_id_fkey"
+            columns: ["odu_id"]
+            isOneToOne: false
+            referencedRelation: "odu"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       odu_history: {
         Row: {
           change_description: string | null

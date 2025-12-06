@@ -1465,6 +1465,7 @@ export default function StudySession() {
         ) : isShowingPresentation ? (
           // NOVO: Tela de apresentação para primeiro contato com Odu
           <OduPresentation
+            oduId={currentOdu.id}
             numero={currentOdu.numero}
             nome={currentOdu.nome}
             texto_principal={currentOdu.texto_principal}
