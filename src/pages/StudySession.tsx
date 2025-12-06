@@ -13,6 +13,7 @@ import { ArrowLeft, Trophy, Lock, Clock, TrendingUp, Zap, Brain } from "lucide-r
 import { toast } from "sonner";
 import confetti from 'canvas-confetti';
 import Flashcard from "@/components/Flashcard";
+import OduPresentation from "@/components/OduPresentation";
 import Quiz from "@/components/Quiz";
 import XPNotification from "@/components/XPNotification";
 import BadgesDisplay from "@/components/BadgesDisplay";
@@ -158,6 +159,9 @@ export default function StudySession() {
   // Track total Odus in database for low-odu mode detection
   const [totalOdusInDb, setTotalOdusInDb] = useState(0);
   const isLowOduMode = totalOdusInDb > 0 && totalOdusInDb < 5;
+  
+  // Presentation mode state - for first contact with new Odus
+  const [isShowingPresentation, setIsShowingPresentation] = useState(false);
 
   // Load phase info from slug
   useEffect(() => {
@@ -493,12 +497,18 @@ export default function StudySession() {
               forca_memoria: memData.forca_memoria,
               status: memData.status
             });
+            
+            // Se já estudou antes, vai direto para flashcard/quiz
+            setIsShowingPresentation(false);
           } else {
+            // NOVO ODU: Mostrar tela de apresentação primeiro
             setCurrentMemorizationData({
               revisoes: 0,
               forca_memoria: 0,
               status: "nao_estudado"
             });
+            setIsShowingPresentation(true);
+            console.log('📖 Odu novo detectado, mostrando apresentação:', selectedOdu.nome);
           }
         });
     }
@@ -875,6 +885,44 @@ export default function StudySession() {
       setPauseStartTime(Date.now());
       toast.info("Sessão pausada. Descanse um pouco! 😌");
     }
+  }
+
+  // Handler para quando o usuário completa a apresentação de um Odu novo
+  async function handlePresentationComplete() {
+    if (!user || !currentOdu) return;
+    
+    console.log('✅ Apresentação concluída, iniciando primeira prática:', currentOdu.nome);
+    
+    // Marcar o Odu como "estudando" (primeiro contato)
+    try {
+      await supabase
+        .from("memorizacao")
+        .upsert({
+          user_id: user.id,
+          odu_id: currentOdu.id,
+          revisoes: 0,
+          forca_memoria: 5, // Força inicial baixa
+          status: "estudando",
+          ultima_revisao: new Date().toISOString(),
+          facilidade: 2.5,
+          intervalo: 0,
+        }, { onConflict: 'user_id,odu_id' });
+      
+      // Atualizar estado local
+      setCurrentMemorizationData({
+        revisoes: 0,
+        forca_memoria: 5,
+        status: "estudando"
+      });
+    } catch (error) {
+      console.error("Erro ao marcar Odu como estudando:", error);
+    }
+    
+    // Sair do modo apresentação e ir para flashcard
+    setIsShowingPresentation(false);
+    setMode("flashcard"); // Primeira prática sempre em flashcard
+    
+    toast.success("🎯 Agora vamos praticar o que você aprendeu!", { duration: 3000 });
   }
 
   const generateQuizQuestion = useMemo((): QuizQuestion | null => {
@@ -1414,6 +1462,19 @@ export default function StudySession() {
               </p>
             </CardContent>
           </Card>
+        ) : isShowingPresentation ? (
+          // NOVO: Tela de apresentação para primeiro contato com Odu
+          <OduPresentation
+            numero={currentOdu.numero}
+            nome={currentOdu.nome}
+            texto_principal={currentOdu.texto_principal}
+            verso={currentOdu.verso}
+            verso_resumido={currentOdu.verso_resumido}
+            significado={currentOdu.significado}
+            contexto_historico={currentOdu.contexto_historico}
+            onComplete={handlePresentationComplete}
+            minReadingTime={30}
+          />
         ) : mode === "flashcard" ? (
           <Flashcard
             numero={currentOdu.numero}
