@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useAdmin } from '@/hooks/useAdmin';
 
 interface ChangelogItem {
   tipo: 'novo' | 'melhoria' | 'correcao';
@@ -24,14 +25,20 @@ export const useChangelog = () => {
   const [hasUnreadChangelog, setHasUnreadChangelog] = useState(false);
   const [hasChecked, setHasChecked] = useState(false);
   const { user, session } = useAuth();
+  const { isAdmin, isColaborador, loading: adminLoading } = useAdmin();
 
   useEffect(() => {
-    if (user && !hasChecked) {
-      console.log('[Changelog] Usuário detectado, verificando novidades...');
-      checkForNewChangelog();
+    // Só verificar changelog para admins e colaboradores
+    if (user && !hasChecked && !adminLoading) {
+      if (isAdmin || isColaborador) {
+        console.log('[Changelog] Admin/Colaborador detectado, verificando novidades...');
+        checkForNewChangelog();
+      } else {
+        console.log('[Changelog] Usuário comum, ignorando changelog...');
+      }
       setHasChecked(true);
     }
-  }, [user, hasChecked]);
+  }, [user, hasChecked, adminLoading, isAdmin, isColaborador]);
 
   const checkForNewChangelog = async () => {
     if (!user) return;

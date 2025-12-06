@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdmin } from "@/hooks/useAdmin";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardHeader from "@/components/DashboardHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Zap, Wrench, ArrowLeft, Calendar } from "lucide-react";
+import { Sparkles, Zap, Wrench, ArrowLeft, Calendar, Lock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -55,18 +56,27 @@ const getTypeBadge = (tipo: string) => {
 
 export default function Changelog() {
   const { user } = useAuth();
+  const { isAdmin, isColaborador, loading: adminLoading } = useAdmin();
   const navigate = useNavigate();
   const [changelogs, setChangelogs] = useState<ChangelogVersion[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<string>("todos");
+
+  const canAccess = isAdmin || isColaborador;
 
   useEffect(() => {
     if (!user) {
       navigate("/");
       return;
     }
-    loadChangelogs();
-  }, [user, navigate]);
+    
+    // Só carregar changelogs se tiver permissão
+    if (!adminLoading && canAccess) {
+      loadChangelogs();
+    } else if (!adminLoading && !canAccess) {
+      setLoading(false);
+    }
+  }, [user, navigate, adminLoading, canAccess]);
 
   const loadChangelogs = async () => {
     try {
@@ -102,6 +112,29 @@ export default function Changelog() {
       }))
       .filter((changelog) => changelog.items.length > 0);
   };
+
+  // Mostrar tela de acesso restrito se não for admin/colaborador
+  if (!adminLoading && !canAccess) {
+    return (
+      <div className="min-h-screen bg-background">
+        <DashboardHeader />
+        <main className="container mx-auto px-4 py-8">
+          <div className="max-w-md mx-auto text-center space-y-6">
+            <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
+              <Lock className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h1 className="text-2xl font-bold">Acesso Restrito</h1>
+            <p className="text-muted-foreground">
+              Esta página é exclusiva para administradores e colaboradores.
+            </p>
+            <Button onClick={() => navigate("/dashboard")}>
+              Voltar ao Dashboard
+            </Button>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

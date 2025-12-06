@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useReferralSettings } from "@/hooks/useReferralSettings";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Copy, Share2, Gift, Trophy, Clock, CheckCircle2, XCircle, Award, Users, Target } from "lucide-react";
+import { Copy, Share2, Gift, Trophy, Clock, CheckCircle2, XCircle, Award, Users, Target, Lock } from "lucide-react";
 import DashboardHeader from "@/components/DashboardHeader";
 
 interface ReferralStats {
@@ -45,6 +46,7 @@ interface UsedReferralCode {
 const Referral = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { isReferralEnabled, loading: settingsLoading } = useReferralSettings();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<ReferralStats | null>(null);
   const [history, setHistory] = useState<ReferralHistory[]>([]);
@@ -59,8 +61,18 @@ const Referral = () => {
       navigate('/auth');
       return;
     }
-    loadReferralData();
-  }, [user, navigate]);
+    
+    // Redirecionar se sistema de indicações estiver desabilitado
+    if (!settingsLoading && !isReferralEnabled) {
+      navigate('/dashboard');
+      toast.info('O sistema de indicações está temporariamente desativado.');
+      return;
+    }
+    
+    if (!settingsLoading && isReferralEnabled) {
+      loadReferralData();
+    }
+  }, [user, navigate, settingsLoading, isReferralEnabled]);
 
   const loadReferralData = async () => {
     try {

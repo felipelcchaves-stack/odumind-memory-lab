@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Gift, Share2, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useReferralSettings } from "@/hooks/useReferralSettings";
 
 interface ReferralStats {
   total_referrals: number;
@@ -14,6 +15,7 @@ interface ReferralStats {
 export const ReferralWidget = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { isReferralEnabled, loading: settingsLoading } = useReferralSettings();
   const [stats, setStats] = useState<ReferralStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -41,7 +43,8 @@ export const ReferralWidget = () => {
     }
   };
 
-  if (loading || !stats || stats.total_referrals === 0) {
+  // Não mostrar se desabilitado ou carregando
+  if (loading || settingsLoading || !isReferralEnabled || !stats || stats.total_referrals === 0) {
     return null;
   }
 
