@@ -1,9 +1,16 @@
 import { Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useReferralSettings } from "@/hooks/useReferralSettings";
 
 export const ReferralBanner = () => {
   const navigate = useNavigate();
+  const { isReferralEnabled, loading } = useReferralSettings();
+
+  // Não mostrar se desabilitado ou carregando
+  if (loading || !isReferralEnabled) {
+    return null;
+  }
 
   return (
     <div className="bg-gradient-hero rounded-lg p-4 flex items-center justify-between gap-4 shadow-soft">
