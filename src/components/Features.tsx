@@ -52,7 +52,7 @@ const Features = () => {
       {
         icon: Users,
         title: "Biblioteca Unificada",
-        description: "Acesso completo a Odu, Rituais, Rezas e Invocações em uma única plataforma integrada.",
+        description: "Acesso completo a biblioteca com os 256 Odu Ifá para acessar a qualquer hora.",
         color: "text-secondary",
         enabled: true,
       },
