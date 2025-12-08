@@ -14,25 +14,23 @@ import { UrgencySection } from "@/components/UrgencySection";
 import { ExitIntentPopup } from "@/components/ExitIntentPopup";
 import { DynamicSocialProof } from "@/components/DynamicSocialProof";
 import { TopReferrers } from "@/components/TopReferrers";
-
 const Index = () => {
-  const { user } = useAuth();
+  const {
+    user
+  } = useAuth();
   const navigate = useNavigate();
-
   useEffect(() => {
     if (user) {
       navigate('/dashboard');
     }
   }, [user, navigate]);
-
-  return (
-    <div className="min-h-screen">
+  return <div className="min-h-screen">
       <Header />
       <ExitIntentPopup />
       <main>
         <Hero />
-        <DynamicSocialProof />
-        <TestimonialsSection />
+        
+        
         <TopReferrers />
         <div id="features">
           <Features />
@@ -50,8 +48,6 @@ const Index = () => {
         <UrgencySection />
       </main>
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
