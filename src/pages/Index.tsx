@@ -35,17 +35,17 @@ const Index = () => {
         <div id="features">
           <Features />
         </div>
-        <ComparisonSection />
+        
         <div id="learning">
-          <LearningPath />
+          
         </div>
         <div id="faq">
-          <FAQSection />
+          
         </div>
         <div id="pricing">
           <Pricing />
         </div>
-        <UrgencySection />
+        
       </main>
       <Footer />
     </div>;

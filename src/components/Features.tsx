@@ -150,33 +150,33 @@ const Features = () => {
 
         <div className="grid md:grid-cols-2 gap-12 items-center mt-20">
           <div className="relative order-2 md:order-1">
-            <img src={flashcardsIllustration} alt="Flashcards interativos" className="rounded-2xl shadow-medium w-full" />
+            <img alt="Flashcards interativos" className="rounded-2xl shadow-medium w-full" src="/lovable-uploads/ef306c73-bc30-4a9c-a96d-e56689b51c0c.jpg" />
           </div>
           <div className="space-y-6 order-1 md:order-2">
             <h3 className="text-3xl font-bold">
               Flashcards que Evoluem com Você
             </h3>
             <p className="text-lg text-muted-foreground">
-              Nossos flashcards inteligentes se adaptam ao seu desempenho, focando nos Odu que você mais precisa revisar. Vamos inclusive te lembrar até de estudar.
+              Nossos flashcards inteligentes se adaptam ao seu desempenho, focando nos Odu que você mais precisa revisar. Compatíveis com impressão física ou uso digital.
             </p>
             <ul className="space-y-3">
               <li className="flex items-start gap-3">
                 <div className="w-6 h-6 rounded-full bg-secondary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <div className="w-2 h-2 rounded-full bg-secondary" />
                 </div>
-                <span>Flashcards otimizados para computadores, tablets e smartphones.</span>
+                <span>Design frente e verso otimizado</span>
               </li>
               <li className="flex items-start gap-3">
                 <div className="w-6 h-6 rounded-full bg-secondary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <div className="w-2 h-2 rounded-full bg-secondary" />
                 </div>
-                <span>Modo de estudo interativo e guiado. Garantindo o aprendizado.</span>
+                <span>Exportação para PDF e impressão</span>
               </li>
               <li className="flex items-start gap-3">
                 <div className="w-6 h-6 rounded-full bg-secondary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <div className="w-2 h-2 rounded-full bg-secondary" />
                 </div>
-                <span>Vá no seu ritmo. Não precisa ler tudo de uma vez.</span>
+                <span>Modo de estudo interativo com feedback instantâneo</span>
               </li>
             </ul>
           </div>

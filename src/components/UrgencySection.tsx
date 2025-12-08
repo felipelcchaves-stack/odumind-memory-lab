@@ -4,40 +4,43 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Users, TrendingUp, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
 export const UrgencySection = () => {
   const navigate = useNavigate();
   const [timeLeft, setTimeLeft] = useState({
     hours: 23,
     minutes: 59,
-    seconds: 59,
+    seconds: 59
   });
-
   useEffect(() => {
     const timer = setInterval(() => {
-      setTimeLeft((prev) => {
+      setTimeLeft(prev => {
         if (prev.seconds > 0) {
-          return { ...prev, seconds: prev.seconds - 1 };
+          return {
+            ...prev,
+            seconds: prev.seconds - 1
+          };
         } else if (prev.minutes > 0) {
-          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
+          return {
+            ...prev,
+            minutes: prev.minutes - 1,
+            seconds: 59
+          };
         } else if (prev.hours > 0) {
-          return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
+          return {
+            hours: prev.hours - 1,
+            minutes: 59,
+            seconds: 59
+          };
         }
         return prev;
       });
     }, 1000);
-
     return () => clearInterval(timer);
   }, []);
-
-  return (
-    <section className="py-24 px-4 bg-gradient-hero relative overflow-hidden">
+  return <section className="py-24 px-4 bg-gradient-hero relative overflow-hidden">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-10">
-        <div className="absolute inset-0" style={{
-          backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)',
-          backgroundSize: '24px 24px',
-        }} />
+        
       </div>
 
       <div className="container mx-auto relative z-10">
@@ -120,12 +123,7 @@ export const UrgencySection = () => {
 
               {/* CTA */}
               <div className="text-center space-y-4">
-                <Button
-                  size="lg"
-                  variant="hero"
-                  className="text-lg px-12 py-6 h-auto"
-                  onClick={() => navigate('/auth')}
-                >
+                <Button size="lg" variant="hero" className="text-lg px-12 py-6 h-auto" onClick={() => navigate('/auth')}>
                   <Clock className="w-5 h-5 mr-2" />
                   Garantir Minha Vaga Agora
                 </Button>
@@ -150,6 +148,5 @@ export const UrgencySection = () => {
           </Card>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
