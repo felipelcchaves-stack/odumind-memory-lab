@@ -26,11 +26,11 @@ const Hero = () => {
 
           {/* Main Heading */}
           <h1 className="text-5xl md:text-7xl font-bold leading-tight">
-            Domine os{" "}
+            IseseMind —{" "}
             <span className="bg-gradient-hero bg-clip-text text-transparent">
-              256 Odu, Rituais & Rezas
+              O Método que Torna Possível
             </span>
-            {" "}em 14 Dias
+            {" "}Aprender os 256 Odù Ifá
           </h1>
 
           {/* Subheading */}
