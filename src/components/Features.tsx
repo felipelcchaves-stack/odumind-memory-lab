@@ -120,7 +120,7 @@ const Features = () => {
               Memória Potencializada com Tecnologia
             </h3>
             <p className="text-lg text-muted-foreground">
-              Nosso sistema utiliza algoritmos de repetição espaçada baseados em pesquisas científicas para garantir que você revise cada Odu no momento ideal, maximizando a retenção de longo prazo.
+              O método foi somado aos 256 Odu Ifá, pela experiência do Oluwo Ifatokun, sacerdote tradicional, com mais de 30 anos de culto a Orisa, com respeito à tradição.
             </p>
             <ul className="space-y-3">
               <li className="flex items-start gap-3">
