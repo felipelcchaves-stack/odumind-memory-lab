@@ -176,7 +176,7 @@ const Features = () => {
                 <div className="w-6 h-6 rounded-full bg-secondary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <div className="w-2 h-2 rounded-full bg-secondary" />
                 </div>
-                <span>Modo de estudo interativo com feedback instantâneo</span>
+                <span>Vá no seu ritmo. Não precisa ler tudo de uma vez.</span>
               </li>
             </ul>
           </div>
