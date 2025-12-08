@@ -120,7 +120,7 @@ const Features = () => {
               Memória Potencializada com Tecnologia
             </h3>
             <p className="text-lg text-muted-foreground">
-              O método foi somado aos 256 Odu Ifá, pela experiência do Oluwo Ifatokun, sacerdote tradicional, com mais de 30 anos de culto a Orisa, com respeito à tradição.
+              Nosso sistema utiliza algoritmos de repetição espaçada baseados em pesquisas científicas para garantir que você revise cada Odu no momento ideal, maximizando a retenção de longo prazo.
             </p>
             <ul className="space-y-3">
               <li className="flex items-start gap-3">
@@ -144,7 +144,7 @@ const Features = () => {
             </ul>
           </div>
           <div className="relative">
-            <img src={memoryIllustration} alt="Ilustração de memorização" className="rounded-2xl shadow-medium w-full" />
+            <img alt="Ilustração de memorização" className="rounded-2xl shadow-medium w-full" src="/lovable-uploads/7914d049-85a2-4c16-b6a8-1c8592417d9b.jpg" />
           </div>
         </div>
 
