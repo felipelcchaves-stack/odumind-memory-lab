@@ -37,38 +37,19 @@ const Hero = () => {
           <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto">Você não vai aprender tudo de uma vez. Mas, pela primeira vez, você vai conseguir aprender.</p>
 
           {/* Feature Pills */}
-          <div className="flex flex-wrap justify-center gap-4 pt-4">
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border shadow-soft">
-              <BookOpen className="w-5 h-5 text-primary" />
-              <span className="text-sm font-medium">256 Odu Ifá</span>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border shadow-soft">
-              <Brain className="w-5 h-5 text-secondary" />
-              <span className="text-sm font-medium">50+ Rituais</span>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border shadow-soft">
-              <Sparkles className="w-5 h-5 text-accent" />
-              <span className="text-sm font-medium">Rezas & Invocações</span>
-            </div>
-          </div>
+          
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
             <Button size="lg" variant="hero" className="text-lg px-8" onClick={() => navigate('/auth')}>
               Começar Grátis Agora
             </Button>
-            <Button size="lg" variant="outline" className="text-lg px-8">
-              <a href="#demo" className="flex items-center gap-2">
-                Ver Vídeo Demo
-              </a>
-            </Button>
+            
           </div>
 
           {/* Video Demo Section */}
           <div className="mt-12 max-w-3xl mx-auto">
-            <p className="text-sm text-muted-foreground mb-4 text-center">
-              ▶️ Veja como funciona em 60 segundos:
-            </p>
+            
             <div className="aspect-video bg-muted rounded-xl flex items-center justify-center border-2 border-border hover:border-primary transition-colors cursor-pointer group">
               <div className="text-center">
                 <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors mb-3">
@@ -82,9 +63,7 @@ const Hero = () => {
           </div>
 
           {/* Social Proof */}
-          <p className="text-sm text-muted-foreground pt-8">
-            Junte-se a milhares de estudantes e mestres de Ifá
-          </p>
+          
         </div>
       </div>
 
