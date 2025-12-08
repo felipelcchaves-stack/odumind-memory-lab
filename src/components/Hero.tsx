@@ -34,7 +34,7 @@ const Hero = () => {
           </h1>
 
           {/* Subheading */}
-          <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto">Plataforma completa de memorização Yorubá. Método aprovado por +2.500 Babalawo, Iyanifa, Awo e estudantes.</p>
+          <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto">Você não vai aprender tudo de uma vez. Mas, pela primeira vez, você vai conseguir aprender.</p>
 
           {/* Feature Pills */}
           <div className="flex flex-wrap justify-center gap-4 pt-4">
