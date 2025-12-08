@@ -157,7 +157,7 @@ const Features = () => {
               Flashcards que Evoluem com Você
             </h3>
             <p className="text-lg text-muted-foreground">
-              Nossos flashcards inteligentes se adaptam ao seu desempenho, focando nos Odu que você mais precisa revisar. Compatíveis com impressão física ou uso digital.
+              Nossos flashcards inteligentes se adaptam ao seu desempenho, focando nos Odu que você mais precisa revisar. Vamos inclusive te lembrar até de estudar.
             </p>
             <ul className="space-y-3">
               <li className="flex items-start gap-3">
