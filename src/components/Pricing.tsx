@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,69 +7,41 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePixelTracking } from "@/hooks/usePixelTracking";
 import { useGuruCheckout } from "@/hooks/useGuruCheckout";
 
-const monthlyPlans = [
+const plans = [
   {
     name: "Gratuito",
     price: "R$ 0",
-    period: "/mês",
-    originalPrice: undefined,
-    savings: undefined,
-    description: "Perfeito para iniciantes explorarem o método",
+    period: "/7 dias",
+    description: "Experimente tudo por 7 dias, sem compromisso",
     features: [
-      "5 Odu Ifá desbloqueados",
-      "Flashcards básicos",
-      "Mapas mentais simples",
-      "Comunidade de estudantes",
-      "Progresso básico",
+      "Todos os 256 Odu Ifá por 7 dias",
+      "Flashcards completos",
+      "Repetição espaçada",
+      "Progresso detalhado",
+      "Após 7 dias, upgrade necessário",
     ],
-    cta: "Começar Agora",
+    cta: "Começar Grátis",
     variant: "outline" as const,
     popular: false,
-    icon: undefined,
-  },
-  {
-    name: "Akapo",
-    price: "R$ 49,90",
-    period: "/mês",
-    originalPrice: undefined,
-    savings: undefined,
-    description: "Para estudantes sérios e comprometidos",
-    features: [
-      "Todos os 256 Odu Ifá",
-      "Flashcards avançados com IA",
-      "Mapas mentais interativos",
-      "Repetição espaçada personalizada",
-      "Acesso à comunidade premium",
-      "Storytelling completo",
-      "Testes e simulados ilimitados",
-      "Feedback personalizado detalhado",
-      "Suporte prioritário",
-    ],
-    cta: "Começar Akapo",
-    variant: "premium" as const,
-    popular: true,
-    stripeId: "price_1SUQd7Do1RHWW8lpaKCqKH8g",
     icon: undefined,
   },
   {
     name: "Awo",
     price: "R$ 99,90",
     period: "/mês",
-    originalPrice: undefined,
-    savings: undefined,
-    description: "Para mestres e professores de Ifá",
+    description: "O plano ideal para dominar os 256 Odu",
     features: [
-      "Tudo do Akapo",
-      "Criar flashcards personalizados",
-      "Módulos exclusivos para ensino",
-      "Análises avançadas de progresso",
-      "Mentoria em grupo mensal",
-      "Acesso antecipado a novos conteúdos",
-      "Badge de mestre verificado",
+      "Todos os 256 Odu Ifá",
+      "Flashcards avançados com IA",
+      "Mapas mentais interativos",
+      "Repetição espaçada personalizada",
+      "Storytelling completo",
+      "Testes e simulados ilimitados",
+      "Suporte prioritário",
     ],
     cta: "Começar Awo",
-    variant: "hero" as const,
-    popular: false,
+    variant: "premium" as const,
+    popular: true,
     stripeId: "price_1SUQe8Do1RHWW8lpTManIdtD",
     icon: undefined,
   },
@@ -78,106 +49,12 @@ const monthlyPlans = [
     name: "Egbe",
     price: "R$ 129,90",
     period: "/mês",
-    originalPrice: undefined,
-    savings: undefined,
     description: "Para grupos e terreiros que estudam juntos",
     features: [
-      "Até 5 contas Akapo",
+      "Até 5 contas com acesso completo",
       "Todos os 256 Odu Ifá (cada conta)",
       "Dashboard compartilhado de progresso",
-      "Recursos Akapo completos",
-      "Perfeito para grupos de estudo",
-      "Gestão centralizada",
-      "Suporte dedicado",
-    ],
-    cta: "Começar Egbe",
-    variant: "outline" as const,
-    popular: false,
-    stripeId: "price_1SVYDfDo1RHWW8lpGhLjNjoV",
-    icon: Users,
-  },
-];
-
-const annualPlans = [
-  {
-    name: "Gratuito",
-    price: "R$ 0",
-    period: "/mês",
-    originalPrice: undefined,
-    savings: undefined,
-    description: "Perfeito para iniciantes explorarem o método",
-    features: [
-      "5 Odu Ifá desbloqueados",
-      "Flashcards básicos",
-      "Mapas mentais simples",
-      "Comunidade de estudantes",
-      "Progresso básico",
-    ],
-    cta: "Começar Agora",
-    variant: "outline" as const,
-    popular: false,
-    icon: undefined,
-  },
-  {
-    name: "Akapo Anual",
-    price: "R$ 499,90",
-    period: "/ano",
-    originalPrice: "R$ 598,80",
-    savings: "Economize R$ 99/ano",
-    description: "Para estudantes sérios e comprometidos",
-    features: [
-      "Todos os 256 Odu Ifá",
-      "Flashcards avançados com IA",
-      "Mapas mentais interativos",
-      "Repetição espaçada personalizada",
-      "Acesso à comunidade premium",
-      "Storytelling completo",
-      "Testes e simulados ilimitados",
-      "Feedback personalizado detalhado",
-      "Suporte prioritário",
-      "🎁 1 mês grátis de presente",
-    ],
-    cta: "Começar Akapo Anual",
-    variant: "premium" as const,
-    popular: true,
-    stripeId: "price_1SVYC4Do1RHWW8lprTS45LGC",
-    icon: undefined,
-  },
-  {
-    name: "Awo Anual",
-    price: "R$ 999,90",
-    period: "/ano",
-    originalPrice: "R$ 1.198,80",
-    savings: "Economize R$ 199/ano",
-    description: "Para mestres e professores de Ifá",
-    features: [
-      "Tudo do Akapo",
-      "Criar flashcards personalizados",
-      "Módulos exclusivos para ensino",
-      "Análises avançadas de progresso",
-      "Mentoria em grupo mensal",
-      "Acesso antecipado a novos conteúdos",
-      "Badge de mestre verificado",
-      "🎁 Sessão de mentoria 1:1 inclusa",
-    ],
-    cta: "Começar Awo Anual",
-    variant: "hero" as const,
-    popular: false,
-    stripeId: "price_1SVYDGDo1RHWW8lpDluZOrfK",
-    icon: undefined,
-  },
-  {
-    name: "Egbe",
-    price: "R$ 129,90",
-    period: "/mês",
-    originalPrice: undefined,
-    savings: undefined,
-    description: "Para grupos e terreiros que estudam juntos",
-    features: [
-      "Até 5 contas Akapo",
-      "Todos os 256 Odu Ifá (cada conta)",
-      "Dashboard compartilhado de progresso",
-      "Recursos Akapo completos",
+      "Todos os recursos do Awo",
       "Perfeito para grupos de estudo",
       "Gestão centralizada",
       "Suporte dedicado",
@@ -193,11 +70,8 @@ const annualPlans = [
 const Pricing = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const { trackViewContent } = usePixelTracking();
   const { isGuruEnabled, openGuruCheckout, loading: guruLoading } = useGuruCheckout();
-
-  const plans = billingCycle === 'monthly' ? monthlyPlans : annualPlans;
 
   const handleCTAClick = async (planName: string, price: string) => {
     // Track content view
@@ -218,10 +92,9 @@ const Pricing = () => {
     }
 
     // Se GURU está habilitado e tem link configurado, abre direto
-    const isAnnual = billingCycle === 'annual';
-    console.log('[PRICING] Tentando abrir GURU para:', planName, 'Anual:', isAnnual);
+    console.log('[PRICING] Tentando abrir GURU para:', planName);
     
-    if (isGuruEnabled && openGuruCheckout(planName, isAnnual)) {
+    if (isGuruEnabled && openGuruCheckout(planName, false)) {
       console.log('[PRICING] GURU checkout aberto com sucesso');
       return; // Sucesso - abriu checkout GURU
     }
@@ -235,7 +108,7 @@ const Pricing = () => {
     <section className="py-24 px-4 bg-background">
       <div className="container mx-auto">
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-8 space-y-4">
+        <div className="text-center max-w-3xl mx-auto mb-12 space-y-4">
           <h2 className="text-4xl md:text-5xl font-bold">
             Escolha seu{" "}
             <span className="bg-gradient-secondary bg-clip-text text-transparent">
@@ -243,39 +116,12 @@ const Pricing = () => {
             </span>
           </h2>
           <p className="text-lg text-muted-foreground">
-            Planos flexíveis para todos os níveis de estudo, do iniciante ao mestre
+            Planos flexíveis para todos os níveis de estudo
           </p>
         </div>
 
-        {/* Billing Toggle */}
-        <div className="flex justify-center items-center gap-4 mb-12">
-          <span className={`text-sm font-medium transition-colors ${billingCycle === 'monthly' ? 'text-foreground' : 'text-muted-foreground'}`}>
-            Mensal
-          </span>
-          <button
-            onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'annual' : 'monthly')}
-            className={`relative w-14 h-7 rounded-full transition-colors ${
-              billingCycle === 'annual' ? 'bg-primary' : 'bg-muted'
-            }`}
-          >
-            <span
-              className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-sm transition-transform ${
-                billingCycle === 'annual' ? 'translate-x-7' : 'translate-x-0'
-              }`}
-            />
-          </button>
-          <div className="flex items-center gap-2">
-            <span className={`text-sm font-medium transition-colors ${billingCycle === 'annual' ? 'text-foreground' : 'text-muted-foreground'}`}>
-              Anual
-            </span>
-            <Badge variant="secondary" className="bg-green-500/10 text-green-600 border-green-500/20">
-              Economize 16%
-            </Badge>
-          </div>
-        </div>
-
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-4 gap-6 max-w-7xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {plans.map((plan, index) => {
             const PlanIcon = plan.icon;
             return (
@@ -304,22 +150,10 @@ const Pricing = () => {
                   )}
                   <CardTitle className="text-2xl mb-2">{plan.name}</CardTitle>
                   
-                  {plan.originalPrice && (
-                    <div className="text-sm text-muted-foreground line-through mb-1">
-                      {plan.originalPrice}
-                    </div>
-                  )}
-                  
                   <div className="flex items-baseline justify-center gap-1">
                     <span className="text-4xl font-bold">{plan.price}</span>
                     <span className="text-muted-foreground text-sm">{plan.period}</span>
                   </div>
-                  
-                  {plan.savings && (
-                    <Badge variant="secondary" className="mt-2 bg-green-500/10 text-green-600 border-green-500/20">
-                      {plan.savings}
-                    </Badge>
-                  )}
                   
                   <p className="text-sm text-muted-foreground mt-4">
                     {plan.description}

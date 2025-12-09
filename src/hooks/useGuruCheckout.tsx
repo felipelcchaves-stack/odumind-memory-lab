@@ -2,10 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface GuruCheckoutUrls {
-  akapoMonthly: string;
-  akapoAnnual: string;
   awoMonthly: string;
-  awoAnnual: string;
   egbeMonthly: string;
   memberArea: string;
   enabled: boolean;
@@ -13,10 +10,7 @@ interface GuruCheckoutUrls {
 
 export const useGuruCheckout = () => {
   const [urls, setUrls] = useState<GuruCheckoutUrls>({
-    akapoMonthly: '',
-    akapoAnnual: '',
     awoMonthly: '',
-    awoAnnual: '',
     egbeMonthly: '',
     memberArea: '',
     enabled: false,
@@ -48,10 +42,7 @@ export const useGuruCheckout = () => {
       });
 
       const newUrls = {
-        akapoMonthly: settings.guru_checkout_akapo_monthly || '',
-        akapoAnnual: settings.guru_checkout_akapo_annual || '',
         awoMonthly: settings.guru_checkout_awo_monthly || '',
-        awoAnnual: settings.guru_checkout_awo_annual || '',
         egbeMonthly: settings.guru_checkout_egbe_monthly || '',
         memberArea: settings.guru_member_area_url || '',
         enabled: settings.guru_enabled === 'true',
@@ -71,8 +62,8 @@ export const useGuruCheckout = () => {
     loadGuruSettings();
   }, [loadGuruSettings]);
 
-  const getCheckoutUrl = useCallback((planName: string, isAnnual: boolean = false): string | null => {
-    console.log('[GURU] getCheckoutUrl chamado:', { planName, isAnnual, enabled: urls.enabled, loading });
+  const getCheckoutUrl = useCallback((planName: string): string | null => {
+    console.log('[GURU] getCheckoutUrl chamado:', { planName, enabled: urls.enabled, loading });
     
     if (!urls.enabled) {
       console.log('[GURU] GURU não está habilitado, retornando null');
@@ -82,11 +73,8 @@ export const useGuruCheckout = () => {
     const planLower = planName.toLowerCase();
     let url: string | null = null;
     
-    if (planLower.includes('akapo')) {
-      url = isAnnual ? urls.akapoAnnual : urls.akapoMonthly;
-      console.log('[GURU] Plano Akapo detectado, URL:', url);
-    } else if (planLower.includes('awo')) {
-      url = isAnnual ? urls.awoAnnual : urls.awoMonthly;
+    if (planLower.includes('awo')) {
+      url = urls.awoMonthly;
       console.log('[GURU] Plano Awo detectado, URL:', url);
     } else if (planLower.includes('egbe') || planLower.includes('familia') || planLower.includes('família')) {
       url = urls.egbeMonthly;
@@ -98,8 +86,8 @@ export const useGuruCheckout = () => {
     return url && url.trim() !== '' ? url : null;
   }, [urls, loading]);
 
-  const openGuruCheckout = useCallback((planName: string, isAnnual: boolean = false): boolean => {
-    console.log('[GURU] openGuruCheckout chamado:', { planName, isAnnual, loading, enabled: urls.enabled });
+  const openGuruCheckout = useCallback((planName: string, _isAnnual: boolean = false): boolean => {
+    console.log('[GURU] openGuruCheckout chamado:', { planName, loading, enabled: urls.enabled });
     
     if (loading) {
       console.log('[GURU] Ainda carregando, não pode abrir checkout');
@@ -111,7 +99,7 @@ export const useGuruCheckout = () => {
       return false;
     }
     
-    const url = getCheckoutUrl(planName, isAnnual);
+    const url = getCheckoutUrl(planName);
     console.log('[GURU] URL obtida para checkout:', url);
     
     if (url && url.trim() !== '') {

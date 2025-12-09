@@ -25,40 +25,16 @@ const AdminGuruPage = () => {
   const [guruEnabled, setGuruEnabled] = useState(true);
   const [memberAreaUrl, setMemberAreaUrl] = useState("");
   const [checkoutLinks, setCheckoutLinks] = useState<Record<string, string>>({
-    guru_checkout_akapo_monthly: "",
-    guru_checkout_akapo_annual: "",
     guru_checkout_awo_monthly: "",
-    guru_checkout_awo_annual: "",
     guru_checkout_egbe_monthly: "",
   });
 
   const checkoutSettings: GuruSetting[] = [
     {
-      key: "guru_checkout_akapo_monthly",
-      value: checkoutLinks.guru_checkout_akapo_monthly,
-      label: "Akapo Mensal",
-      description: "R$ 49,90/mês - Plano inicial premium",
-      placeholder: "https://pay.guru.com.br/...",
-    },
-    {
-      key: "guru_checkout_akapo_annual",
-      value: checkoutLinks.guru_checkout_akapo_annual,
-      label: "Akapo Anual",
-      description: "R$ 499,90/ano - Economize R$ 99",
-      placeholder: "https://pay.guru.com.br/...",
-    },
-    {
       key: "guru_checkout_awo_monthly",
       value: checkoutLinks.guru_checkout_awo_monthly,
       label: "Awo Mensal",
-      description: "R$ 99,90/mês - Para mestres e professores",
-      placeholder: "https://pay.guru.com.br/...",
-    },
-    {
-      key: "guru_checkout_awo_annual",
-      value: checkoutLinks.guru_checkout_awo_annual,
-      label: "Awo Anual",
-      description: "R$ 999,90/ano - Economize R$ 199",
+      description: "R$ 99,90/mês - O plano ideal para dominar os 256 Odu",
       placeholder: "https://pay.guru.com.br/...",
     },
     {
@@ -90,7 +66,7 @@ const AdminGuruPage = () => {
           setGuruEnabled(s.value === "true");
         } else if (s.key === "guru_member_area_url") {
           setMemberAreaUrl(s.value || "");
-        } else {
+        } else if (s.key === "guru_checkout_awo_monthly" || s.key === "guru_checkout_egbe_monthly") {
           settings[s.key] = s.value || "";
         }
       });
@@ -268,7 +244,7 @@ const AdminGuruPage = () => {
                   <Label htmlFor={setting.key} className="font-medium">
                     {setting.label}
                   </Label>
-                  {setting.value ? (
+                  {checkoutLinks[setting.key] ? (
                     <Badge variant="outline" className="text-green-600 border-green-600">
                       <CheckCircle className="h-3 w-3 mr-1" />
                       Configurado
@@ -287,11 +263,11 @@ const AdminGuruPage = () => {
                     onChange={(e) => handleCheckoutLinkChange(setting.key, e.target.value)}
                     placeholder={setting.placeholder}
                   />
-                  {setting.value && (
+                  {checkoutLinks[setting.key] && (
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => window.open(setting.value, "_blank")}
+                      onClick={() => window.open(checkoutLinks[setting.key], "_blank")}
                       title="Testar link"
                     >
                       <ExternalLink className="h-4 w-4" />

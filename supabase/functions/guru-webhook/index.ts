@@ -11,18 +11,20 @@ const logStep = (step: string, details?: any) => {
   console.log(`[GURU-WEBHOOK] ${step}${detailsStr}`);
 };
 
-// Mapeamento de produtos GURU para planos do sistema (NORMALIZADO)
-// Todos os planos GURU devem mapear para os nomes padrão do sistema
+// Mapeamento de produtos GURU para planos do sistema (ATUALIZADO)
+// Removido Akapo - agora só temos Awo e Egbe como planos pagos
 const GURU_PRODUCT_MAPPING: Record<string, string> = {
   // Planos padrão
-  'premium': 'Premium',
-  'profissional': 'Profissional',
-  'familia': 'Família',
-  'family': 'Família',
+  'profissional': 'Awo',
+  'professional': 'Awo',
+  'familia': 'Egbe',
+  'family': 'Egbe',
   // Nomes GURU -> Nomes do Sistema
-  'akapo': 'Premium',        // Akapo = Premium
-  'awo': 'Profissional',     // Awo = Profissional
-  'egbe': 'Família',         // Egbe = Família
+  'akapo': 'Awo',        // Akapo agora mapeia para Awo
+  'awo': 'Awo',
+  'egbe': 'Egbe',
+  // Aliases antigos
+  'premium': 'Awo',
 };
 
 // Função para gerar senha aleatória
@@ -50,8 +52,8 @@ function mapGuruProductToPlan(productId: string, productName: string): string {
     }
   }
   
-  // Padrão
-  return 'Premium';
+  // Padrão - Awo é o plano principal agora
+  return 'Awo';
 }
 
 // Função para verificar se o evento indica cancelamento
