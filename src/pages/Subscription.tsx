@@ -20,49 +20,30 @@ const plans = [
   {
     name: "Gratuito",
     price: "R$ 0",
-    period: "/mês",
-    description: "Perfeito para iniciantes explorarem o método",
+    period: "/7 dias",
+    description: "Experimente tudo por 7 dias, sem compromisso",
     features: [
-      "5 Odu Ifá desbloqueados",
-      "Flashcards básicos",
-      "Mapas mentais simples",
-      "Comunidade de estudantes",
-      "Progresso básico",
+      "Todos os 256 Odu Ifá por 7 dias",
+      "Flashcards completos",
+      "Repetição espaçada",
+      "Progresso detalhado",
+      "Após 7 dias, upgrade necessário",
     ],
     planId: "free",
-  },
-  {
-    name: "Akapo",
-    price: "R$ 49,90",
-    period: "/mês",
-    description: "Para estudantes sérios e comprometidos",
-    features: [
-      "Todos os 256 Odu Ifá",
-      "Flashcards avançados com IA",
-      "Mapas mentais interativos",
-      "Repetição espaçada personalizada",
-      "Acesso à comunidade premium",
-      "Storytelling completo",
-      "Testes e simulados ilimitados",
-      "Feedback personalizado detalhado",
-      "Suporte prioritário",
-    ],
-    planId: "premium",
-    stripeId: "price_1SUQd7Do1RHWW8lpaKCqKH8g",
   },
   {
     name: "Awo",
     price: "R$ 99,90",
     period: "/mês",
-    description: "Para mestres e professores de Ifá",
+    description: "O plano ideal para dominar os 256 Odu",
     features: [
-      "Tudo do Akapo",
-      "Criar flashcards personalizados",
-      "Módulos exclusivos para ensino",
-      "Análises avançadas de progresso",
-      "Mentoria em grupo mensal",
-      "Acesso antecipado a novos conteúdos",
-      "Badge de mestre verificado",
+      "Todos os 256 Odu Ifá",
+      "Flashcards avançados com IA",
+      "Mapas mentais interativos",
+      "Repetição espaçada personalizada",
+      "Storytelling completo",
+      "Testes e simulados ilimitados",
+      "Suporte prioritário",
     ],
     planId: "professional",
     stripeId: "price_1SUQe8Do1RHWW8lpTManIdtD",
@@ -73,10 +54,10 @@ const plans = [
     period: "/mês",
     description: "Para grupos e terreiros que estudam juntos",
     features: [
-      "Até 5 contas Akapo",
+      "Até 5 contas com acesso completo",
       "Todos os 256 Odu Ifá (cada conta)",
       "Dashboard compartilhado de progresso",
-      "Recursos Akapo completos",
+      "Todos os recursos do Awo",
       "Perfeito para grupos de estudo",
       "Gestão centralizada",
       "Suporte dedicado",
@@ -112,10 +93,14 @@ export default function Subscription() {
   const [pendingDowngradePlan, setPendingDowngradePlan] = useState<string | null>(null);
 
   // Plan hierarchy for determining if downgrade is allowed
-  const planHierarchy = ['Gratuito', 'Akapo', 'Awo', 'Egbe'];
+  const planHierarchy = ['Gratuito', 'Awo', 'Egbe'];
   const getCurrentPlanIndex = () => {
     const currentPlanName = subscription?.plan_name || 'Gratuito';
-    return planHierarchy.indexOf(currentPlanName);
+    // Normalize plan name for hierarchy check
+    const normalizedName = currentPlanName.includes('Egbe') || currentPlanName.includes('Família') 
+      ? 'Egbe' 
+      : currentPlanName;
+    return planHierarchy.indexOf(normalizedName);
   };
 
   useEffect(() => {
@@ -410,7 +395,7 @@ export default function Subscription() {
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20">
       <DashboardHeader />
       
-      <div className="container max-w-7xl mx-auto px-4 py-8">
+      <div className="container max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <Button
@@ -491,84 +476,103 @@ export default function Subscription() {
         )}
 
         {/* Plans Grid */}
-        <div className="grid md:grid-cols-4 gap-6">
+        <div className="grid md:grid-cols-3 gap-6">
           {plans.map((plan, index) => {
-            const isCurrentPlan = plan.name === currentPlanName;
+            const isCurrentPlan = plan.name === currentPlanName || 
+              (plan.name === 'Egbe (Família)' && (currentPlanName === 'Egbe' || currentPlanName === 'Família'));
             const currentPlanIdx = getCurrentPlanIndex();
-            const thisPlanIdx = planHierarchy.indexOf(plan.name);
-            const canDowngrade = thisPlanIdx < currentPlanIdx && !isCurrentPlan;
-            const isUpgrade = thisPlanIdx > currentPlanIdx;
             
+            // Normalize plan name for hierarchy check
+            const planNameNormalized = plan.name.includes('Egbe') ? 'Egbe' : plan.name;
+            const thisPlanIdx = planHierarchy.indexOf(planNameNormalized);
+            
+            const isDowngrade = thisPlanIdx < currentPlanIdx;
+            const isUpgrade = thisPlanIdx > currentPlanIdx;
+            const isFamilyPlan = plan.planId === 'family';
+
             return (
               <Card
                 key={index}
-                className={`relative transition-smooth hover:shadow-medium ${
-                  isCurrentPlan
-                    ? "border-2 border-primary shadow-medium"
-                    : "border-2 hover:border-primary/50"
+                className={`relative transition-all ${
+                  isCurrentPlan 
+                    ? 'border-2 border-primary shadow-lg' 
+                    : 'border hover:border-primary/50'
                 }`}
               >
                 {isCurrentPlan && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <Badge className="px-4 py-1.5 bg-gradient-secondary text-sm font-semibold shadow-soft">
-                      Seu Plano Atual
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <Badge variant="default" className="bg-primary">
+                      Seu Plano
                     </Badge>
                   </div>
                 )}
 
-                <CardHeader className="text-center pb-8 pt-8">
-                  <CardTitle className="text-2xl mb-2">{plan.name}</CardTitle>
-                  <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-5xl font-bold">{plan.price}</span>
-                    <span className="text-muted-foreground">{plan.period}</span>
+                {plan.name === 'Awo' && !isCurrentPlan && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <Badge variant="secondary" className="bg-gradient-secondary">
+                      <Crown className="w-3 h-3 mr-1" />
+                      Mais Popular
+                    </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    {plan.description}
-                  </p>
+                )}
+
+                <CardHeader className="text-center">
+                  {isFamilyPlan && (
+                    <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-accent/10 flex items-center justify-center">
+                      <Users className="w-6 h-6 text-accent" />
+                    </div>
+                  )}
+                  <CardTitle className="text-xl">{plan.name}</CardTitle>
+                  <div className="flex items-baseline justify-center gap-1 mt-2">
+                    <span className="text-3xl font-bold">{plan.price}</span>
+                    <span className="text-muted-foreground text-sm">{plan.period}</span>
+                  </div>
+                  <CardDescription className="mt-2">{plan.description}</CardDescription>
                 </CardHeader>
 
-                <CardContent className="space-y-6">
-                  {canDowngrade ? (
-                    <Button
-                      className="w-full"
-                      size="lg"
-                      variant="outline"
-                      disabled={processingPlan === plan.name}
-                      onClick={() => handleDowngrade(plan.name)}
-                    >
-                      {processingPlan === plan.name ? 'Processando...' : 'Fazer Downgrade'}
-                    </Button>
-                  ) : (
-                    <Button
-                      className="w-full"
-                      size="lg"
-                      disabled={isCurrentPlan || processingPlan === plan.planId}
-                      onClick={() => handleSubscribe(plan.planId, plan.stripeId)}
-                      variant={isCurrentPlan ? "secondary" : "default"}
-                    >
-                      {processingPlan === plan.planId ? (
-                        'Processando...'
-                      ) : isCurrentPlan ? (
-                        'Plano Atual'
-                      ) : plan.planId === 'free' ? (
-                        'Plano Gratuito'
-                      ) : isUpgrade ? (
-                        `Fazer Upgrade`
-                      ) : (
-                        `Assinar ${plan.name}`
-                      )}
-                    </Button>
-                  )}
-
-                  <div className="space-y-3">
-                    {plan.features.map((feature, featureIndex) => (
-                      <div key={featureIndex} className="flex items-start gap-3">
-                        <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <Check className="w-3 h-3 text-primary" />
-                        </div>
+                <CardContent className="space-y-4">
+                  <ul className="space-y-2">
+                    {plan.features.map((feature, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                         <span className="text-sm">{feature}</span>
-                      </div>
+                      </li>
                     ))}
+                  </ul>
+
+                  <div className="pt-4">
+                    {isCurrentPlan ? (
+                      <Button className="w-full" variant="outline" disabled>
+                        Plano Atual
+                      </Button>
+                    ) : isUpgrade ? (
+                      <Button
+                        className="w-full"
+                        variant="premium"
+                        onClick={() => handleSubscribe(plan.planId, plan.stripeId)}
+                        disabled={processingPlan === plan.planId}
+                      >
+                        {processingPlan === plan.planId ? 'Processando...' : 'Fazer Upgrade'}
+                      </Button>
+                    ) : isDowngrade ? (
+                      <Button
+                        className="w-full"
+                        variant="outline"
+                        onClick={() => handleDowngrade(plan.name)}
+                        disabled={processingPlan === plan.name}
+                      >
+                        {processingPlan === plan.name ? 'Processando...' : 'Fazer Downgrade'}
+                      </Button>
+                    ) : (
+                      <Button
+                        className="w-full"
+                        variant="default"
+                        onClick={() => handleSubscribe(plan.planId, plan.stripeId)}
+                        disabled={processingPlan === plan.planId}
+                      >
+                        {processingPlan === plan.planId ? 'Processando...' : 'Assinar'}
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -576,34 +580,23 @@ export default function Subscription() {
           })}
         </div>
 
-        {/* Additional Info */}
-        <div className="mt-16 text-center">
-          <Card className="inline-block">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="h-5 w-5 text-primary" />
-                <span className="text-sm font-medium">
-                  Todos os planos incluem 7 dias de garantia de satisfação
-                </span>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Info */}
+        <div className="mt-8 text-center text-sm text-muted-foreground">
+          <p>Todos os planos incluem 7 dias de garantia de satisfação.</p>
+          <p className="mt-1">Dúvidas? Entre em contato pelo suporte.</p>
         </div>
-      </div>
 
-      {/* Retention Offer Dialog */}
-      {retentionOfferData && (
+        {/* Retention Offer Dialog */}
         <RetentionOfferDialog
           open={showRetentionOffer}
           onOpenChange={setShowRetentionOffer}
+          currentPlan={subscription?.plan_name || 'Awo'}
+          discountPercent={retentionOfferData?.discountPercent || 30}
+          durationMonths={retentionOfferData?.durationMonths || 3}
           onAcceptOffer={handleAcceptRetentionOffer}
           onDeclineOffer={handleDeclineRetentionOffer}
-          currentPlan={subscription?.plan_name || ''}
-          discountPercent={retentionOfferData.discountPercent}
-          durationMonths={retentionOfferData.durationMonths}
-          loading={processingPlan !== null}
         />
-      )}
+      </div>
     </div>
   );
 }

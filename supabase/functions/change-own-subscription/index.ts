@@ -17,9 +17,9 @@ const PLAN_ALIASES: { [key: string]: string } = {
   'Egbe (Família)': 'Egbe',
   'Família': 'Egbe',
   'Profissional': 'Awo',
-  'Premium': 'Akapo',
+  'Premium': 'Awo',
   'Awo': 'Awo',
-  'Akapo': 'Akapo',
+  'Akapo': 'Awo', // Akapo agora mapeia para Awo
   'Egbe': 'Egbe',
   'Gratuito': 'Gratuito',
 };
@@ -29,7 +29,8 @@ function normalizePlanName(planName: string): string {
 }
 
 // Plan hierarchy for downgrade validation (lower index = lower tier)
-const PLAN_HIERARCHY = ['Gratuito', 'Akapo', 'Awo', 'Egbe'];
+// Removido Akapo - agora só temos Gratuito, Awo e Egbe
+const PLAN_HIERARCHY = ['Gratuito', 'Awo', 'Egbe'];
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
