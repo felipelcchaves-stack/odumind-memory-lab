@@ -12,6 +12,7 @@ import { useScrollTracking } from "@/hooks/useScrollTracking";
 import { useTimeTracking } from "@/hooks/useTimeTracking";
 import { useSectionTracking } from "@/hooks/useSectionTracking";
 import { useUtmTracking } from "@/hooks/useUtmTracking";
+import { useCustomScripts } from "@/hooks/useCustomScripts";
 
 // Define sections to track visibility
 const TRACKED_SECTIONS = [
@@ -29,6 +30,7 @@ const Index = () => {
   useTimeTracking();
   useSectionTracking(TRACKED_SECTIONS);
   useUtmTracking(); // Capture UTM parameters
+  useCustomScripts(); // Load tracking scripts ONLY on landing page
 
   useEffect(() => {
     if (user) {
