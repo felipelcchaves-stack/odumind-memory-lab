@@ -1,16 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Check, Crown, Sparkles, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { usePixelTracking } from "@/hooks/usePixelTracking";
 import { useGuruCheckout } from "@/hooks/useGuruCheckout";
+import { useLandingTracking } from "@/hooks/useLandingTracking";
 
 const plans = [
   {
     name: "Gratuito",
     price: "R$ 0",
+    priceValue: 0,
     period: "/7 dias",
     description: "Experimente tudo por 7 dias, sem compromisso",
     features: [
@@ -28,6 +28,7 @@ const plans = [
   {
     name: "Awo",
     price: "R$ 99,90",
+    priceValue: 99.90,
     period: "/mês",
     description: "O plano ideal para dominar os 256 Odu",
     features: [
@@ -48,6 +49,7 @@ const plans = [
   {
     name: "Egbe",
     price: "R$ 129,90",
+    priceValue: 129.90,
     period: "/mês",
     description: "Para grupos e terreiros que estudam juntos",
     features: [
@@ -70,13 +72,19 @@ const plans = [
 const Pricing = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { trackViewContent } = usePixelTracking();
   const { isGuruEnabled, openGuruCheckout, loading: guruLoading } = useGuruCheckout();
+  const { trackCTAClick, trackInitiateCheckout, trackAddToCart } = useLandingTracking();
 
-  const handleCTAClick = async (planName: string, price: string) => {
-    // Track content view
-    trackViewContent(planName, 'pricing_plan');
+  const handleCTAClick = async (planName: string, priceValue: number) => {
+    // Track CTA click
+    trackCTAClick(`começar_${planName.toLowerCase()}`, 'pricing', planName, priceValue);
     
+    // Track AddToCart for interest tracking
+    trackAddToCart(planName, priceValue);
+    
+    // Track InitiateCheckout
+    trackInitiateCheckout(planName, priceValue, 'pricing');
+
     // Se for plano gratuito, vai para auth/subscription
     if (planName === "Gratuito") {
       navigate(user ? '/subscription' : '/auth');
@@ -93,7 +101,7 @@ const Pricing = () => {
 
     // Se GURU está habilitado e tem link configurado, abre direto
     console.log('[PRICING] Tentando abrir GURU para:', planName);
-    
+
     if (isGuruEnabled && openGuruCheckout(planName, false)) {
       console.log('[PRICING] GURU checkout aberto com sucesso');
       return; // Sucesso - abriu checkout GURU
@@ -105,7 +113,7 @@ const Pricing = () => {
   };
 
   return (
-    <section className="py-24 px-4 bg-background">
+    <section id="pricing" className="py-24 px-4 bg-background">
       <div className="container mx-auto">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-12 space-y-4">
@@ -149,15 +157,13 @@ const Pricing = () => {
                     </div>
                   )}
                   <CardTitle className="text-2xl mb-2">{plan.name}</CardTitle>
-                  
+
                   <div className="flex items-baseline justify-center gap-1">
                     <span className="text-4xl font-bold">{plan.price}</span>
                     <span className="text-muted-foreground text-sm">{plan.period}</span>
                   </div>
-                  
-                  <p className="text-sm text-muted-foreground mt-4">
-                    {plan.description}
-                  </p>
+
+                  <p className="text-sm text-muted-foreground mt-4">{plan.description}</p>
                 </CardHeader>
 
                 <CardContent className="space-y-6">
@@ -176,7 +182,7 @@ const Pricing = () => {
                     className="w-full"
                     variant={plan.variant}
                     size="lg"
-                    onClick={() => handleCTAClick(plan.name, plan.price)}
+                    onClick={() => handleCTAClick(plan.name, plan.priceValue)}
                   >
                     {plan.cta}
                     {plan.popular && <Sparkles className="ml-2 w-4 h-4" />}

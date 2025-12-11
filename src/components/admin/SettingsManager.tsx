@@ -5,9 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAppSettings } from '@/hooks/useAppSettings';
-import { Loader2, Save, Eye, EyeOff, ExternalLink, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader2, Save, Eye, EyeOff, ExternalLink, CheckCircle, AlertCircle, Code } from 'lucide-react';
 import { toast } from 'sonner';
+import { CustomScriptsManager } from './CustomScriptsManager';
 
 export function SettingsManager() {
   const { settings, loading, updateSetting, getSettingsByCategory } = useAppSettings();
@@ -91,129 +93,134 @@ export function SettingsManager() {
 
   return (
     <div className="space-y-6">
-      {/* Tracking Pixels Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Pixels de Tracking</CardTitle>
-          <CardDescription>
-            Configure os IDs dos pixels para rastreamento de conversões e análise de usuários.
-            Os pixels serão carregados automaticamente em todas as páginas.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {trackingSettings.map((setting) => {
-            const currentValue = editingValues[setting.key] ?? setting.value ?? '';
-            const hasChanges = editingValues[setting.key] !== undefined;
-            const isSaving = saving[setting.key];
-            const isShowing = showSensitive[setting.key];
+      <Tabs defaultValue="pixels" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="pixels">IDs dos Pixels</TabsTrigger>
+          <TabsTrigger value="scripts" className="gap-2">
+            <Code className="w-4 h-4" />
+            Scripts Customizados
+          </TabsTrigger>
+        </TabsList>
 
-            return (
-              <div key={setting.key} className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Label htmlFor={setting.key} className="text-base font-medium">
-                      {setting.description}
-                    </Label>
-                    {getPixelStatus(setting.key, setting.value)}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {setting.key !== 'tracking_enabled' && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => testPixel(setting.key, currentValue)}
-                          disabled={!currentValue}
-                        >
-                          <ExternalLink className="w-4 h-4 mr-1" />
-                          Testar
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => window.open(getPixelDocs(setting.key), '_blank')}
-                        >
-                          <ExternalLink className="w-4 h-4 mr-1" />
-                          Documentação
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
+        <TabsContent value="pixels">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pixels de Tracking</CardTitle>
+              <CardDescription>
+                Configure os IDs dos pixels para rastreamento de conversões e análise de usuários.
+                Os pixels serão carregados automaticamente em todas as páginas.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {trackingSettings.map((setting) => {
+                const currentValue = editingValues[setting.key] ?? setting.value ?? '';
+                const hasChanges = editingValues[setting.key] !== undefined;
+                const isSaving = saving[setting.key];
+                const isShowing = showSensitive[setting.key];
 
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Input
-                      id={setting.key}
-                      type={setting.is_sensitive && !isShowing ? 'password' : 'text'}
-                      value={currentValue}
-                      onChange={(e) => handleChange(setting.key, e.target.value)}
-                      placeholder={`Digite o ${setting.description}`}
-                      className="font-mono text-sm"
-                    />
-                    {setting.is_sensitive && (
+                return (
+                  <div key={setting.key} className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Label htmlFor={setting.key} className="text-base font-medium">
+                          {setting.description}
+                        </Label>
+                        {getPixelStatus(setting.key, setting.value)}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {setting.key !== 'tracking_enabled' && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => testPixel(setting.key, currentValue)}
+                              disabled={!currentValue}
+                            >
+                              <ExternalLink className="w-4 h-4 mr-1" />
+                              Testar
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => window.open(getPixelDocs(setting.key), '_blank')}
+                            >
+                              <ExternalLink className="w-4 h-4 mr-1" />
+                              Documentação
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Input
+                          id={setting.key}
+                          type={setting.is_sensitive && !isShowing ? 'password' : 'text'}
+                          value={currentValue}
+                          onChange={(e) => handleChange(setting.key, e.target.value)}
+                          placeholder={`Digite o ${setting.description}`}
+                          className="font-mono text-sm"
+                        />
+                        {setting.is_sensitive && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                            onClick={() => toggleSensitive(setting.key)}
+                          >
+                            {isShowing ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </Button>
+                        )}
+                      </div>
                       <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                        onClick={() => toggleSensitive(setting.key)}
+                        onClick={() => handleSave(setting.key)}
+                        disabled={!hasChanges || isSaving}
+                        variant={hasChanges ? "default" : "outline"}
                       >
-                        {isShowing ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {isSaving ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Save className="w-4 h-4" />
+                        )}
                       </Button>
+                    </div>
+
+                    {setting.key !== 'tracking_enabled' && (
+                      <p className="text-xs text-muted-foreground">
+                        Código do pixel: <code className="font-mono bg-muted px-1 py-0.5 rounded">{setting.key}</code>
+                      </p>
                     )}
+
+                    {setting.key === 'tracking_enabled' && (
+                      <p className="text-xs text-muted-foreground">
+                        Ative ou desative todos os pixels de tracking de uma vez. Use "true" para ativar ou "false" para desativar.
+                      </p>
+                    )}
+
+                    <Separator />
                   </div>
-                  <Button
-                    onClick={() => handleSave(setting.key)}
-                    disabled={!hasChanges || isSaving}
-                    variant={hasChanges ? "default" : "outline"}
-                  >
-                    {isSaving ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Save className="w-4 h-4" />
-                    )}
-                  </Button>
-                </div>
+                );
+              })}
 
-                {setting.key !== 'tracking_enabled' && (
-                  <p className="text-xs text-muted-foreground">
-                    Código do pixel: <code className="font-mono bg-muted px-1 py-0.5 rounded">{setting.key}</code>
-                  </p>
-                )}
-
-                {setting.key === 'tracking_enabled' && (
-                  <p className="text-xs text-muted-foreground">
-                    Ative ou desative todos os pixels de tracking de uma vez. Use "true" para ativar ou "false" para desativar.
-                  </p>
-                )}
-
-                <Separator />
+              <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                <h4 className="font-medium text-sm">📊 Como funciona:</h4>
+                <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                  <li>Os pixels são carregados automaticamente em todas as páginas</li>
+                  <li>Os eventos são rastreados automaticamente (PageView, SignUp, Purchase, etc.)</li>
+                  <li>As alterações são aplicadas em tempo real sem necessidade de redeploy</li>
+                  <li>Todas as mudanças são registradas no log de auditoria</li>
+                </ul>
               </div>
-            );
-          })}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-          <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-            <h4 className="font-medium text-sm">📊 Como funciona:</h4>
-            <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-              <li>Os pixels são carregados automaticamente em todas as páginas</li>
-              <li>Os eventos são rastreados automaticamente (PageView, SignUp, Purchase, etc.)</li>
-              <li>As alterações são aplicadas em tempo real sem necessidade de redeploy</li>
-              <li>Todas as mudanças são registradas no log de auditoria</li>
-            </ul>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Future sections can be added here */}
-      <Card className="border-dashed">
-        <CardHeader>
-          <CardTitle className="text-muted-foreground">Mais configurações em breve</CardTitle>
-          <CardDescription>
-            Outras configurações do sistema serão adicionadas aqui no futuro.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+        <TabsContent value="scripts">
+          <CustomScriptsManager />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
