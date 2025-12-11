@@ -101,7 +101,11 @@ export const useSubscription = () => {
 
       if (error) {
         console.error('Error checking subscription with Stripe:', error);
-        toast.error('Erro ao verificar assinatura. Seus dados locais foram mantidos.');
+        // Only show toast if user is actually logged in (not on landing page)
+        // Don't show error for auth-related issues on public pages
+        if (user && !error.message?.includes('Auth session missing')) {
+          toast.error('Erro ao verificar assinatura. Seus dados locais foram mantidos.');
+        }
         // Default to free plan on error to avoid blocking users
         if (!localData) {
           const freeData: SubscriptionData = {
