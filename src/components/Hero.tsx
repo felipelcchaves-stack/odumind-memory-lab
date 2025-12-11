@@ -2,18 +2,25 @@ import { Button } from "@/components/ui/button";
 import { Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useLandingTracking } from "@/hooks/useLandingTracking";
+import { useFreePlanSettings } from "@/hooks/useFreePlanSettings";
 import heroPattern from "@/assets/hero-pattern.jpg";
 
 const Hero = () => {
   const navigate = useNavigate();
   const { trackCTAClick, trackVideoInteraction, trackInitiateCheckout } = useLandingTracking();
+  const { isFreePlanEnabled } = useFreePlanSettings();
 
   const handleCTAClick = () => {
-    // Track CTA click
+    if (!isFreePlanEnabled) {
+      // Scroll to pricing section when free plan is disabled
+      trackCTAClick('ver_planos', 'hero');
+      document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+    
+    // Track CTA click for free trial
     trackCTAClick('começar_gratis', 'hero');
-    // Track as InitiateCheckout for free trial
     trackInitiateCheckout('Gratuito', 0, 'hero');
-    // Navigate
     navigate('/auth');
   };
 
@@ -69,7 +76,7 @@ const Hero = () => {
               className="text-lg px-8"
               onClick={handleCTAClick}
             >
-              Começar Grátis Agora
+              {isFreePlanEnabled ? 'Começar Grátis Agora' : 'Ver Planos'}
             </Button>
           </div>
 

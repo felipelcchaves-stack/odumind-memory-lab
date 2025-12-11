@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useGuruCheckout } from '@/hooks/useGuruCheckout';
+import { useFreePlanSettings } from '@/hooks/useFreePlanSettings';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -82,10 +83,19 @@ export default function Subscription() {
     createRetentionOffer,
   } = useSubscription();
   const { isGuruEnabled, openGuruCheckout, openMemberArea, loading: guruLoading } = useGuruCheckout();
+  const { isFreePlanEnabled } = useFreePlanSettings();
   const navigate = useNavigate();
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
   const [managingSubscription, setManagingSubscription] = useState(false);
   const { trackInitiateCheckout } = usePixelTracking();
+  
+  // Filter plans based on free plan setting
+  const visiblePlans = plans.filter(plan => {
+    if (plan.name === 'Gratuito' && !isFreePlanEnabled) {
+      return false;
+    }
+    return true;
+  });
   
   // Retention offer state
   const [showRetentionOffer, setShowRetentionOffer] = useState(false);
@@ -476,8 +486,8 @@ export default function Subscription() {
         )}
 
         {/* Plans Grid */}
-        <div className="grid md:grid-cols-3 gap-6">
-          {plans.map((plan, index) => {
+        <div className={`grid gap-6 ${visiblePlans.length === 2 ? 'md:grid-cols-2 max-w-3xl mx-auto' : 'md:grid-cols-3'}`}>
+          {visiblePlans.map((plan, index) => {
             const isCurrentPlan = plan.name === currentPlanName || 
               (plan.name === 'Egbe (Família)' && (currentPlanName === 'Egbe' || currentPlanName === 'Família'));
             const currentPlanIdx = getCurrentPlanIndex();
