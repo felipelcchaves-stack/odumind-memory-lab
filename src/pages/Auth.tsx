@@ -10,6 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { Mail, Lock, User, ArrowLeft, Sparkles, Shield, Zap } from 'lucide-react';
 import { usePixelTracking } from '@/hooks/usePixelTracking';
+import { useFreePlanSettings } from '@/hooks/useFreePlanSettings';
 
 const emailSchema = z.string().email('Email inválido');
 const passwordSchema = z.string().min(6, 'Senha deve ter no mínimo 6 caracteres');
@@ -24,6 +25,7 @@ export default function Auth() {
   const { signIn, signUp, resetPassword, user } = useAuth();
   const navigate = useNavigate();
   const { trackSignUp } = usePixelTracking();
+  const { isFreePlanEnabled } = useFreePlanSettings();
 
   useEffect(() => {
     if (user) {
@@ -106,7 +108,13 @@ export default function Auth() {
         title: 'Conta criada!',
         description: 'Sua conta foi criada com sucesso'
       });
-      navigate('/dashboard');
+      
+      // Redirect based on free plan setting
+      if (isFreePlanEnabled) {
+        navigate('/dashboard');
+      } else {
+        navigate('/subscription?required=true');
+      }
     }
     setLoading(false);
   };

@@ -20,6 +20,7 @@ import DashboardHeader from '@/components/DashboardHeader';
 import UpgradeBanner from '@/components/UpgradeBanner';
 import ForgettingRiskAlert from '@/components/ForgettingRiskAlert';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useFreePlanSettings } from '@/hooks/useFreePlanSettings';
 import MemorizationStatusBadge from '@/components/MemorizationStatusBadge';
 import StudyPlanProgress from '@/components/StudyPlanProgress';
 import { DailyGuideWidget } from '@/components/DailyGuideWidget';
@@ -85,6 +86,7 @@ export default function Dashboard() {
     scheduleReviewReminder 
   } = useNotifications();
   const { subscription, loading: subLoading } = useSubscription();
+  const { isFreePlanEnabled, loading: freePlanLoading } = useFreePlanSettings();
   const { isProfileComplete, loading: profileLoading, refetch: refetchProfile } = useProfileCompletion();
   const [achievementsHistory, setAchievementsHistory] = useState<any[]>([]);
   const hasScheduledNotifications = useRef(false);
@@ -117,6 +119,25 @@ export default function Dashboard() {
       navigate('/');
     }
   }, [user, authLoading, navigate]);
+
+  // Guard: Block access if free plan is disabled and user has no active subscription
+  useEffect(() => {
+    if (
+      !authLoading && 
+      !subLoading && 
+      !freePlanLoading && 
+      user && 
+      !isFreePlanEnabled
+    ) {
+      const hasActiveSubscription = 
+        subscription?.status === 'active' || 
+        subscription?.status === 'trialing';
+      
+      if (!hasActiveSubscription) {
+        navigate('/subscription?required=true');
+      }
+    }
+  }, [user, authLoading, subLoading, freePlanLoading, subscription, isFreePlanEnabled, navigate]);
 
   useEffect(() => {
     if (user) {
