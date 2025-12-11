@@ -2,10 +2,20 @@ import { Button } from "@/components/ui/button";
 import { BookOpen, Menu } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useFreePlanSettings } from "@/hooks/useFreePlanSettings";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const { isFreePlanEnabled } = useFreePlanSettings();
+
+  const handleCtaClick = () => {
+    if (isFreePlanEnabled) {
+      navigate('/auth');
+    } else {
+      document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
@@ -40,8 +50,8 @@ const Header = () => {
             <Button variant="ghost" size="sm" onClick={() => navigate('/auth')}>
               Entrar
             </Button>
-            <Button variant="hero" size="sm" onClick={() => navigate('/auth')}>
-              Começar Grátis
+            <Button variant="hero" size="sm" onClick={handleCtaClick}>
+              {isFreePlanEnabled ? 'Começar Grátis' : 'Ver Planos'}
             </Button>
           </div>
 
@@ -74,8 +84,8 @@ const Header = () => {
                 <Button variant="ghost" size="sm" onClick={() => navigate('/auth')}>
                   Entrar
                 </Button>
-                <Button variant="hero" size="sm" onClick={() => navigate('/auth')}>
-                  Começar Grátis
+                <Button variant="hero" size="sm" onClick={handleCtaClick}>
+                  {isFreePlanEnabled ? 'Começar Grátis' : 'Ver Planos'}
                 </Button>
               </div>
             </nav>
