@@ -8,7 +8,7 @@ import { useFreePlanSettings } from '@/hooks/useFreePlanSettings';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Crown, Check, CreditCard, Calendar, AlertCircle, Shield, Users } from 'lucide-react';
+import { ArrowLeft, Crown, Check, CreditCard, Calendar, AlertCircle, Shield, Users, AlertTriangle } from 'lucide-react';
 import DashboardHeader from '@/components/DashboardHeader';
 import RetentionOfferDialog from '@/components/RetentionOfferDialog';
 import { format } from 'date-fns';
@@ -16,6 +16,7 @@ import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { usePixelTracking } from '@/hooks/usePixelTracking';
 import { supabase } from '@/integrations/supabase/client';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const plans = [
   {
@@ -101,6 +102,18 @@ export default function Subscription() {
   const [showRetentionOffer, setShowRetentionOffer] = useState(false);
   const [retentionOfferData, setRetentionOfferData] = useState<any>(null);
   const [pendingDowngradePlan, setPendingDowngradePlan] = useState<string | null>(null);
+  
+  // Checkout required state (when free plan is disabled)
+  const [isCheckoutRequired, setIsCheckoutRequired] = useState(false);
+  
+  // Check for required=true query param
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('required') === 'true') {
+      setIsCheckoutRequired(true);
+      window.history.replaceState({}, '', '/subscription');
+    }
+  }, []);
 
   // Plan hierarchy for determining if downgrade is allowed
   const planHierarchy = ['Gratuito', 'Awo', 'Egbe'];
@@ -408,19 +421,37 @@ export default function Subscription() {
       <div className="container max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/dashboard')}
-            className="mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar
-          </Button>
-          <h1 className="text-4xl font-bold mb-2">Minha Assinatura</h1>
+          {!isCheckoutRequired && (
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/dashboard')}
+              className="mb-4"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Voltar
+            </Button>
+          )}
+          <h1 className="text-4xl font-bold mb-2">
+            {isCheckoutRequired ? 'Escolha seu Plano' : 'Minha Assinatura'}
+          </h1>
           <p className="text-muted-foreground">
-            Gerencie seu plano e acesse recursos premium
+            {isCheckoutRequired 
+              ? 'Selecione um dos planos abaixo para acessar a plataforma'
+              : 'Gerencie seu plano e acesse recursos premium'}
           </p>
         </div>
+
+        {/* Checkout Required Alert */}
+        {isCheckoutRequired && (
+          <Alert variant="destructive" className="mb-6 border-orange-500/50 bg-orange-500/10">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Escolha um plano para continuar</AlertTitle>
+            <AlertDescription>
+              Para acessar a plataforma e começar sua jornada de memorização dos 256 Odu Ifá, 
+              selecione um dos planos disponíveis abaixo.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Current Subscription Card */}
         {subscription && (
