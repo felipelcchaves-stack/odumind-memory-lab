@@ -11,7 +11,7 @@ import { Link2, Target, Megaphone, TrendingUp, Users } from 'lucide-react';
 
 interface UtmRecord {
   id: string;
-  user_id: string;
+  user_id: string | null;
   utm_source: string | null;
   utm_medium: string | null;
   utm_campaign: string | null;
@@ -47,7 +47,8 @@ export default function UtmAnalytics() {
 
   const loadUtmData = async () => {
     try {
-      const { data, error } = await supabase
+      // Use type assertion since types may not be synced yet
+      const { data, error } = await (supabase as any)
         .from('utm_tracking')
         .select('*')
         .order('created_at', { ascending: false })
@@ -55,7 +56,7 @@ export default function UtmAnalytics() {
 
       if (error) throw error;
 
-      const utmRecords = data || [];
+      const utmRecords: UtmRecord[] = data || [];
       setRecords(utmRecords);
 
       // Calculate statistics
