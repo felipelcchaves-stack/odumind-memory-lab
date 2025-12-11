@@ -10,11 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Gift, X } from "lucide-react";
 import { toast } from "sonner";
+import { useLandingTracking } from "@/hooks/useLandingTracking";
 
 export const ExitIntentPopup = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [hasShown, setHasShown] = useState(false);
+  const { trackPopupView, trackPopupClose, trackLeadCapture, trackCTAClick } = useLandingTracking();
 
   useEffect(() => {
     // Check if popup was already shown in this session
@@ -30,6 +32,8 @@ export const ExitIntentPopup = () => {
         setIsOpen(true);
         setHasShown(true);
         sessionStorage.setItem('exitIntentShown', 'true');
+        // Track popup view
+        trackPopupView('exit_intent_discount');
       }
     };
 
@@ -42,7 +46,7 @@ export const ExitIntentPopup = () => {
       clearTimeout(timer);
       document.removeEventListener('mouseleave', handleMouseLeave);
     };
-  }, [hasShown, isOpen]);
+  }, [hasShown, isOpen, trackPopupView]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +55,10 @@ export const ExitIntentPopup = () => {
       return;
     }
 
+    // Track lead capture
+    trackLeadCapture('exit_intent_popup', true);
+    trackCTAClick('quero_desconto', 'exit_intent_popup');
+
     // Here you would typically send to your email service
     console.log('Exit intent email captured:', email);
     toast.success('Desconto enviado para seu email!');
@@ -58,11 +66,21 @@ export const ExitIntentPopup = () => {
   };
 
   const handleClose = () => {
+    // Track popup close without action
+    trackPopupClose('exit_intent_discount', false);
     setIsOpen(false);
   };
 
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      // Track popup close if closing
+      trackPopupClose('exit_intent_discount', false);
+    }
+    setIsOpen(open);
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <button
           onClick={handleClose}
