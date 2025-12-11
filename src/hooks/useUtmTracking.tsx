@@ -94,7 +94,9 @@ export const useUtmTracking = () => {
     if (!utmParams || !userId) return;
 
     try {
-      const { error } = await supabase
+      // Use type assertion to bypass TypeScript checking since table was just created
+      const client = supabase as any;
+      const { error } = await client
         .from('utm_tracking')
         .insert({
           user_id: userId,
