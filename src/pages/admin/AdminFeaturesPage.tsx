@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { BookOpen, Flame, Heart, Sparkles, Loader2, Save, Eye, EyeOff, Info, Gift, Users } from 'lucide-react';
+import { BookOpen, Flame, Heart, Sparkles, Loader2, Save, Eye, EyeOff, Info, Gift, Users, Ticket } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface ContentType {
@@ -60,6 +60,13 @@ export default function AdminFeaturesPage() {
       if (error) throw error;
 
       const features: SystemFeature[] = [
+        {
+          key: 'free_plan_enabled',
+          nome: 'Plano Gratuito',
+          descricao: 'Exibe o plano gratuito (7 dias de teste) na landing page e permite novos cadastros sem pagamento',
+          icon: Ticket,
+          enabled: data?.find(s => s.key === 'free_plan_enabled')?.value !== 'false',
+        },
         {
           key: 'referral_system_enabled',
           nome: 'Sistema de Indicação',

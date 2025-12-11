@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGuruCheckout } from "@/hooks/useGuruCheckout";
 import { useLandingTracking } from "@/hooks/useLandingTracking";
+import { useFreePlanSettings } from "@/hooks/useFreePlanSettings";
 
 const plans = [
   {
@@ -74,6 +75,15 @@ const Pricing = () => {
   const { user } = useAuth();
   const { isGuruEnabled, openGuruCheckout, loading: guruLoading } = useGuruCheckout();
   const { trackCTAClick, trackInitiateCheckout, trackAddToCart } = useLandingTracking();
+  const { isFreePlanEnabled } = useFreePlanSettings();
+
+  // Filter plans based on free plan setting
+  const visiblePlans = plans.filter(plan => {
+    if (plan.name === 'Gratuito' && !isFreePlanEnabled) {
+      return false;
+    }
+    return true;
+  });
 
   const handleCTAClick = async (planName: string, priceValue: number) => {
     // Track CTA click
@@ -129,8 +139,8 @@ const Pricing = () => {
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          {plans.map((plan, index) => {
+        <div className={`grid gap-6 max-w-5xl mx-auto ${visiblePlans.length === 2 ? 'md:grid-cols-2 max-w-3xl' : 'md:grid-cols-3'}`}>
+          {visiblePlans.map((plan, index) => {
             const PlanIcon = plan.icon;
             return (
               <Card
