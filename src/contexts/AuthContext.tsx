@@ -144,7 +144,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     isLoggingOutRef.current = true;
+    
+    // Limpar todos os flags de sessão
     localStorage.removeItem('session_id');
+    localStorage.removeItem('profile_modal_completed_session');
+    localStorage.removeItem('onboarding_modal_completed_session');
+    localStorage.removeItem('login_in_progress');
+    
     await supabase.auth.signOut();
     setTimeout(() => {
       isLoggingOutRef.current = false;
