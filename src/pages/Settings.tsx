@@ -5,12 +5,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Play, AlertTriangle, Type, Gift, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Type, Gift, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import NotificationSettings from '@/components/NotificationSettings';
 import DashboardHeader from '@/components/DashboardHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useProductTour } from '@/hooks/useProductTour';
 import { ResetProgressDialog } from '@/components/ResetProgressDialog';
 import StudyCalendar from '@/components/StudyCalendar';
 import StudyPlanGenerator from '@/components/StudyPlanGenerator';
@@ -20,7 +19,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 export default function Settings() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { resetTour } = useProductTour();
   const { fontSize, setFontSize } = useAccessibility();
   const [usedCode, setUsedCode] = useState<{ referral_code: string; used_at: string; status: string } | null>(null);
   const [applyCodeInput, setApplyCodeInput] = useState("");
@@ -187,38 +185,6 @@ export default function Settings() {
           <StudyCalendar />
           
           <StudyPlanGenerator />
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Tour da Plataforma</CardTitle>
-              <CardDescription>
-                Refaça os tours guiados para conhecer novamente todas as funcionalidades
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button 
-                onClick={resetTour} 
-                variant="outline" 
-                className="w-full sm:w-auto"
-              >
-                <Play className="h-4 w-4 mr-2" />
-                Refazer Tour Inicial
-              </Button>
-              
-              <Button 
-                onClick={() => {
-                  localStorage.setItem('start_dashboard_tour', 'true');
-                  navigate('/dashboard');
-                  toast.success('Tour do Dashboard iniciado! Aguarde um momento...');
-                }}
-                variant="outline" 
-                className="w-full sm:w-auto"
-              >
-                <Play className="h-4 w-4 mr-2" />
-                Refazer Tour do Dashboard
-              </Button>
-            </CardContent>
-          </Card>
           
           <NotificationSettings />
 

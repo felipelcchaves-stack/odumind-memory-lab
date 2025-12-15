@@ -94,10 +94,7 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
         origin: { y: 0.6 }
       });
 
-      toast.success('🎉 Agora vamos conhecer o Dashboard!');
-      
-      // Sinaliza para iniciar o tour do dashboard (opcional)
-      localStorage.setItem('start_dashboard_tour', 'true');
+      toast.success('🎉 Bem-vindo ao IseseMind!');
       
       // Aguarda um pouco antes de fechar o modal
       setTimeout(() => {
