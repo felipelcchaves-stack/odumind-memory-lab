@@ -36,6 +36,7 @@ import FamiliaAceitar from "./pages/FamiliaAceitar";
 import BibliotecaYoruba from "./pages/BibliotecaYoruba";
 import RitualStudy from "./pages/RitualStudy";
 import CaminhoIfa from "./pages/CaminhoIfa";
+import Instalar from "./pages/Instalar";
 import { AdminLayout } from "./components/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminOduPage from "./pages/admin/AdminOduPage";
@@ -90,6 +91,7 @@ function AppContent() {
           <Route path="/biblioteca-yoruba" element={<BibliotecaYoruba />} />
           <Route path="/ritual/:id" element={<RitualStudy />} />
           <Route path="/caminho-ifa" element={<CaminhoIfa />} />
+          <Route path="/instalar" element={<Instalar />} />
           <Route path="/study" element={<StudySession />} />
           <Route path="/memory-palace" element={<MemoryPalace />} />
           <Route path="/tecnicas" element={<Tecnicas />} />

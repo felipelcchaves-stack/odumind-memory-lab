@@ -36,6 +36,7 @@ import { ChevronDown, HelpCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useContentFeatures } from '@/hooks/useContentFeatures';
 import { CaminhoIfaMiniMap } from '@/components/CaminhoIfaMiniMap';
+import { PWAInstallBanner } from '@/components/PWAInstallBanner';
 
 interface ProfileData {
   xp: number;
@@ -471,6 +472,9 @@ export default function Dashboard() {
         }} 
       />
       <DashboardHeader />
+
+      {/* PWA Install Banner */}
+      <PWAInstallBanner />
 
       {/* Main Content */}
       <main className="container px-4 py-8">
