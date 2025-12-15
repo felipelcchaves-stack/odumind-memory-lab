@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useChangelog } from '@/hooks/useChangelog';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useReferralSettings } from '@/hooks/useReferralSettings';
 import { useTheme } from 'next-themes';
 import { useAccessibility } from '@/contexts/AccessibilityContext';
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Home, BookOpen, Brain, Shield, Settings, LogOut, Sun, Moon, User, Crown, BarChart3, Edit, Landmark, Lightbulb, Sparkles, Gift, Users, Map } from 'lucide-react';
+import { Home, BookOpen, Shield, Settings, LogOut, Sun, Moon, User, Crown, BarChart3, Edit, Lightbulb, Sparkles, Gift, Users, Map } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 export default function DashboardHeader() {
@@ -27,18 +28,18 @@ export default function DashboardHeader() {
   const { theme, setTheme } = useTheme();
   const { hasUnreadChangelog } = useChangelog();
   const { isFamily } = useSubscription();
+  const { isReferralEnabled } = useReferralSettings();
   const { simplifiedMode, setSimplifiedMode, highContrast, setHighContrast } = useAccessibility();
 
+  // Navegação simplificada: apenas itens essenciais no header
   const navItems = [
     { path: '/dashboard', icon: Home, label: 'Dashboard', priority: 'high' },
     { path: '/caminho-ifa', icon: Map, label: 'Caminho', priority: 'high' },
     { path: '/biblioteca-yoruba', icon: BookOpen, label: 'Biblioteca', priority: 'high' },
-    { path: '/study', icon: Brain, label: 'Estudar', priority: 'high' },
-    { path: '/indicar', icon: Gift, label: 'Indicar', priority: 'medium' },
+    // Indicar - condicional baseado nas configurações
+    ...(isReferralEnabled ? [{ path: '/indicar', icon: Gift, label: 'Indicar', priority: 'medium' as const }] : []),
+    // Família - condicional baseado no plano
     ...(isFamily() ? [{ path: '/familia', icon: Users, label: 'Família', priority: 'medium' as const }] : []),
-    { path: '/memory-palace', icon: Landmark, label: 'Palácio', priority: 'medium' },
-    { path: '/tecnicas', icon: Lightbulb, label: 'Técnicas', priority: 'low' },
-    { path: '/novidades', icon: Sparkles, label: 'Novidades', showBadge: hasUnreadChangelog, priority: 'low' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -85,9 +86,6 @@ export default function DashboardHeader() {
         >
           <item.icon className="h-4 w-4" />
           <span className="hidden sm:inline">{item.label}</span>
-          {item.showBadge && (
-            <Badge variant="destructive" className="absolute -top-1 -right-1 h-2 w-2 p-0 animate-pulse" />
-          )}
         </Button>
       ))}
         </nav>
@@ -163,9 +161,9 @@ export default function DashboardHeader() {
                 <Crown className="mr-2 h-4 w-4" />
                 Minha Assinatura
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/familia')}>
-                <Users className="mr-2 h-4 w-4" />
-                Plano Família
+              <DropdownMenuItem onClick={() => navigate('/tecnicas')}>
+                <Lightbulb className="mr-2 h-4 w-4" />
+                Técnicas de Memorização
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate('/settings')}>
                 <Settings className="mr-2 h-4 w-4" />
@@ -210,6 +208,15 @@ export default function DashboardHeader() {
                 <DropdownMenuItem onClick={() => navigate('/colaborador')}>
                   <Edit className="mr-2 h-4 w-4" />
                   Editar Odu
+                </DropdownMenuItem>
+              )}
+              {(isAdmin || isColaborador) && (
+                <DropdownMenuItem onClick={() => navigate('/novidades')} className="relative">
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Novidades
+                  {hasUnreadChangelog && (
+                    <Badge variant="destructive" className="ml-2 h-2 w-2 p-0 animate-pulse" />
+                  )}
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
