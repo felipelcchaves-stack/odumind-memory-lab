@@ -2,8 +2,6 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-// Changelog modal removido - já está no App.tsx
-import ProductTour from '@/components/ProductTour';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -33,7 +31,6 @@ import { ReferralWidget } from '@/components/ReferralWidget';
 import { ProfileCompletionModal } from '@/components/ProfileCompletionModal';
 import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { useAccessibility } from '@/contexts/AccessibilityContext';
-import { DashboardTour } from '@/components/DashboardTour';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, HelpCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -94,25 +91,8 @@ export default function Dashboard() {
   const [hasCompletedFirstStudy, setHasCompletedFirstStudy] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showGlossary, setShowGlossary] = useState(false);
-  const [runTour, setRunTour] = useState(false);
   const { simplifiedMode } = useAccessibility();
   const { isFeatureEnabled } = useContentFeatures();
-  
-  // Inicia o tour se há flag do onboarding
-  useEffect(() => {
-    const shouldStartTour = localStorage.getItem('start_dashboard_tour');
-    if (shouldStartTour === 'true' && !loading) {
-      localStorage.removeItem('start_dashboard_tour');
-      // Aguarda renderização completa
-      const timer = setTimeout(() => {
-        setRunTour(true);
-      }, 2000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [loading]);
-
-  // Debug log de changelog removido - gerenciado no App.tsx
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -490,7 +470,6 @@ export default function Dashboard() {
           refetchProfile();
         }} 
       />
-      <ProductTour />
       <DashboardHeader />
 
       {/* Main Content */}
@@ -961,12 +940,6 @@ export default function Dashboard() {
       >
         <HelpCircle className="h-8 w-8" />
       </Button>
-
-      {/* Dashboard Tour */}
-      <DashboardTour 
-        run={runTour}
-        onComplete={() => setRunTour(false)}
-      />
     </div>
   );
 }

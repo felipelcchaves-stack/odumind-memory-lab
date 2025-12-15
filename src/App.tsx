@@ -7,9 +7,11 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ReferralWelcomeModal } from "@/components/ReferralWelcomeModal";
 import ChangelogModal from "@/components/ChangelogModal";
+import { AnnouncementModal } from "@/components/AnnouncementModal";
 import { ProfileCompletionChecker } from "@/components/ProfileCompletionChecker";
 import { useSessionValidation } from "@/hooks/useSessionValidation";
 import { useChangelog } from "@/hooks/useChangelog";
+import { useAnnouncements } from "@/hooks/useAnnouncements";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -47,6 +49,7 @@ import AdminChangelogPage from "./pages/admin/AdminChangelogPage";
 import AdminRestorePage from "./pages/admin/AdminRestorePage";
 import AdminGuruPage from "./pages/admin/AdminGuruPage";
 import AdminFeaturesPage from "./pages/admin/AdminFeaturesPage";
+import AdminAnnouncementsPage from "./pages/admin/AdminAnnouncementsPage";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +60,7 @@ function SessionValidator() {
 
 function AppContent() {
   const { showModal, latestChangelog, markAsViewed } = useChangelog();
+  const { announcement, markAsRead } = useAnnouncements();
   
   return (
     <>
@@ -70,6 +74,11 @@ function AppContent() {
           onClose={markAsViewed}
           changelog={latestChangelog}
           onMarkAsViewed={markAsViewed}
+        />
+        <AnnouncementModal
+          open={!!announcement}
+          onClose={markAsRead}
+          announcement={announcement}
         />
         <SessionValidator />
         <Routes>
@@ -102,6 +111,7 @@ function AppContent() {
             <Route path="changelog" element={<AdminChangelogPage />} />
             <Route path="guru" element={<AdminGuruPage />} />
             <Route path="features" element={<AdminFeaturesPage />} />
+            <Route path="announcements" element={<AdminAnnouncementsPage />} />
             <Route path="restore" element={<AdminRestorePage />} />
           </Route>
           <Route path="/profile" element={<Profile />} />
