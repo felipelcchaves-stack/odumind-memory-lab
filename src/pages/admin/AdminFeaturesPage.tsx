@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { BookOpen, Flame, Heart, Sparkles, Loader2, Save, Eye, EyeOff, Info, Gift, Users, Ticket } from 'lucide-react';
+import { BookOpen, Flame, Heart, Sparkles, Loader2, Save, Eye, EyeOff, Info, Gift, Users, Ticket, Volume2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface ContentType {
@@ -73,6 +73,13 @@ export default function AdminFeaturesPage() {
           descricao: 'Permite que alunos indiquem amigos e ganhem recompensas (dias Premium grátis)',
           icon: Gift,
           enabled: data?.find(s => s.key === 'referral_system_enabled')?.value === 'true',
+        },
+        {
+          key: 'audio_pronunciation_enabled',
+          nome: 'Áudio de Pronúncia',
+          descricao: 'Habilita botões de áudio com pronúncia Yorubá nos Odus (ElevenLabs TTS)',
+          icon: Volume2,
+          enabled: data?.find(s => s.key === 'audio_pronunciation_enabled')?.value === 'true',
         },
       ];
 

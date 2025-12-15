@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { OduAudioPlayer } from "@/components/OduAudioPlayer";
 import { OduAudioPlayerWithSync } from "@/components/OduAudioPlayerWithSync";
 import { SyncedTextHighlighter } from "@/components/SyncedTextHighlighter";
+import { useAudioSettings } from "@/hooks/useAudioSettings";
 
 interface OduPresentationProps {
   oduId: string;
@@ -39,6 +40,9 @@ export default function OduPresentation({
   const [timeRemaining, setTimeRemaining] = useState(minReadingTime);
   const [canProceed, setCanProceed] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
+  
+  // Audio settings
+  const { isAudioEnabled } = useAudioSettings();
   
   // Audio sync states for verso
   const [versoCurrentTime, setVersoCurrentTime] = useState(0);
@@ -136,11 +140,13 @@ export default function OduPresentation({
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <CardTitle className="text-2xl md:text-3xl font-bold">{nome}</CardTitle>
-                    <OduAudioPlayer 
-                      oduId={oduId} 
-                      audioType="nome" 
-                      variant="icon"
-                    />
+                    {isAudioEnabled && (
+                      <OduAudioPlayer 
+                        oduId={oduId} 
+                        audioType="nome" 
+                        variant="icon"
+                      />
+                    )}
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">
                     Odu #{numero} • Leia com atenção antes de praticar
@@ -188,8 +194,8 @@ export default function OduPresentation({
                         </div>
                       </div>
                       
-                      {/* Synced text highlighter */}
-                      {versoDuration > 0 && (isVersoPlaying || versoCurrentTime > 0) ? (
+                      {/* Synced text highlighter - only when audio is enabled and playing */}
+                      {isAudioEnabled && versoDuration > 0 && (isVersoPlaying || versoCurrentTime > 0) ? (
                         <SyncedTextHighlighter
                           text={verso_resumido}
                           isPlaying={isVersoPlaying}
@@ -203,23 +209,27 @@ export default function OduPresentation({
                         </p>
                       )}
                       
-                      {/* Audio player with sync */}
-                      <div className="mt-3 flex items-center gap-3">
-                        <OduAudioPlayerWithSync 
-                          oduId={oduId} 
-                          audioType="verso_resumido"
-                          label="Ouvir e Acompanhar"
-                          onTimeUpdate={(time, dur) => {
-                            setVersoCurrentTime(time);
-                            setVersoDuration(dur);
-                          }}
-                          onPlayingChange={setIsVersoPlaying}
-                        />
-                      </div>
-                      
-                      <p className="text-xs text-muted-foreground mt-3">
-                        💡 Clique em "Ouvir e Acompanhar" para ver o texto grifado conforme a leitura
-                      </p>
+                      {/* Audio player with sync - conditional */}
+                      {isAudioEnabled && (
+                        <>
+                          <div className="mt-3 flex items-center gap-3">
+                            <OduAudioPlayerWithSync 
+                              oduId={oduId} 
+                              audioType="verso_resumido"
+                              label="Ouvir e Acompanhar"
+                              onTimeUpdate={(time, dur) => {
+                                setVersoCurrentTime(time);
+                                setVersoDuration(dur);
+                              }}
+                              onPlayingChange={setIsVersoPlaying}
+                            />
+                          </div>
+                          
+                          <p className="text-xs text-muted-foreground mt-3">
+                            💡 Clique em "Ouvir e Acompanhar" para ver o texto grifado conforme a leitura
+                          </p>
+                        </>
+                      )}
                     </motion.div>
                   )}
 
