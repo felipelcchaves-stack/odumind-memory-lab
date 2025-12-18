@@ -11,14 +11,19 @@ import { Input } from "@/components/ui/input";
 import { Gift, X } from "lucide-react";
 import { toast } from "sonner";
 import { useLandingTracking } from "@/hooks/useLandingTracking";
+import { useExitPopupSettings } from "@/hooks/useExitPopupSettings";
 
 export const ExitIntentPopup = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [hasShown, setHasShown] = useState(false);
   const { trackPopupView, trackPopupClose, trackLeadCapture, trackCTAClick } = useLandingTracking();
+  const { settings, loading, formattedDescription, formattedButtonText } = useExitPopupSettings();
 
   useEffect(() => {
+    // Não configurar listener se desabilitado ou carregando
+    if (loading || !settings.enabled) return;
+
     // Check if popup was already shown in this session
     const popupShown = sessionStorage.getItem('exitIntentShown');
     if (popupShown) {
@@ -37,16 +42,19 @@ export const ExitIntentPopup = () => {
       }
     };
 
-    // Add event listener after 3 seconds to avoid immediate trigger
+    // Add event listener after configured delay
     const timer = setTimeout(() => {
       document.addEventListener('mouseleave', handleMouseLeave);
-    }, 3000);
+    }, settings.delaySeconds * 1000);
 
     return () => {
       clearTimeout(timer);
       document.removeEventListener('mouseleave', handleMouseLeave);
     };
-  }, [hasShown, isOpen, trackPopupView]);
+  }, [hasShown, isOpen, trackPopupView, loading, settings.enabled, settings.delaySeconds]);
+
+  // Não renderizar nada se desabilitado ou carregando
+  if (loading || !settings.enabled) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,10 +105,15 @@ export const ExitIntentPopup = () => {
             </div>
           </div>
           <DialogTitle className="text-center text-2xl">
-            Espera! 🎁
+            {settings.title}
           </DialogTitle>
           <DialogDescription className="text-center text-base">
-            Antes de ir, que tal <strong className="text-foreground">20% de desconto</strong> no seu primeiro mês?
+            <span dangerouslySetInnerHTML={{ 
+              __html: formattedDescription.replace(
+                /\*\*(.*?)\*\*/g, 
+                '<strong class="text-foreground">$1</strong>'
+              ) 
+            }} />
           </DialogDescription>
         </DialogHeader>
 
@@ -116,7 +129,7 @@ export const ExitIntentPopup = () => {
           </div>
 
           <Button type="submit" className="w-full" size="lg" variant="hero">
-            Quero Meu Desconto de 20%
+            {formattedButtonText}
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">

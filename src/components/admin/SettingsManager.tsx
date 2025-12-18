@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,10 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePlanVisibilityAdmin } from '@/hooks/usePlanVisibility';
 import { PLANS } from '@/config/plans';
-import { Loader2, Save, Eye, EyeOff, ExternalLink, CheckCircle, AlertCircle, Code, CreditCard } from 'lucide-react';
+import { Loader2, Save, Eye, EyeOff, ExternalLink, CheckCircle, AlertCircle, Code, CreditCard, Megaphone, Gift } from 'lucide-react';
 import { toast } from 'sonner';
 import { CustomScriptsManager } from './CustomScriptsManager';
 
@@ -22,6 +23,44 @@ export function SettingsManager() {
   const [saving, setSaving] = useState<Record<string, boolean>>({});
 
   const trackingSettings = getSettingsByCategory('tracking');
+  const marketingSettings = getSettingsByCategory('marketing');
+
+  // Estados para o exit popup
+  const [exitPopupEnabled, setExitPopupEnabled] = useState(true);
+  const [exitPopupDiscount, setExitPopupDiscount] = useState('20');
+  const [exitPopupTitle, setExitPopupTitle] = useState('Espera! 🎁');
+  const [exitPopupDescription, setExitPopupDescription] = useState('Antes de ir, que tal **{discount}% de desconto** no seu primeiro mês?');
+  const [exitPopupButtonText, setExitPopupButtonText] = useState('Quero Meu Desconto de {discount}%');
+  const [exitPopupDelay, setExitPopupDelay] = useState('3');
+  const [savingMarketing, setSavingMarketing] = useState(false);
+
+  // Carregar valores do marketing ao iniciar
+  useEffect(() => {
+    if (marketingSettings.length > 0) {
+      marketingSettings.forEach(setting => {
+        switch (setting.key) {
+          case 'exit_popup_enabled':
+            setExitPopupEnabled(setting.value === 'true');
+            break;
+          case 'exit_popup_discount_percent':
+            setExitPopupDiscount(setting.value || '20');
+            break;
+          case 'exit_popup_title':
+            setExitPopupTitle(setting.value || 'Espera! 🎁');
+            break;
+          case 'exit_popup_description':
+            setExitPopupDescription(setting.value || 'Antes de ir, que tal **{discount}% de desconto** no seu primeiro mês?');
+            break;
+          case 'exit_popup_button_text':
+            setExitPopupButtonText(setting.value || 'Quero Meu Desconto de {discount}%');
+            break;
+          case 'exit_popup_delay_seconds':
+            setExitPopupDelay(setting.value || '3');
+            break;
+        }
+      });
+    }
+  }, [marketingSettings]);
 
   const handleChange = (key: string, value: string) => {
     setEditingValues(prev => ({ ...prev, [key]: value }));
@@ -56,6 +95,25 @@ export function SettingsManager() {
       toast.success(`Plano ${planId} ${isVisible ? 'ativado' : 'desativado'} com sucesso`);
     } else {
       toast.error('Erro ao atualizar visibilidade do plano');
+    }
+  };
+
+  const handleSaveMarketingSettings = async () => {
+    setSavingMarketing(true);
+    try {
+      await Promise.all([
+        updateSetting('exit_popup_enabled', String(exitPopupEnabled)),
+        updateSetting('exit_popup_discount_percent', exitPopupDiscount),
+        updateSetting('exit_popup_title', exitPopupTitle),
+        updateSetting('exit_popup_description', exitPopupDescription),
+        updateSetting('exit_popup_button_text', exitPopupButtonText),
+        updateSetting('exit_popup_delay_seconds', exitPopupDelay),
+      ]);
+      toast.success('Configurações do popup salvas com sucesso!');
+    } catch (error) {
+      toast.error('Erro ao salvar configurações');
+    } finally {
+      setSavingMarketing(false);
     }
   };
 
@@ -96,6 +154,11 @@ export function SettingsManager() {
     return docs[key];
   };
 
+  // Formatar preview com placeholder substituído
+  const formatWithDiscount = (text: string) => {
+    return text.replace(/{discount}/g, exitPopupDiscount);
+  };
+
   if (loading || visibilityLoading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -107,7 +170,7 @@ export function SettingsManager() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="plans" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6">
+        <TabsList className="grid w-full grid-cols-4 mb-6">
           <TabsTrigger value="plans" className="gap-2">
             <CreditCard className="w-4 h-4" />
             Planos
@@ -116,6 +179,10 @@ export function SettingsManager() {
           <TabsTrigger value="scripts" className="gap-2">
             <Code className="w-4 h-4" />
             Scripts
+          </TabsTrigger>
+          <TabsTrigger value="marketing" className="gap-2">
+            <Megaphone className="w-4 h-4" />
+            Marketing
           </TabsTrigger>
         </TabsList>
 
@@ -284,6 +351,163 @@ export function SettingsManager() {
 
         <TabsContent value="scripts">
           <CustomScriptsManager />
+        </TabsContent>
+
+        <TabsContent value="marketing">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Gift className="w-5 h-5 text-primary" />
+                Exit Intent Popup
+              </CardTitle>
+              <CardDescription>
+                Configure o popup de desconto que aparece quando o usuário tenta sair da landing page.
+                Use <code className="bg-muted px-1 py-0.5 rounded text-xs">{'{discount}'}</code> para inserir o percentual dinamicamente.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Switch para habilitar/desabilitar */}
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="space-y-1">
+                  <Label className="text-base font-medium">Popup Habilitado</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Quando ativado, o popup aparece quando o usuário tenta sair da página
+                  </p>
+                </div>
+                <Switch
+                  checked={exitPopupEnabled}
+                  onCheckedChange={setExitPopupEnabled}
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {/* Percentual de desconto */}
+                <div className="space-y-2">
+                  <Label htmlFor="discount">Percentual de Desconto (%)</Label>
+                  <Input
+                    id="discount"
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={exitPopupDiscount}
+                    onChange={(e) => setExitPopupDiscount(e.target.value)}
+                    placeholder="20"
+                  />
+                </div>
+
+                {/* Delay em segundos */}
+                <div className="space-y-2">
+                  <Label htmlFor="delay">Delay (segundos)</Label>
+                  <Input
+                    id="delay"
+                    type="number"
+                    min="1"
+                    max="60"
+                    value={exitPopupDelay}
+                    onChange={(e) => setExitPopupDelay(e.target.value)}
+                    placeholder="3"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Tempo de espera antes de ativar a detecção de saída
+                  </p>
+                </div>
+              </div>
+
+              {/* Título */}
+              <div className="space-y-2">
+                <Label htmlFor="title">Título do Popup</Label>
+                <Input
+                  id="title"
+                  value={exitPopupTitle}
+                  onChange={(e) => setExitPopupTitle(e.target.value)}
+                  placeholder="Espera! 🎁"
+                />
+              </div>
+
+              {/* Descrição */}
+              <div className="space-y-2">
+                <Label htmlFor="description">Descrição</Label>
+                <Textarea
+                  id="description"
+                  value={exitPopupDescription}
+                  onChange={(e) => setExitPopupDescription(e.target.value)}
+                  placeholder="Antes de ir, que tal {discount}% de desconto no seu primeiro mês?"
+                  rows={2}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Use <code className="bg-muted px-1 py-0.5 rounded">{'{discount}'}</code> para o percentual e <code className="bg-muted px-1 py-0.5 rounded">**texto**</code> para negrito
+                </p>
+              </div>
+
+              {/* Texto do botão */}
+              <div className="space-y-2">
+                <Label htmlFor="buttonText">Texto do Botão</Label>
+                <Input
+                  id="buttonText"
+                  value={exitPopupButtonText}
+                  onChange={(e) => setExitPopupButtonText(e.target.value)}
+                  placeholder="Quero Meu Desconto de {discount}%"
+                />
+              </div>
+
+              <Separator />
+
+              {/* Preview */}
+              <div className="space-y-3">
+                <Label className="text-base font-medium">Preview</Label>
+                <div className="border rounded-lg p-6 bg-background">
+                  <div className="max-w-sm mx-auto text-center space-y-4">
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                      <Gift className="w-8 h-8 text-primary" />
+                    </div>
+                    <h3 className="text-2xl font-bold">{exitPopupTitle}</h3>
+                    <p className="text-muted-foreground" dangerouslySetInnerHTML={{ 
+                      __html: formatWithDiscount(exitPopupDescription).replace(
+                        /\*\*(.*?)\*\*/g, 
+                        '<strong class="text-foreground">$1</strong>'
+                      ) 
+                    }} />
+                    <div className="bg-primary text-primary-foreground py-3 px-6 rounded-lg font-medium">
+                      {formatWithDiscount(exitPopupButtonText)}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Enviaremos o cupom de desconto direto no seu email
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botão de salvar */}
+              <Button 
+                onClick={handleSaveMarketingSettings} 
+                disabled={savingMarketing}
+                className="w-full"
+                size="lg"
+              >
+                {savingMarketing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Salvar Configurações do Popup
+                  </>
+                )}
+              </Button>
+
+              <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                <h4 className="font-medium text-sm">💡 Dicas:</h4>
+                <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                  <li>O popup aparece apenas uma vez por sessão</li>
+                  <li>Funciona apenas em desktop (detecção de mouse saindo da janela)</li>
+                  <li>O delay evita que o popup apareça imediatamente ao carregar</li>
+                  <li>As mudanças são aplicadas instantaneamente após salvar</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
