@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Save, ExternalLink, CheckCircle, AlertCircle, CreditCard, Link2, Users } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Save, ExternalLink, CheckCircle, AlertCircle, CreditCard, Link2, Users, Flame, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -28,6 +29,13 @@ const AdminGuruPage = () => {
     guru_checkout_awo_monthly: "",
     guru_checkout_egbe_monthly: "",
   });
+
+  // Promo settings
+  const [promoEnabled, setPromoEnabled] = useState(false);
+  const [promoName, setPromoName] = useState("Lançamento Especial");
+  const [promoDurationDays, setPromoDurationDays] = useState("90");
+  const [promoPlanMapping, setPromoPlanMapping] = useState("Awo");
+  const [promoCheckoutUrl, setPromoCheckoutUrl] = useState("");
 
   const checkoutSettings: GuruSetting[] = [
     {
@@ -53,15 +61,17 @@ const AdminGuruPage = () => {
   const loadSettings = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // Load GURU settings
+      const { data: guruData, error: guruError } = await supabase
         .from("app_settings")
         .select("key, value")
         .eq("category", "guru");
 
-      if (error) throw error;
+      if (guruError) throw guruError;
 
       const settings: Record<string, string> = {};
-      data?.forEach((s) => {
+      guruData?.forEach((s) => {
         if (s.key === "guru_enabled") {
           setGuruEnabled(s.value === "true");
         } else if (s.key === "guru_member_area_url") {
@@ -71,8 +81,36 @@ const AdminGuruPage = () => {
         }
       });
       setCheckoutLinks(settings);
+
+      // Load promo settings
+      const { data: promoData, error: promoError } = await supabase
+        .from("app_settings")
+        .select("key, value")
+        .eq("category", "promo");
+
+      if (promoError) throw promoError;
+
+      promoData?.forEach((s) => {
+        switch (s.key) {
+          case "promo_enabled":
+            setPromoEnabled(s.value === "true");
+            break;
+          case "promo_name":
+            setPromoName(s.value || "Lançamento Especial");
+            break;
+          case "promo_duration_days":
+            setPromoDurationDays(s.value || "90");
+            break;
+          case "promo_plan_mapping":
+            setPromoPlanMapping(s.value || "Awo");
+            break;
+          case "promo_checkout_url":
+            setPromoCheckoutUrl(s.value || "");
+            break;
+        }
+      });
     } catch (error) {
-      console.error("Error loading GURU settings:", error);
+      console.error("Error loading settings:", error);
       toast.error("Erro ao carregar configurações");
     } finally {
       setLoading(false);
@@ -83,11 +121,15 @@ const AdminGuruPage = () => {
     setCheckoutLinks((prev) => ({ ...prev, [key]: value }));
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Link copiado!");
+  };
+
   const saveSettings = async () => {
     try {
       setSaving(true);
 
-      // Obter usuário autenticado
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
@@ -97,11 +139,17 @@ const AdminGuruPage = () => {
 
       console.log("[GURU] Salvando configurações como usuário:", user.id);
 
-      // Update all settings
+      // All updates including promo settings
       const updates = [
         { key: "guru_enabled", value: guruEnabled ? "true" : "false" },
         { key: "guru_member_area_url", value: memberAreaUrl },
         ...Object.entries(checkoutLinks).map(([key, value]) => ({ key, value })),
+        // Promo settings
+        { key: "promo_enabled", value: promoEnabled ? "true" : "false" },
+        { key: "promo_name", value: promoName },
+        { key: "promo_duration_days", value: promoDurationDays },
+        { key: "promo_plan_mapping", value: promoPlanMapping },
+        { key: "promo_checkout_url", value: promoCheckoutUrl },
       ];
 
       let successCount = 0;
@@ -136,14 +184,14 @@ const AdminGuruPage = () => {
       }
 
       if (failCount === 0) {
-        toast.success("Configurações da GURU salvas com sucesso!");
+        toast.success("Configurações salvas com sucesso!");
       } else if (successCount > 0) {
         toast.warning(`${successCount} configurações salvas, ${failCount} falharam`);
       } else {
         toast.error("Nenhuma configuração foi salva. Verifique se as chaves existem no banco.");
       }
     } catch (error) {
-      console.error("Error saving GURU settings:", error);
+      console.error("Error saving settings:", error);
       toast.error("Erro ao salvar configurações");
     } finally {
       setSaving(false);
@@ -221,6 +269,140 @@ const AdminGuruPage = () => {
         </CardContent>
       </Card>
 
+      {/* Promotional Plan Card */}
+      <Card className={promoEnabled ? "border-orange-500/50 bg-orange-500/5" : ""}>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-lg ${promoEnabled ? "bg-orange-500/20" : "bg-muted"}`}>
+                <Flame className={`h-5 w-5 ${promoEnabled ? "text-orange-500" : "text-muted-foreground"}`} />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Plano Promocional</CardTitle>
+                <CardDescription>
+                  Configure promoções especiais para lives e campanhas
+                </CardDescription>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="promo-enabled" className="text-sm">
+                Promoção Ativa
+              </Label>
+              <Switch
+                id="promo-enabled"
+                checked={promoEnabled}
+                onCheckedChange={setPromoEnabled}
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {promoEnabled && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-orange-500/10 text-orange-700 dark:text-orange-400 text-sm">
+              <CheckCircle className="h-4 w-4" />
+              <span>Promoção ativa! Compras via link promocional serão reconhecidas automaticamente pelo webhook.</span>
+            </div>
+          )}
+
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Nome da Promoção */}
+            <div className="space-y-2">
+              <Label htmlFor="promo-name">Nome da Promoção</Label>
+              <p className="text-xs text-muted-foreground">Aparecerá no email de boas-vindas</p>
+              <Input
+                id="promo-name"
+                value={promoName}
+                onChange={(e) => setPromoName(e.target.value)}
+                placeholder="Ex: Lançamento 2024, Black Friday"
+              />
+            </div>
+
+            {/* Duração */}
+            <div className="space-y-2">
+              <Label htmlFor="promo-duration">Duração do Acesso (dias)</Label>
+              <p className="text-xs text-muted-foreground">Quantos dias de acesso o aluno terá</p>
+              <Input
+                id="promo-duration"
+                type="number"
+                min="1"
+                value={promoDurationDays}
+                onChange={(e) => setPromoDurationDays(e.target.value)}
+                placeholder="90"
+              />
+            </div>
+
+            {/* Plano Interno */}
+            <div className="space-y-2">
+              <Label htmlFor="promo-plan">Plano Interno</Label>
+              <p className="text-xs text-muted-foreground">Define as permissões do aluno</p>
+              <Select value={promoPlanMapping} onValueChange={setPromoPlanMapping}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o plano" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Awo">Awo (Premium Individual)</SelectItem>
+                  <SelectItem value="Egbe">Egbe (Família)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* URL do Checkout */}
+            <div className="space-y-2">
+              <Label htmlFor="promo-checkout">URL de Checkout GURU</Label>
+              <p className="text-xs text-muted-foreground">Link para compartilhar na live</p>
+              <div className="flex gap-2">
+                <Input
+                  id="promo-checkout"
+                  value={promoCheckoutUrl}
+                  onChange={(e) => setPromoCheckoutUrl(e.target.value)}
+                  placeholder="https://pay.guru.com.br/..."
+                />
+                {promoCheckoutUrl && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => copyToClipboard(promoCheckoutUrl)}
+                      title="Copiar link"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => window.open(promoCheckoutUrl, "_blank")}
+                      title="Abrir link"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Link para Copiar */}
+          {promoEnabled && promoCheckoutUrl && (
+            <div className="p-4 rounded-lg bg-muted/50 border">
+              <p className="text-sm font-medium mb-2">Link para compartilhar na live:</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 px-3 py-2 bg-background rounded text-sm break-all">
+                  {promoCheckoutUrl}
+                </code>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => copyToClipboard(promoCheckoutUrl)}
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copiar
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Checkout Links */}
       <Card>
         <CardHeader>
@@ -229,9 +411,9 @@ const AdminGuruPage = () => {
               <Link2 className="h-5 w-5 text-accent" />
             </div>
             <div>
-              <CardTitle className="text-lg">Links de Checkout</CardTitle>
+              <CardTitle className="text-lg">Links de Checkout Padrão</CardTitle>
               <CardDescription>
-                Configure os links de checkout para cada plano. Obtenha esses links no painel da GURU após criar os produtos.
+                Configure os links de checkout para os planos regulares. Obtenha esses links no painel da GURU.
               </CardDescription>
             </div>
           </div>
@@ -347,6 +529,7 @@ const AdminGuruPage = () => {
             <li>Acesse o painel da GURU e crie os produtos/ofertas correspondentes a cada plano</li>
             <li>Copie o link de checkout de cada produto criado</li>
             <li>Cole os links nos campos acima correspondentes</li>
+            <li>Para promoções de live, configure o "Plano Promocional" com URL específica e ative-o</li>
             <li>Configure o webhook na GURU apontando para:
               <code className="ml-2 px-2 py-1 bg-background rounded text-xs">
                 https://wmwuirqdluzjdqtmfzsm.supabase.co/functions/v1/guru-webhook
