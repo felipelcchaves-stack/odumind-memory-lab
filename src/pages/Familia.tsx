@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { getSiteUrl } from '@/lib/siteUrl';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -152,7 +153,8 @@ export default function Familia() {
   };
 
   const handleCopyInviteLink = (token: string) => {
-    const inviteLink = `${window.location.origin}/familia/aceitar/${token}`;
+    // Usar domínio de produção para links compartilháveis
+    const inviteLink = `${getSiteUrl()}/familia/aceitar/${token}`;
     navigator.clipboard.writeText(inviteLink);
     setCopiedInvite(token);
     toast.success('Link copiado para a área de transferência!');

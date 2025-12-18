@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useReferralSettings } from "@/hooks/useReferralSettings";
+import { getSiteUrl } from "@/lib/siteUrl";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -160,7 +161,8 @@ const Referral = () => {
 
   const shareReferral = () => {
     const text = `Use meu código ${stats?.referral_code} para ganhar 7 dias Premium grátis no Isesemind!`;
-    const url = `${window.location.origin}/auth?ref=${stats?.referral_code}`;
+    // Usar domínio de produção para links compartilháveis
+    const url = `${getSiteUrl()}/auth?ref=${stats?.referral_code}`;
     
     if (navigator.share) {
       navigator.share({ title: 'Isesemind', text, url });
