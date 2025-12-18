@@ -6,13 +6,17 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 import { useAppSettings } from '@/hooks/useAppSettings';
-import { Loader2, Save, Eye, EyeOff, ExternalLink, CheckCircle, AlertCircle, Code } from 'lucide-react';
+import { usePlanVisibilityAdmin } from '@/hooks/usePlanVisibility';
+import { PLANS } from '@/config/plans';
+import { Loader2, Save, Eye, EyeOff, ExternalLink, CheckCircle, AlertCircle, Code, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import { CustomScriptsManager } from './CustomScriptsManager';
 
 export function SettingsManager() {
   const { settings, loading, updateSetting, getSettingsByCategory } = useAppSettings();
+  const { visibility, loading: visibilityLoading, saving: visibilitySaving, updateVisibility } = usePlanVisibilityAdmin();
   const [editingValues, setEditingValues] = useState<Record<string, string>>({});
   const [showSensitive, setShowSensitive] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState<Record<string, boolean>>({});
@@ -44,6 +48,15 @@ export function SettingsManager() {
 
   const toggleSensitive = (key: string) => {
     setShowSensitive(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handlePlanVisibilityChange = async (planId: string, isVisible: boolean) => {
+    const success = await updateVisibility(planId, isVisible);
+    if (success) {
+      toast.success(`Plano ${planId} ${isVisible ? 'ativado' : 'desativado'} com sucesso`);
+    } else {
+      toast.error('Erro ao atualizar visibilidade do plano');
+    }
   };
 
   const testPixel = (pixelType: string, pixelId: string) => {
@@ -83,7 +96,7 @@ export function SettingsManager() {
     return docs[key];
   };
 
-  if (loading) {
+  if (loading || visibilityLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -93,14 +106,66 @@ export function SettingsManager() {
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="pixels" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-6">
+      <Tabs defaultValue="plans" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsTrigger value="plans" className="gap-2">
+            <CreditCard className="w-4 h-4" />
+            Planos
+          </TabsTrigger>
           <TabsTrigger value="pixels">IDs dos Pixels</TabsTrigger>
           <TabsTrigger value="scripts" className="gap-2">
             <Code className="w-4 h-4" />
-            Scripts Customizados
+            Scripts
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="plans">
+          <Card>
+            <CardHeader>
+              <CardTitle>Visibilidade dos Planos</CardTitle>
+              <CardDescription>
+                Controle quais planos aparecem na landing page e na página de assinatura.
+                As mudanças são aplicadas instantaneamente.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {PLANS.map((plan) => (
+                <div key={plan.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium">{plan.name}</h4>
+                      <Badge variant={visibility[plan.id] ? "default" : "secondary"}>
+                        {visibility[plan.id] ? 'Visível' : 'Oculto'}
+                      </Badge>
+                      {plan.popular && (
+                        <Badge variant="outline" className="text-primary border-primary">
+                          Mais Popular
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">{plan.description}</p>
+                    <p className="text-sm font-medium">{plan.price}/mês</p>
+                  </div>
+                  <Switch
+                    checked={visibility[plan.id] ?? true}
+                    onCheckedChange={(checked) => handlePlanVisibilityChange(plan.id, checked)}
+                    disabled={visibilitySaving}
+                  />
+                </div>
+              ))}
+
+              <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                <h4 className="font-medium text-sm">💡 Dicas de uso:</h4>
+                <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                  <li>Durante o lançamento, deixe apenas o plano <strong>Awo</strong> visível</li>
+                  <li>O plano Gratuito pode ser ocultado para forçar conversão</li>
+                  <li>O plano Egbe (Família) pode ser ativado posteriormente</li>
+                  <li>As mudanças são instantâneas, sem necessidade de deploy</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="pixels">
           <Card>
