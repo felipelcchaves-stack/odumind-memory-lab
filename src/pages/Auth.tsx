@@ -23,13 +23,20 @@ export default function Auth() {
   const [nome, setNome] = useState('');
   const [loading, setLoading] = useState(false);
   const [showReset, setShowReset] = useState(false);
-  const { signIn, signUp, resetPassword, user } = useAuth();
+  const { signIn, signUp, resetPassword, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { trackSignUp } = usePixelTracking();
   const { isFreePlanEnabled, loading: loadingSettings } = useFreePlanSettings();
 
-  // Loading state enquanto carrega configurações
-  if (loadingSettings) {
+  // CRÍTICO: useEffect ANTES de qualquer return condicional
+  useEffect(() => {
+    if (user && !authLoading) {
+      navigate('/dashboard');
+    }
+  }, [user, authLoading, navigate]);
+
+  // Loading state combinado - DEPOIS dos hooks
+  if (loadingSettings || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -59,11 +66,26 @@ export default function Auth() {
     );
   }
 
-  useEffect(() => {
-    if (user) {
-      navigate('/dashboard');
-    }
-  }, [user, navigate]);
+  // Se já está logado, mostrar loading enquanto redireciona
+  if (user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
+        </div>
+        <div className="w-full max-w-md relative z-10 text-center">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
+            Isesemind
+          </h1>
+          <p className="text-muted-foreground flex items-center justify-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Redirecionando para o dashboard...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
