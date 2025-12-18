@@ -1,8 +1,14 @@
+# Robots.txt para IseseMind Ifatokun
+# https://isesemind.ileaseifatokun.com.br
+
+# Permitir todos os crawlers nas páginas públicas
 User-agent: Googlebot
 Allow: /
+Crawl-delay: 1
 
 User-agent: Bingbot
 Allow: /
+Crawl-delay: 1
 
 User-agent: Twitterbot
 Allow: /
@@ -10,5 +16,47 @@ Allow: /
 User-agent: facebookexternalhit
 Allow: /
 
+User-agent: LinkedInBot
+Allow: /
+
+User-agent: WhatsApp
+Allow: /
+
+User-agent: TelegramBot
+Allow: /
+
+User-agent: Slackbot
+Allow: /
+
 User-agent: *
 Allow: /
+
+# Páginas privadas que NÃO devem ser indexadas
+Disallow: /admin/
+Disallow: /admin
+Disallow: /colaborador
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /settings
+Disallow: /familia
+Disallow: /familia-aceitar
+Disallow: /success
+Disallow: /odu-study/
+Disallow: /ritual-study/
+Disallow: /study-session
+Disallow: /analytics
+Disallow: /caminho-ifa
+Disallow: /palacio-memoria
+Disallow: /tecnicas
+Disallow: /user/
+
+# Arquivos de sistema
+Disallow: /api/
+Disallow: /*.json$
+Disallow: /sw.js
+
+# Sitemap
+Sitemap: https://isesemind.ileaseifatokun.com.br/sitemap.xml
+
+# Host preferencial
+Host: https://isesemind.ileaseifatokun.com.br
