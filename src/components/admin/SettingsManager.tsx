@@ -376,7 +376,16 @@ export function SettingsManager() {
                 </div>
                 <Switch
                   checked={exitPopupEnabled}
-                  onCheckedChange={setExitPopupEnabled}
+                  onCheckedChange={async (checked) => {
+                    setExitPopupEnabled(checked);
+                    try {
+                      await updateSetting('exit_popup_enabled', String(checked));
+                      toast.success(checked ? 'Popup habilitado' : 'Popup desabilitado');
+                    } catch (error) {
+                      toast.error('Erro ao salvar configuração');
+                      setExitPopupEnabled(!checked); // Reverter em caso de erro
+                    }
+                  }}
                 />
               </div>
 
