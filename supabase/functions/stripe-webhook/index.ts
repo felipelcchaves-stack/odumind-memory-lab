@@ -16,6 +16,66 @@ const logStep = (step: string, details?: any) => {
   console.log(`[STRIPE-WEBHOOK] ${step}${detailsStr}`);
 };
 
+// Função para verificar se a assinatura foi criada recentemente
+async function wasRecentlyCreated(
+  supabase: any,
+  userId: string,
+  minutesThreshold: number = 30
+): Promise<{ isRecent: boolean; createdAt: string | null; currentStatus: string | null }> {
+  try {
+    const { data: subscription, error } = await supabase
+      .from('subscriptions')
+      .select('created_at, status, updated_at')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error || !subscription) {
+      logStep("Nenhuma assinatura encontrada para verificação de recência", { userId, error });
+      return { isRecent: false, createdAt: null, currentStatus: null };
+    }
+
+    const createdAt = new Date(subscription.created_at);
+    const now = new Date();
+    const diffMinutes = (now.getTime() - createdAt.getTime()) / (1000 * 60);
+
+    logStep("Verificação de recência da assinatura", {
+      userId,
+      createdAt: subscription.created_at,
+      updatedAt: subscription.updated_at,
+      currentStatus: subscription.status,
+      diffMinutes: Math.round(diffMinutes),
+      threshold: minutesThreshold,
+      isRecent: diffMinutes < minutesThreshold
+    });
+
+    return {
+      isRecent: diffMinutes < minutesThreshold,
+      createdAt: subscription.created_at,
+      currentStatus: subscription.status
+    };
+  } catch (error) {
+    logStep("Erro ao verificar recência da assinatura", { userId, error });
+    return { isRecent: false, createdAt: null, currentStatus: null };
+  }
+}
+
+// Função para verificar se é um evento de cancelamento legítimo
+function isCancellationEvent(subscription: Stripe.Subscription): boolean {
+  // Verifica se a assinatura realmente foi cancelada
+  // Diferencia entre cancelamento real e eventos de atualização
+  const isCanceled = subscription.status === 'canceled';
+  const canceledAt = subscription.canceled_at;
+  
+  logStep("Verificação de evento de cancelamento", {
+    status: subscription.status,
+    isCanceled,
+    canceledAt,
+    cancelAtPeriodEnd: subscription.cancel_at_period_end
+  });
+  
+  return isCanceled && canceledAt !== null;
+}
+
 serve(async (req) => {
   const signature = req.headers.get("stripe-signature");
   if (!signature) {
@@ -67,7 +127,21 @@ serve(async (req) => {
 
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
-        logStep("Subscription deleted", { subscriptionId: subscription.id });
+        logStep("Subscription deleted event received", { 
+          subscriptionId: subscription.id,
+          status: subscription.status,
+          canceledAt: subscription.canceled_at,
+          createdAt: subscription.created
+        });
+        
+        // Verificar se é realmente um evento de cancelamento
+        if (!isCancellationEvent(subscription)) {
+          logStep("⚠️ Evento de cancelamento ignorado - não é um cancelamento real", {
+            subscriptionId: subscription.id,
+            status: subscription.status
+          });
+          break;
+        }
         
         const customer = await stripe.customers.retrieve(subscription.customer as string);
         if ('email' in customer && customer.email) {
@@ -75,6 +149,45 @@ serve(async (req) => {
           const user = authData.users.find(u => u.email === customer.email);
           
           if (user) {
+            // PROTEÇÃO: Verificar se assinatura foi criada recentemente
+            const { isRecent, createdAt, currentStatus } = await wasRecentlyCreated(
+              supabaseClient, 
+              user.id, 
+              30 // 30 minutos
+            );
+            
+            // Se foi criada há menos de 30 minutos E tem status ativo, ignorar
+            if (isRecent && currentStatus && ['active', 'trialing'].includes(currentStatus)) {
+              logStep("⚠️ PROTEÇÃO ATIVADA: Ignorando cancelamento de assinatura recente", {
+                userId: user.id,
+                subscriptionId: subscription.id,
+                createdAt,
+                currentStatus,
+                message: "Assinatura criada há menos de 30 minutos - evento de cancelamento ignorado"
+              });
+              
+              // Retornar sucesso para o Stripe não reenviar
+              return new Response(JSON.stringify({ 
+                received: true, 
+                warning: "Cancelamento ignorado - assinatura muito recente",
+                details: {
+                  userId: user.id,
+                  createdAt,
+                  currentStatus
+                }
+              }), {
+                status: 200,
+                headers: { "Content-Type": "application/json" },
+              });
+            }
+            
+            // Cancelamento legítimo - processar normalmente
+            logStep("Processando cancelamento legítimo", {
+              userId: user.id,
+              createdAt,
+              currentStatus
+            });
+            
             await supabaseClient
               .from('subscriptions')
               .update({
@@ -85,7 +198,7 @@ serve(async (req) => {
               })
               .eq('user_id', user.id);
             
-            logStep("Subscription set to free", { userId: user.id });
+            logStep("✅ Subscription cancelada e definida como gratuita", { userId: user.id });
           }
         }
         break;
