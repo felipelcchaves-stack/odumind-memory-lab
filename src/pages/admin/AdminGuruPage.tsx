@@ -241,7 +241,7 @@ const AdminGuruPage = () => {
       {/* Status Card */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
                 <CreditCard className="h-5 w-5 text-primary" />
@@ -251,12 +251,12 @@ const AdminGuruPage = () => {
                 <CardDescription>Gerencie o gateway de pagamento</CardDescription>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3">
               <Badge variant={configuredCount === totalLinks ? "default" : "secondary"}>
                 {configuredCount}/{totalLinks} links configurados
               </Badge>
               <div className="flex items-center gap-2">
-                <Label htmlFor="guru-enabled" className="text-sm">
+                <Label htmlFor="guru-enabled" className="text-sm whitespace-nowrap">
                   GURU Ativo
                 </Label>
                 <Switch
@@ -286,7 +286,7 @@ const AdminGuruPage = () => {
       {/* Promotional Plan Card */}
       <Card className={promoEnabled ? "border-orange-500/50 bg-orange-500/5" : ""}>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className={`p-2 rounded-lg ${promoEnabled ? "bg-orange-500/20" : "bg-muted"}`}>
                 <Flame className={`h-5 w-5 ${promoEnabled ? "text-orange-500" : "text-muted-foreground"}`} />
@@ -299,7 +299,7 @@ const AdminGuruPage = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Label htmlFor="promo-enabled" className="text-sm">
+              <Label htmlFor="promo-enabled" className="text-sm whitespace-nowrap">
                 Promoção Ativa
               </Label>
               <Switch
@@ -354,7 +354,7 @@ const AdminGuruPage = () => {
             <div className="space-y-2">
               <Label htmlFor="promo-duration">Duração do Acesso</Label>
               <p className="text-xs text-muted-foreground">Quantos dias de acesso o aluno terá</p>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Select 
                   value={durationPresets.some(p => p.value === promoDurationDays) ? promoDurationDays : "custom"} 
                   onValueChange={(v) => {
@@ -363,7 +363,7 @@ const AdminGuruPage = () => {
                     }
                   }}
                 >
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
@@ -405,15 +405,16 @@ const AdminGuruPage = () => {
             <div className="space-y-2">
               <Label htmlFor="promo-checkout">URL de Checkout GURU</Label>
               <p className="text-xs text-muted-foreground">Link para compartilhar na live</p>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Input
                   id="promo-checkout"
                   value={promoCheckoutUrl}
                   onChange={(e) => setPromoCheckoutUrl(e.target.value)}
                   placeholder="https://pay.guru.com.br/..."
+                  className="flex-1"
                 />
                 {promoCheckoutUrl && (
-                  <>
+                  <div className="flex gap-2 shrink-0">
                     <Button
                       variant="outline"
                       size="icon"
@@ -430,7 +431,7 @@ const AdminGuruPage = () => {
                     >
                       <ExternalLink className="h-4 w-4" />
                     </Button>
-                  </>
+                  </div>
                 )}
               </div>
             </div>
@@ -440,14 +441,15 @@ const AdminGuruPage = () => {
           {promoEnabled && promoCheckoutUrl && (
             <div className="p-4 rounded-lg bg-muted/50 border">
               <p className="text-sm font-medium mb-2">Link para compartilhar na live:</p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 px-3 py-2 bg-background rounded text-sm break-all">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <code className="flex-1 px-3 py-2 bg-background rounded text-sm break-all min-w-0">
                   {promoCheckoutUrl}
                 </code>
                 <Button
                   variant="default"
                   size="sm"
                   onClick={() => copyToClipboard(promoCheckoutUrl)}
+                  className="w-full sm:w-auto shrink-0"
                 >
                   <Copy className="h-4 w-4 mr-2" />
                   Copiar
@@ -499,6 +501,7 @@ const AdminGuruPage = () => {
                     value={checkoutLinks[setting.key] || ""}
                     onChange={(e) => handleCheckoutLinkChange(setting.key, e.target.value)}
                     placeholder={setting.placeholder}
+                    className="flex-1 min-w-0"
                   />
                   {checkoutLinks[setting.key] && (
                     <Button
@@ -506,6 +509,7 @@ const AdminGuruPage = () => {
                       size="icon"
                       onClick={() => window.open(checkoutLinks[setting.key], "_blank")}
                       title="Testar link"
+                      className="shrink-0"
                     >
                       <ExternalLink className="h-4 w-4" />
                     </Button>
@@ -541,6 +545,7 @@ const AdminGuruPage = () => {
                 value={memberAreaUrl}
                 onChange={(e) => setMemberAreaUrl(e.target.value)}
                 placeholder="https://membro.guru.com.br/..."
+                className="flex-1 min-w-0"
               />
               {memberAreaUrl && (
                 <Button
@@ -548,6 +553,7 @@ const AdminGuruPage = () => {
                   size="icon"
                   onClick={() => window.open(memberAreaUrl, "_blank")}
                   title="Abrir área do membro"
+                  className="shrink-0"
                 >
                   <ExternalLink className="h-4 w-4" />
                 </Button>
@@ -585,8 +591,8 @@ const AdminGuruPage = () => {
             <li>Copie o link de checkout de cada produto criado</li>
             <li>Cole os links nos campos acima correspondentes</li>
             <li>Para promoções de live, configure o "Plano Promocional" com URL específica e ative-o</li>
-            <li>Configure o webhook na GURU apontando para:
-              <code className="ml-2 px-2 py-1 bg-background rounded text-xs">
+            <li className="break-words">Configure o webhook na GURU apontando para:
+              <code className="block mt-1 px-2 py-1 bg-background rounded text-xs break-all overflow-wrap-anywhere">
                 https://wmwuirqdluzjdqtmfzsm.supabase.co/functions/v1/guru-webhook
               </code>
             </li>
