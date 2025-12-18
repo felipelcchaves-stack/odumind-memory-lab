@@ -51,6 +51,7 @@ import AdminRestorePage from "./pages/admin/AdminRestorePage";
 import AdminGuruPage from "./pages/admin/AdminGuruPage";
 import AdminFeaturesPage from "./pages/admin/AdminFeaturesPage";
 import AdminAnnouncementsPage from "./pages/admin/AdminAnnouncementsPage";
+import AdminCouponsPage from "./pages/admin/AdminCouponsPage";
 
 const queryClient = new QueryClient();
 
@@ -114,6 +115,7 @@ function AppContent() {
             <Route path="guru" element={<AdminGuruPage />} />
             <Route path="features" element={<AdminFeaturesPage />} />
             <Route path="announcements" element={<AdminAnnouncementsPage />} />
+            <Route path="coupons" element={<AdminCouponsPage />} />
             <Route path="restore" element={<AdminRestorePage />} />
           </Route>
           <Route path="/profile" element={<Profile />} />
