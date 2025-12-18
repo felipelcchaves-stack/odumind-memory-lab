@@ -227,23 +227,145 @@ export default function Auth() {
             </CardContent>
           </Card>
         ) : (
-          // Login/Signup Tabs
+          // Login/Signup Card
           <Card className="shadow-2xl border-primary/10">
             <CardHeader className="space-y-1 pb-4">
               <CardTitle className="text-2xl font-bold text-center">Bem-vindo</CardTitle>
               <CardDescription className="text-center">
-                Entre na sua conta ou crie uma nova
+                {isFreePlanEnabled 
+                  ? 'Entre na sua conta ou crie uma nova'
+                  : 'Entre na sua conta para continuar'}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="login" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="login" className="text-sm">Login</TabsTrigger>
-                  <TabsTrigger value="signup" className="text-sm">Criar Conta</TabsTrigger>
-                </TabsList>
+              {isFreePlanEnabled ? (
+                // Tabs completas quando plano gratuito está habilitado
+                <Tabs defaultValue="login" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 mb-6">
+                    <TabsTrigger value="login" className="text-sm">Login</TabsTrigger>
+                    <TabsTrigger value="signup" className="text-sm">Criar Conta</TabsTrigger>
+                  </TabsList>
 
-                {/* Login Tab */}
-                <TabsContent value="login">
+                  {/* Login Tab */}
+                  <TabsContent value="login">
+                    <form onSubmit={handleSignIn} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="login-email">Email</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="login-email"
+                            type="email"
+                            placeholder="seu@email.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="pl-10"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="login-password">Senha</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="login-password"
+                            type="password"
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="pl-10"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowReset(true)}
+                        className="text-sm text-primary hover:underline"
+                      >
+                        Esqueceu sua senha?
+                      </button>
+
+                      <Button 
+                        type="submit" 
+                        className="w-full"
+                        disabled={loading}
+                      >
+                        {loading ? 'Entrando...' : 'Entrar'}
+                      </Button>
+                    </form>
+                  </TabsContent>
+
+                  {/* Signup Tab */}
+                  <TabsContent value="signup">
+                    <form onSubmit={handleSignUp} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-nome">Nome Completo</Label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="signup-nome"
+                            type="text"
+                            placeholder="Seu nome"
+                            value={nome}
+                            onChange={(e) => setNome(e.target.value)}
+                            className="pl-10"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-email">Email</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="signup-email"
+                            type="email"
+                            placeholder="seu@email.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="pl-10"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-password">Senha</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="signup-password"
+                            type="password"
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="pl-10"
+                            required
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Mínimo de 6 caracteres
+                        </p>
+                      </div>
+
+                      <Button 
+                        type="submit" 
+                        className="w-full"
+                        disabled={loading}
+                      >
+                        {loading ? 'Criando conta...' : 'Criar Conta'}
+                      </Button>
+                    </form>
+                  </TabsContent>
+                </Tabs>
+              ) : (
+                // Apenas Login quando plano gratuito está desabilitado
+                <>
                   <form onSubmit={handleSignIn} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="login-email">Email</Label>
@@ -293,72 +415,22 @@ export default function Auth() {
                       {loading ? 'Entrando...' : 'Entrar'}
                     </Button>
                   </form>
-                </TabsContent>
 
-                {/* Signup Tab */}
-                <TabsContent value="signup">
-                  <form onSubmit={handleSignUp} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-nome">Nome Completo</Label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="signup-nome"
-                          type="text"
-                          placeholder="Seu nome"
-                          value={nome}
-                          onChange={(e) => setNome(e.target.value)}
-                          className="pl-10"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-email">Email</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="signup-email"
-                          type="email"
-                          placeholder="seu@email.com"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className="pl-10"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-password">Senha</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="signup-password"
-                          type="password"
-                          placeholder="••••••••"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          className="pl-10"
-                          required
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Mínimo de 6 caracteres
-                      </p>
-                    </div>
-
+                  {/* CTA para criar conta via planos */}
+                  <div className="mt-6 pt-6 border-t border-border text-center">
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Não tem conta ainda?
+                    </p>
                     <Button 
-                      type="submit" 
+                      variant="outline" 
                       className="w-full"
-                      disabled={loading}
+                      onClick={() => navigate('/#pricing')}
                     >
-                      {loading ? 'Criando conta...' : 'Criar Conta'}
+                      Ver Planos e Criar Conta
                     </Button>
-                  </form>
-                </TabsContent>
-              </Tabs>
+                  </div>
+                </>
+              )}
 
               {/* Benefits section */}
               <div className="mt-8 pt-6 border-t border-border">
