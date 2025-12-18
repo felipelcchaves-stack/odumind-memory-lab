@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useGuruCheckout } from '@/hooks/useGuruCheckout';
-import { useFreePlanSettings } from '@/hooks/useFreePlanSettings';
+import { usePlanVisibility } from '@/hooks/usePlanVisibility';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,7 +18,8 @@ import { usePixelTracking } from '@/hooks/usePixelTracking';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-const plans = [
+// Dados dos planos para a página de subscription
+const plansData = [
   {
     name: "Gratuito",
     price: "R$ 0",
@@ -84,18 +85,18 @@ export default function Subscription() {
     createRetentionOffer,
   } = useSubscription();
   const { isGuruEnabled, openGuruCheckout, openMemberArea, loading: guruLoading } = useGuruCheckout();
-  const { isFreePlanEnabled } = useFreePlanSettings();
+  const { visiblePlans: visiblePlanConfigs, loading: plansLoading } = usePlanVisibility();
   const navigate = useNavigate();
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
   const [managingSubscription, setManagingSubscription] = useState(false);
   const { trackInitiateCheckout } = usePixelTracking();
   
-  // Filter plans based on free plan setting
-  const visiblePlans = plans.filter(plan => {
-    if (plan.name === 'Gratuito' && !isFreePlanEnabled) {
-      return false;
-    }
-    return true;
+  // Map visible plan configs to actual plan data
+  const visiblePlans = plansData.filter(plan => {
+    const planId = plan.name.toLowerCase().replace(' (família)', '').replace('egbe', 'egbe');
+    const normalizedId = plan.name === 'Gratuito' ? 'gratuito' : 
+                         plan.name === 'Awo' ? 'awo' : 'egbe';
+    return visiblePlanConfigs.some(p => p.id === normalizedId);
   });
   
   // Retention offer state
@@ -283,7 +284,7 @@ export default function Subscription() {
     }
 
     // Get the current plan's stripe ID
-    const currentPlan = plans.find(p => p.name === subscription.plan_name);
+    const currentPlan = plansData.find(p => p.name === subscription.plan_name);
     if (!currentPlan?.stripeId) {
       toast.error('Plano não encontrado');
       return;
@@ -323,7 +324,7 @@ export default function Subscription() {
     
     try {
       // Track checkout initiation
-      const plan = plans.find(p => p.planId === planId);
+      const plan = plansData.find(p => p.planId === planId);
       if (plan) {
         const price = parseFloat(plan.price.replace('R$ ', '').replace(',', '.'));
         trackInitiateCheckout(plan.name, price);
@@ -403,7 +404,7 @@ export default function Subscription() {
     }
   };
 
-  if (authLoading || subLoading) {
+  if (authLoading || subLoading || plansLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20 flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Carregando...</div>

@@ -5,85 +5,64 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGuruCheckout } from "@/hooks/useGuruCheckout";
 import { useLandingTracking } from "@/hooks/useLandingTracking";
-import { useFreePlanSettings } from "@/hooks/useFreePlanSettings";
-
-const plans = [
-  {
-    name: "Gratuito",
-    price: "R$ 0",
-    priceValue: 0,
-    period: "/7 dias",
-    description: "Experimente tudo por 7 dias, sem compromisso",
-    features: [
-      "Todos os 256 Odu Ifá por 7 dias",
-      "Flashcards completos",
-      "Repetição espaçada",
-      "Progresso detalhado",
-      "Após 7 dias, upgrade necessário",
-    ],
-    cta: "Começar Grátis",
-    variant: "outline" as const,
-    popular: false,
-    icon: undefined,
-  },
-  {
-    name: "Awo",
-    price: "R$ 97,00",
-    priceValue: 97.00,
-    period: "/mês",
-    description: "O plano ideal para dominar os 256 Odu",
-    features: [
-      "Todos os 256 Odu Ifá",
-      "Flashcards avançados com IA",
-      "Mapas mentais interativos",
-      "Repetição espaçada personalizada",
-      "Storytelling completo",
-      "Testes e simulados ilimitados",
-      "Suporte prioritário",
-    ],
-    cta: "Começar Awo",
-    variant: "premium" as const,
-    popular: true,
-    stripeId: "price_1SUQe8Do1RHWW8lpTManIdtD",
-    icon: undefined,
-  },
-  {
-    name: "Egbe",
-    price: "R$ 129,90",
-    priceValue: 129.90,
-    period: "/mês",
-    description: "Para grupos e terreiros que estudam juntos",
-    features: [
-      "Até 5 contas com acesso completo",
-      "Todos os 256 Odu Ifá (cada conta)",
-      "Dashboard compartilhado de progresso",
-      "Todos os recursos do Awo",
-      "Perfeito para grupos de estudo",
-      "Gestão centralizada",
-      "Suporte dedicado",
-    ],
-    cta: "Começar Egbe",
-    variant: "outline" as const,
-    popular: false,
-    stripeId: "price_1SVYDfDo1RHWW8lpGhLjNjoV",
-    icon: Users,
-  },
-];
+import { usePlanVisibility } from "@/hooks/usePlanVisibility";
 
 const Pricing = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isGuruEnabled, openGuruCheckout, loading: guruLoading } = useGuruCheckout();
   const { trackCTAClick, trackInitiateCheckout, trackAddToCart } = useLandingTracking();
-  const { isFreePlanEnabled } = useFreePlanSettings();
+  const { visiblePlans, loading: plansLoading } = usePlanVisibility();
 
-  // Filter plans based on free plan setting
-  const visiblePlans = plans.filter(plan => {
-    if (plan.name === 'Gratuito' && !isFreePlanEnabled) {
-      return false;
-    }
-    return true;
-  });
+  // Dados específicos para a landing page (preços podem variar por promoção)
+  const landingPlanData: Record<string, { price: string; priceValue: number; period: string; description: string; features: string[]; stripeId?: string; icon?: typeof Users }> = {
+    gratuito: {
+      price: "R$ 0",
+      priceValue: 0,
+      period: "/7 dias",
+      description: "Experimente tudo por 7 dias, sem compromisso",
+      features: [
+        "Todos os 256 Odu Ifá por 7 dias",
+        "Flashcards completos",
+        "Repetição espaçada",
+        "Progresso detalhado",
+        "Após 7 dias, upgrade necessário",
+      ],
+    },
+    awo: {
+      price: "R$ 97,00",
+      priceValue: 97.00,
+      period: "/mês",
+      description: "O plano ideal para dominar os 256 Odu",
+      features: [
+        "Todos os 256 Odu Ifá",
+        "Flashcards avançados com IA",
+        "Mapas mentais interativos",
+        "Repetição espaçada personalizada",
+        "Storytelling completo",
+        "Testes e simulados ilimitados",
+        "Suporte prioritário",
+      ],
+      stripeId: "price_1SUQe8Do1RHWW8lpTManIdtD",
+    },
+    egbe: {
+      price: "R$ 129,90",
+      priceValue: 129.90,
+      period: "/mês",
+      description: "Para grupos e terreiros que estudam juntos",
+      features: [
+        "Até 5 contas com acesso completo",
+        "Todos os 256 Odu Ifá (cada conta)",
+        "Dashboard compartilhado de progresso",
+        "Todos os recursos do Awo",
+        "Perfeito para grupos de estudo",
+        "Gestão centralizada",
+        "Suporte dedicado",
+      ],
+      stripeId: "price_1SVYDfDo1RHWW8lpGhLjNjoV",
+      icon: Users,
+    },
+  };
 
   const handleCTAClick = async (planName: string, priceValue: number) => {
     // Track CTA click
@@ -96,7 +75,7 @@ const Pricing = () => {
     trackInitiateCheckout(planName, priceValue, 'pricing');
 
     // Se for plano gratuito, vai para auth/subscription
-    if (planName === "Gratuito") {
+    if (planName.toLowerCase() === "gratuito") {
       navigate(user ? '/subscription' : '/auth');
       return;
     }
@@ -122,6 +101,16 @@ const Pricing = () => {
     navigate(user ? '/subscription' : '/auth');
   };
 
+  if (plansLoading) {
+    return (
+      <section id="pricing" className="py-24 px-4 bg-background">
+        <div className="container mx-auto flex items-center justify-center min-h-[400px]">
+          <div className="animate-pulse text-muted-foreground">Carregando planos...</div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section id="pricing" className="py-24 px-4 bg-background">
       <div className="container mx-auto">
@@ -139,9 +128,12 @@ const Pricing = () => {
         </div>
 
         {/* Pricing Cards */}
-        <div className={`grid gap-6 max-w-5xl mx-auto ${visiblePlans.length === 2 ? 'md:grid-cols-2 max-w-3xl' : 'md:grid-cols-3'}`}>
+        <div className={`grid gap-6 max-w-5xl mx-auto ${visiblePlans.length === 1 ? 'max-w-md' : visiblePlans.length === 2 ? 'md:grid-cols-2 max-w-3xl' : 'md:grid-cols-3'}`}>
           {visiblePlans.map((plan, index) => {
-            const PlanIcon = plan.icon;
+            const planData = landingPlanData[plan.id];
+            if (!planData) return null;
+            
+            const PlanIcon = planData.icon;
             return (
               <Card
                 key={index}
@@ -169,16 +161,16 @@ const Pricing = () => {
                   <CardTitle className="text-2xl mb-2">{plan.name}</CardTitle>
 
                   <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-4xl font-bold">{plan.price}</span>
-                    <span className="text-muted-foreground text-sm">{plan.period}</span>
+                    <span className="text-4xl font-bold">{planData.price}</span>
+                    <span className="text-muted-foreground text-sm">{planData.period}</span>
                   </div>
 
-                  <p className="text-sm text-muted-foreground mt-4">{plan.description}</p>
+                  <p className="text-sm text-muted-foreground mt-4">{planData.description}</p>
                 </CardHeader>
 
                 <CardContent className="space-y-6">
                   <ul className="space-y-3">
-                    {plan.features.map((feature, i) => (
+                    {planData.features.map((feature, i) => (
                       <li key={i} className="flex items-start gap-2">
                         <div className="rounded-full p-0.5 bg-primary/10 mt-0.5 flex-shrink-0">
                           <Check className="w-3.5 h-3.5 text-primary" />
@@ -192,7 +184,7 @@ const Pricing = () => {
                     className="w-full"
                     variant={plan.variant}
                     size="lg"
-                    onClick={() => handleCTAClick(plan.name, plan.priceValue)}
+                    onClick={() => handleCTAClick(plan.name, planData.priceValue)}
                   >
                     {plan.cta}
                     {plan.popular && <Sparkles className="ml-2 w-4 h-4" />}
