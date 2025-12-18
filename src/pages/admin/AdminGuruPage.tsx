@@ -36,6 +36,16 @@ const AdminGuruPage = () => {
   const [promoDurationDays, setPromoDurationDays] = useState("90");
   const [promoPlanMapping, setPromoPlanMapping] = useState("Awo");
   const [promoCheckoutUrl, setPromoCheckoutUrl] = useState("");
+  const [promoGuruProductId, setPromoGuruProductId] = useState("");
+
+  const durationPresets = [
+    { label: "Mensal (30 dias)", value: "30" },
+    { label: "Trimestral (90 dias)", value: "90" },
+    { label: "Semestral (180 dias)", value: "180" },
+    { label: "Anual (365 dias)", value: "365" },
+    { label: "Bianual (730 dias)", value: "730" },
+    { label: "Personalizado", value: "custom" },
+  ];
 
   const checkoutSettings: GuruSetting[] = [
     {
@@ -107,6 +117,9 @@ const AdminGuruPage = () => {
           case "promo_checkout_url":
             setPromoCheckoutUrl(s.value || "");
             break;
+          case "promo_guru_product_id":
+            setPromoGuruProductId(s.value || "");
+            break;
         }
       });
     } catch (error) {
@@ -150,6 +163,7 @@ const AdminGuruPage = () => {
         { key: "promo_duration_days", value: promoDurationDays },
         { key: "promo_plan_mapping", value: promoPlanMapping },
         { key: "promo_checkout_url", value: promoCheckoutUrl },
+        { key: "promo_guru_product_id", value: promoGuruProductId },
       ];
 
       let successCount = 0;
@@ -305,6 +319,25 @@ const AdminGuruPage = () => {
           )}
 
           <div className="grid gap-6 md:grid-cols-2">
+            {/* ID do Produto GURU */}
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="promo-product-id">ID/Nome do Produto na GURU</Label>
+              <p className="text-xs text-muted-foreground">
+                Identificador único da oferta promocional na GURU. O sistema usará isso para reconhecer compras desta promoção específica.
+              </p>
+              <Input
+                id="promo-product-id"
+                value={promoGuruProductId}
+                onChange={(e) => setPromoGuruProductId(e.target.value)}
+                placeholder="Ex: lancamento-2024, black-friday, promo-especial"
+              />
+              {!promoGuruProductId && promoEnabled && (
+                <p className="text-xs text-amber-600">
+                  ⚠️ Sem ID configurado, qualquer produto não reconhecido será tratado como promoção
+                </p>
+              )}
+            </div>
+
             {/* Nome da Promoção */}
             <div className="space-y-2">
               <Label htmlFor="promo-name">Nome da Promoção</Label>
@@ -317,18 +350,40 @@ const AdminGuruPage = () => {
               />
             </div>
 
-            {/* Duração */}
+            {/* Duração com Presets */}
             <div className="space-y-2">
-              <Label htmlFor="promo-duration">Duração do Acesso (dias)</Label>
+              <Label htmlFor="promo-duration">Duração do Acesso</Label>
               <p className="text-xs text-muted-foreground">Quantos dias de acesso o aluno terá</p>
-              <Input
-                id="promo-duration"
-                type="number"
-                min="1"
-                value={promoDurationDays}
-                onChange={(e) => setPromoDurationDays(e.target.value)}
-                placeholder="90"
-              />
+              <div className="flex gap-2">
+                <Select 
+                  value={durationPresets.some(p => p.value === promoDurationDays) ? promoDurationDays : "custom"} 
+                  onValueChange={(v) => {
+                    if (v !== "custom") {
+                      setPromoDurationDays(v);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {durationPresets.map((preset) => (
+                      <SelectItem key={preset.value} value={preset.value}>
+                        {preset.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  id="promo-duration"
+                  type="number"
+                  min="1"
+                  value={promoDurationDays}
+                  onChange={(e) => setPromoDurationDays(e.target.value)}
+                  placeholder="Dias"
+                  className="flex-1"
+                />
+              </div>
             </div>
 
             {/* Plano Interno */}

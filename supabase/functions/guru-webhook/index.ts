@@ -65,6 +65,7 @@ async function getPromoSettings(supabaseAdmin: any): Promise<{
   name: string;
   durationDays: number;
   planMapping: string;
+  guruProductId: string;
 }> {
   const { data, error } = await supabaseAdmin
     .from('app_settings')
@@ -78,6 +79,7 @@ async function getPromoSettings(supabaseAdmin: any): Promise<{
       name: "Promoção",
       durationDays: 30,
       planMapping: "Awo",
+      guruProductId: "",
     };
   }
 
@@ -91,7 +93,24 @@ async function getPromoSettings(supabaseAdmin: any): Promise<{
     name: settings['promo_name'] || 'Promoção',
     durationDays: parseInt(settings['promo_duration_days'] || '30', 10),
     planMapping: settings['promo_plan_mapping'] || 'Awo',
+    guruProductId: settings['promo_guru_product_id'] || '',
   };
+}
+
+// Check if the product matches the promo configuration
+function isPromoProduct(productId: string, productName: string, promoGuruProductId: string): boolean {
+  if (!promoGuruProductId) return false;
+  
+  const promoIdLower = promoGuruProductId.toLowerCase();
+  const productIdLower = (productId || '').toLowerCase();
+  const productNameLower = (productName || '').toLowerCase();
+  
+  // Check exact match or partial match
+  return productIdLower === promoIdLower || 
+         productIdLower.includes(promoIdLower) ||
+         productNameLower.includes(promoIdLower) ||
+         promoIdLower.includes(productIdLower) ||
+         promoIdLower.includes(productNameLower);
 }
 
 serve(async (req) => {
@@ -225,11 +244,21 @@ serve(async (req) => {
 
       // Determine plan name for welcome email
       let emailPlanName = mapGuruProductToPlan(productId, productName);
+      let emailIsPromo = false;
+      let emailPromoDuration = promoSettings.durationDays;
       
-      // If product not recognized but promo is enabled, use promo name
-      if (!emailPlanName && promoSettings.enabled) {
+      // Check if this is a promo product (explicit match)
+      if (promoSettings.enabled && promoSettings.guruProductId && 
+          isPromoProduct(productId, productName, promoSettings.guruProductId)) {
         emailPlanName = promoSettings.name;
-        logStep("Usando nome da promoção para email", { promoName: promoSettings.name });
+        emailIsPromo = true;
+        logStep("Usando nome da promoção para email (ID correspondente)", { promoName: promoSettings.name });
+      }
+      // If not recognized but promo is enabled without specific ID
+      else if (!emailPlanName && promoSettings.enabled && !promoSettings.guruProductId) {
+        emailPlanName = promoSettings.name;
+        emailIsPromo = true;
+        logStep("Usando nome da promoção para email (sem ID específico)", { promoName: promoSettings.name });
       } else if (!emailPlanName) {
         emailPlanName = 'Awo';
       }
@@ -250,8 +279,8 @@ serve(async (req) => {
             name: buyerName,
             password: tempPassword,
             planName: emailPlanName,
-            isPromo: promoSettings.enabled && !mapGuruProductToPlan(productId, productName),
-            promoDurationDays: promoSettings.durationDays,
+            isPromo: emailIsPromo,
+            promoDurationDays: emailPromoDuration,
           }),
         });
 
@@ -269,22 +298,41 @@ serve(async (req) => {
     // Determine plan and duration
     let planName = mapGuruProductToPlan(productId, productName);
     let durationDays = 30; // Default monthly
+    let isPromo = false;
 
-    // If product not recognized but promo is enabled, use promo settings
-    if (!planName && promoSettings.enabled) {
+    // First, check if this is a promo product (explicit match)
+    if (promoSettings.enabled && promoSettings.guruProductId && 
+        isPromoProduct(productId, productName, promoSettings.guruProductId)) {
       planName = promoSettings.planMapping;
       durationDays = promoSettings.durationDays;
-      logStep("Produto não reconhecido, usando configuração de promoção", { 
+      isPromo = true;
+      logStep("Produto promocional identificado pelo ID", { 
+        productId,
+        productName,
+        promoGuruProductId: promoSettings.guruProductId,
         planName, 
         durationDays,
         promoName: promoSettings.name 
       });
-    } else if (!planName) {
+    }
+    // If not a promo product but also not recognized, and promo is enabled without specific ID
+    else if (!planName && promoSettings.enabled && !promoSettings.guruProductId) {
+      planName = promoSettings.planMapping;
+      durationDays = promoSettings.durationDays;
+      isPromo = true;
+      logStep("Produto não reconhecido, usando configuração de promoção (sem ID específico)", { 
+        planName, 
+        durationDays,
+        promoName: promoSettings.name 
+      });
+    } 
+    // If not recognized and promo has specific ID (but doesn't match), use default
+    else if (!planName) {
       planName = 'Awo'; // Default fallback
       logStep("Produto não reconhecido, usando plano padrão Awo");
     }
 
-    logStep("Plano mapeado", { productId, productName, planName, durationDays });
+    logStep("Plano mapeado", { productId, productName, planName, durationDays, isPromo });
 
     let subscriptionStatus = 'active';
     let shouldUpdateSubscription = true;
