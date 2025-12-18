@@ -22,8 +22,8 @@ const Success = () => {
       const planPrices: Record<string, number> = {
         'premium': 49.90,
         'akapo': 49.90,
-        'professional': 99.90,
-        'awo': 99.90,
+        'professional': 97.00,
+        'awo': 97.00,
       };
       
       const price = planPrices[subscription.plan_name.toLowerCase()] || 0;

@@ -23,11 +23,11 @@ const PRICE_IDS = {
     annual: 'price_1SVYC4Do1RHWW8lprTS45LGC'   // R$ 499,90/ano
   },
   'Profissional': {
-    monthly: 'price_1SUQe8Do1RHWW8lpTManIdtD',  // R$ 99,90/mês
+    monthly: 'price_1SUQe8Do1RHWW8lpTManIdtD',  // R$ 97,00/mês
     annual: 'price_1SVYDGDo1RHWW8lpDluZOrfK'   // R$ 999,90/ano
   },
   'Awo': {
-    monthly: 'price_1SUQe8Do1RHWW8lpTManIdtD',  // R$ 99,90/mês
+    monthly: 'price_1SUQe8Do1RHWW8lpTManIdtD',  // R$ 97,00/mês
     annual: 'price_1SVYDGDo1RHWW8lpDluZOrfK'   // R$ 999,90/ano
   },
   'Família': {

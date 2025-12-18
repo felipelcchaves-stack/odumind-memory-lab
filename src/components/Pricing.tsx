@@ -28,8 +28,8 @@ const plans = [
   },
   {
     name: "Awo",
-    price: "R$ 99,90",
-    priceValue: 99.90,
+    price: "R$ 97,00",
+    priceValue: 97.00,
     period: "/mês",
     description: "O plano ideal para dominar os 256 Odu",
     features: [

@@ -58,7 +58,7 @@ export default function RetentionOfferDialog({
   // Calculate savings
   const planPrices: Record<string, number> = {
     'Akapo': 49.90,
-    'Awo': 99.90,
+    'Awo': 97.00,
     'Egbe': 129.90,
   };
 

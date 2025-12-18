@@ -52,7 +52,7 @@ const AdminGuruPage = () => {
       key: "guru_checkout_awo_monthly",
       value: checkoutLinks.guru_checkout_awo_monthly,
       label: "Awo Mensal",
-      description: "R$ 99,90/mês - O plano ideal para dominar os 256 Odu",
+      description: "R$ 97,00/mês - O plano ideal para dominar os 256 Odu",
       placeholder: "https://pay.guru.com.br/...",
     },
     {

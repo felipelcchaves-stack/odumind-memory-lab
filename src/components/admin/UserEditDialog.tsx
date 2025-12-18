@@ -467,7 +467,7 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
                     <SelectItem value="Profissional">
                       <div className="flex items-center gap-2">
                         <Badge variant="default">Profissional</Badge>
-                        <span className="text-sm text-muted-foreground">R$ 99,90/mês</span>
+                        <span className="text-sm text-muted-foreground">R$ 97,00/mês</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="Família">
