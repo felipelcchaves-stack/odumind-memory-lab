@@ -59,6 +59,15 @@ function isCancellationEvent(payload: any): boolean {
   return false;
 }
 
+// Normaliza string removendo espaços, acentos e caracteres especiais para matching
+function normalizeForMatching(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .replace(/[^a-z0-9]/g, ''); // Remove tudo que não é letra ou número
+}
+
 // Fetch promo settings from database
 async function getPromoSettings(supabaseAdmin: any): Promise<{
   enabled: boolean;
@@ -97,20 +106,93 @@ async function getPromoSettings(supabaseAdmin: any): Promise<{
   };
 }
 
-// Check if the product matches the promo configuration
+// Check if the product matches the promo configuration - IMPROVED MATCHING
 function isPromoProduct(productId: string, productName: string, promoGuruProductId: string): boolean {
   if (!promoGuruProductId) return false;
   
-  const promoIdLower = promoGuruProductId.toLowerCase();
-  const productIdLower = (productId || '').toLowerCase();
+  // Normaliza todas as strings para comparação
+  const promoNormalized = normalizeForMatching(promoGuruProductId);
+  const productIdNormalized = normalizeForMatching(productId || '');
+  const productNameNormalized = normalizeForMatching(productName || '');
+  
+  // Log detalhado para debug
+  logStep("Verificando match de produto promo", {
+    promoOriginal: promoGuruProductId,
+    promoNormalized,
+    productNameOriginal: productName,
+    productNameNormalized,
+    productIdOriginal: productId,
+    productIdNormalized
+  });
+  
+  // Check 1: Match exato normalizado
+  if (productIdNormalized === promoNormalized || productNameNormalized === promoNormalized) {
+    logStep("Match encontrado: exato normalizado");
+    return true;
+  }
+  
+  // Check 2: Um contém o outro (normalizado)
+  if (productIdNormalized.includes(promoNormalized) || productNameNormalized.includes(promoNormalized)) {
+    logStep("Match encontrado: produto contém promo ID");
+    return true;
+  }
+  
+  if (promoNormalized.includes(productIdNormalized) && productIdNormalized.length > 3) {
+    logStep("Match encontrado: promo ID contém produto ID");
+    return true;
+  }
+  
+  if (promoNormalized.includes(productNameNormalized) && productNameNormalized.length > 3) {
+    logStep("Match encontrado: promo ID contém nome do produto");
+    return true;
+  }
+  
+  // Check 3: Verifica se todas as palavras do promoId estão no productName
+  const promoWords = promoGuruProductId.toLowerCase().split(/\s+/).filter(w => w.length > 2);
   const productNameLower = (productName || '').toLowerCase();
   
-  // Check exact match or partial match
-  return productIdLower === promoIdLower || 
-         productIdLower.includes(promoIdLower) ||
-         productNameLower.includes(promoIdLower) ||
-         promoIdLower.includes(productIdLower) ||
-         promoIdLower.includes(productNameLower);
+  const allWordsMatch = promoWords.every(word => {
+    const wordNormalized = normalizeForMatching(word);
+    return productNameNormalized.includes(wordNormalized) || productNameLower.includes(word);
+  });
+  
+  if (allWordsMatch && promoWords.length > 0) {
+    logStep("Match encontrado: todas as palavras do promo ID estão no nome do produto", { promoWords });
+    return true;
+  }
+  
+  logStep("Nenhum match encontrado");
+  return false;
+}
+
+// Check if subscription was recently created (protection against unexpected cancellations)
+async function wasRecentlyCreated(supabaseAdmin: any, userId: string, minutesThreshold: number = 30): Promise<boolean> {
+  const { data, error } = await supabaseAdmin
+    .from('subscriptions')
+    .select('created_at, updated_at, status')
+    .eq('user_id', userId)
+    .single();
+  
+  if (error || !data) {
+    return false;
+  }
+  
+  const createdAt = new Date(data.created_at);
+  const now = new Date();
+  const diffMinutes = (now.getTime() - createdAt.getTime()) / (1000 * 60);
+  
+  // If subscription was created within threshold and is active, it's "recently created"
+  const isRecent = diffMinutes <= minutesThreshold && data.status === 'active';
+  
+  if (isRecent) {
+    logStep("⚠️ Assinatura foi criada recentemente", {
+      createdAt: data.created_at,
+      diffMinutes: Math.round(diffMinutes),
+      currentStatus: data.status
+    });
+  }
+  
+  return isRecent;
 }
 
 serve(async (req) => {
@@ -403,13 +485,43 @@ serve(async (req) => {
         }
     }
 
+    // PROTEÇÃO: Se é um evento de cancelamento, verificar se a assinatura foi criada recentemente
+    if (subscriptionStatus === 'canceled' || isCancellationEvent(payload)) {
+      const isRecentlyCreated = await wasRecentlyCreated(supabaseAdmin, userId, 30);
+      
+      if (isRecentlyCreated) {
+        logStep("⚠️ PROTEÇÃO ATIVADA: Ignorando cancelamento para assinatura recém-criada", {
+          eventType: eventTypeLower,
+          userId
+        });
+        
+        // Retorna sucesso mas não processa o cancelamento
+        return new Response(JSON.stringify({ 
+          success: true,
+          message: "Cancelamento ignorado - assinatura muito recente",
+          user_id: userId,
+          protection_activated: true
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+    }
+
     if (subscriptionStatus === 'active' && isCancellationEvent(payload)) {
-      subscriptionStatus = 'canceled';
-      planName = 'Gratuito';
-      logStep("CORREÇÃO: Cancelamento detectado via campos adicionais", {
-        cancel_at_cycle_end: payload.cancel_at_cycle_end,
-        last_status: payload.last_status
-      });
+      // Double-check: only cancel if not recently created
+      const isRecentlyCreated = await wasRecentlyCreated(supabaseAdmin, userId, 30);
+      
+      if (!isRecentlyCreated) {
+        subscriptionStatus = 'canceled';
+        planName = 'Gratuito';
+        logStep("CORREÇÃO: Cancelamento detectado via campos adicionais", {
+          cancel_at_cycle_end: payload.cancel_at_cycle_end,
+          last_status: payload.last_status
+        });
+      } else {
+        logStep("⚠️ Ignorando flags de cancelamento para assinatura recém-criada");
+      }
     }
 
     logStep("Status final determinado", { 
