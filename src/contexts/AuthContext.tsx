@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode, useRef } fro
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { getSiteUrl } from '@/lib/siteUrl';
 
 interface AuthContextType {
   user: User | null;
@@ -45,7 +46,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUp = async (email: string, password: string, nome: string) => {
-    const redirectUrl = `${window.location.origin}/dashboard`;
+    // Usar domínio de produção para garantir redirect correto em emails
+    const redirectUrl = `${getSiteUrl()}/dashboard`;
     
     const { error } = await supabase.auth.signUp({
       email,
@@ -158,8 +160,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const resetPassword = async (email: string) => {
+    // Usar domínio de produção para garantir redirect correto em emails
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth?mode=reset`,
+      redirectTo: `${getSiteUrl()}/auth?mode=reset`,
     });
     
     return { error };

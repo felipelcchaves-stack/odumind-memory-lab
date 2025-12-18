@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
+// URL de produção fixa para garantir links corretos em emails
+const PRODUCTION_URL = "https://isesemind.ileaseifatokun.com.br";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -93,7 +96,8 @@ serve(async (req) => {
       throw new Error(`Erro ao criar convite: ${inviteError.message}`);
     }
 
-    const inviteLink = `${req.headers.get("origin")}/familia/aceitar/${inviteToken}`;
+    // Usar URL de produção fixa em vez de origin do request
+    const inviteLink = `${PRODUCTION_URL}/familia/aceitar/${inviteToken}`;
 
     console.log(`[INVITE-FAMILY] Convite criado: ${invite.id} para ${email}`);
 
