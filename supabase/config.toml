@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.generate-odu-audio]
 verify_jwt = false
+
+[functions.generate-exit-popup-coupon]
+verify_jwt = false

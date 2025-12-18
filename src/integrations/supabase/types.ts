@@ -316,6 +316,92 @@ export type Database = {
         }
         Relationships: []
       }
+      coupon_usage: {
+        Row: {
+          coupon_id: string
+          discount_applied: number | null
+          email: string
+          id: string
+          order_value: number | null
+          used_at: string
+          user_id: string | null
+        }
+        Insert: {
+          coupon_id: string
+          discount_applied?: number | null
+          email: string
+          id?: string
+          order_value?: number | null
+          used_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          coupon_id?: string
+          discount_applied?: number | null
+          email?: string
+          id?: string
+          order_value?: number | null
+          used_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_usage_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "discount_coupons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discount_coupons: {
+        Row: {
+          code: string
+          created_at: string
+          current_uses: number
+          discount_percent: number
+          email: string | null
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          source: string
+          stripe_coupon_id: string | null
+          updated_at: string
+          valid_from: string
+          valid_until: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          current_uses?: number
+          discount_percent?: number
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          source?: string
+          stripe_coupon_id?: string | null
+          updated_at?: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          current_uses?: number
+          discount_percent?: number
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          source?: string
+          stripe_coupon_id?: string | null
+          updated_at?: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       elaborative_notes: {
         Row: {
           created_at: string
