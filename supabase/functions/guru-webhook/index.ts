@@ -11,23 +11,18 @@ const logStep = (step: string, details?: any) => {
   console.log(`[GURU-WEBHOOK] ${step}${detailsStr}`);
 };
 
-// Mapeamento de produtos GURU para planos do sistema (ATUALIZADO)
-// Removido Akapo - agora só temos Awo e Egbe como planos pagos
+// Mapeamento de produtos GURU para planos do sistema
 const GURU_PRODUCT_MAPPING: Record<string, string> = {
-  // Planos padrão
   'profissional': 'Awo',
   'professional': 'Awo',
   'familia': 'Egbe',
   'family': 'Egbe',
-  // Nomes GURU -> Nomes do Sistema
-  'akapo': 'Awo',        // Akapo agora mapeia para Awo
+  'akapo': 'Awo',
   'awo': 'Awo',
   'egbe': 'Egbe',
-  // Aliases antigos
   'premium': 'Awo',
 };
 
-// Função para gerar senha aleatória
 function generateRandomPassword(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%';
   let password = '';
@@ -37,14 +32,11 @@ function generateRandomPassword(): string {
   return password;
 }
 
-// Função para mapear produto GURU para plano do sistema
-function mapGuruProductToPlan(productId: string, productName: string): string {
-  // Primeiro tenta pelo ID
+function mapGuruProductToPlan(productId: string, productName: string): string | null {
   if (GURU_PRODUCT_MAPPING[productId?.toLowerCase()]) {
     return GURU_PRODUCT_MAPPING[productId.toLowerCase()];
   }
   
-  // Depois tenta pelo nome do produto
   const nameLower = productName?.toLowerCase() || '';
   for (const [key, plan] of Object.entries(GURU_PRODUCT_MAPPING)) {
     if (nameLower.includes(key)) {
@@ -52,13 +44,10 @@ function mapGuruProductToPlan(productId: string, productName: string): string {
     }
   }
   
-  // Padrão - Awo é o plano principal agora
-  return 'Awo';
+  return null; // Return null if not recognized
 }
 
-// Função para verificar se o evento indica cancelamento
 function isCancellationEvent(payload: any): boolean {
-  // Verificar campos específicos do GURU que indicam cancelamento
   if (payload.cancel_at_cycle_end === true) return true;
   if (payload.last_status === 'cancelled' || payload.last_status === 'canceled') return true;
   if (payload.cancelled_by || payload.canceled_by) return true;
@@ -70,6 +59,41 @@ function isCancellationEvent(payload: any): boolean {
   return false;
 }
 
+// Fetch promo settings from database
+async function getPromoSettings(supabaseAdmin: any): Promise<{
+  enabled: boolean;
+  name: string;
+  durationDays: number;
+  planMapping: string;
+}> {
+  const { data, error } = await supabaseAdmin
+    .from('app_settings')
+    .select('key, value')
+    .eq('category', 'promo');
+
+  if (error) {
+    logStep("Erro ao buscar configurações de promoção", { error: error.message });
+    return {
+      enabled: false,
+      name: "Promoção",
+      durationDays: 30,
+      planMapping: "Awo",
+    };
+  }
+
+  const settings: Record<string, string> = {};
+  data?.forEach((s: any) => {
+    settings[s.key] = s.value;
+  });
+
+  return {
+    enabled: settings['promo_enabled'] === 'true',
+    name: settings['promo_name'] || 'Promoção',
+    durationDays: parseInt(settings['promo_duration_days'] || '30', 10),
+    planMapping: settings['promo_plan_mapping'] || 'Awo',
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -78,13 +102,9 @@ serve(async (req) => {
   try {
     logStep("Webhook recebido", { method: req.method });
 
-    // PRIMEIRO: Parse do payload JSON
     const payload = await req.json();
-    
-    // Log completo do payload para debug
     logStep("Payload completo recebido", payload);
 
-    // EXTRAIR api_token DO CORPO JSON (não dos headers!)
     const guruToken = payload.api_token;
     const expectedToken = Deno.env.get("GURU_API_TOKEN");
     
@@ -96,7 +116,6 @@ serve(async (req) => {
       });
     }
 
-    // Validar token
     if (!guruToken) {
       logStep("ERRO: api_token não encontrado no payload");
       return new Response(JSON.stringify({ error: "Token não fornecido" }), {
@@ -118,14 +137,16 @@ serve(async (req) => {
 
     logStep("Token validado com sucesso");
 
-    // Inicializar Supabase Admin Client
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       { auth: { persistSession: false } }
     );
 
-    // Extrair dados do webhook - PRIORIZAR webhook_type
+    // Fetch promo settings
+    const promoSettings = await getPromoSettings(supabaseAdmin);
+    logStep("Configurações de promoção carregadas", promoSettings);
+
     const eventType = payload.webhook_type || payload.event || payload.type || payload.webhook_event;
     const buyerEmail = payload.contact?.email || payload.buyer?.email || payload.customer?.email || payload.email || payload.subscriber?.email;
     const buyerName = payload.contact?.name || payload.buyer?.name || payload.customer?.name || payload.name || payload.subscriber?.name || 'Usuário';
@@ -134,7 +155,6 @@ serve(async (req) => {
     const productId = payload.product?.id || payload.product_id || payload.offer?.product_id;
     const productName = payload.product?.name || payload.product_name || payload.offer?.name || '';
     
-    // Log de campos de cancelamento para debug
     logStep("Verificando campos de cancelamento", {
       webhook_type: payload.webhook_type,
       event: payload.event,
@@ -164,7 +184,6 @@ serve(async (req) => {
       productName
     });
 
-    // Verificar se usuário já existe
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
     const existingUser = existingUsers?.users?.find(u => u.email === buyerEmail);
 
@@ -175,7 +194,6 @@ serve(async (req) => {
       userId = existingUser.id;
       logStep("Usuário existente encontrado", { userId });
     } else {
-      // Criar novo usuário
       const tempPassword = generateRandomPassword();
       
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -200,13 +218,23 @@ serve(async (req) => {
       isNewUser = true;
       logStep("Novo usuário criado", { userId, email: buyerEmail });
 
-      // Atualizar perfil com o nome
       await supabaseAdmin
         .from('profiles')
         .update({ nome: buyerName })
         .eq('user_id', userId);
 
-      // Enviar e-mail de boas-vindas com os dados de acesso
+      // Determine plan name for welcome email
+      let emailPlanName = mapGuruProductToPlan(productId, productName);
+      
+      // If product not recognized but promo is enabled, use promo name
+      if (!emailPlanName && promoSettings.enabled) {
+        emailPlanName = promoSettings.name;
+        logStep("Usando nome da promoção para email", { promoName: promoSettings.name });
+      } else if (!emailPlanName) {
+        emailPlanName = 'Awo';
+      }
+
+      // Send welcome email
       try {
         const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
         const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
@@ -221,31 +249,46 @@ serve(async (req) => {
             email: buyerEmail,
             name: buyerName,
             password: tempPassword,
-            planName: mapGuruProductToPlan(productId, productName),
+            planName: emailPlanName,
+            isPromo: promoSettings.enabled && !mapGuruProductToPlan(productId, productName),
+            promoDurationDays: promoSettings.durationDays,
           }),
         });
 
         if (emailResponse.ok) {
-          logStep("E-mail de boas-vindas enviado com sucesso", { email: buyerEmail });
+          logStep("E-mail de boas-vindas enviado com sucesso", { email: buyerEmail, planName: emailPlanName });
         } else {
           const emailError = await emailResponse.text();
           logStep("Erro ao enviar e-mail de boas-vindas", { error: emailError });
         }
       } catch (emailError) {
         logStep("Falha ao enviar e-mail de boas-vindas", { error: String(emailError) });
-        // Não falhar o webhook por causa do e-mail
       }
     }
 
-    // Determinar o plano baseado no produto
+    // Determine plan and duration
     let planName = mapGuruProductToPlan(productId, productName);
-    logStep("Plano mapeado", { productId, productName, planName });
+    let durationDays = 30; // Default monthly
 
-    // Processar evento
+    // If product not recognized but promo is enabled, use promo settings
+    if (!planName && promoSettings.enabled) {
+      planName = promoSettings.planMapping;
+      durationDays = promoSettings.durationDays;
+      logStep("Produto não reconhecido, usando configuração de promoção", { 
+        planName, 
+        durationDays,
+        promoName: promoSettings.name 
+      });
+    } else if (!planName) {
+      planName = 'Awo'; // Default fallback
+      logStep("Produto não reconhecido, usando plano padrão Awo");
+    }
+
+    logStep("Plano mapeado", { productId, productName, planName, durationDays });
+
     let subscriptionStatus = 'active';
     let shouldUpdateSubscription = true;
 
-    // Normalizar eventType para lowercase para comparação
     const eventTypeLower = eventType?.toLowerCase() || '';
 
     switch (eventTypeLower) {
@@ -276,7 +319,7 @@ serve(async (req) => {
       case 'canceled':
       case 'cancelled':
         subscriptionStatus = 'canceled';
-        planName = 'Gratuito'; // Resetar para plano gratuito
+        planName = 'Gratuito';
         logStep("Processando CANCELAMENTO de assinatura", { eventType: eventTypeLower });
         break;
 
@@ -297,12 +340,11 @@ serve(async (req) => {
       case 'chargeback':
       case 'chargeback.created':
         subscriptionStatus = 'canceled';
-        planName = 'Gratuito'; // Resetar para plano gratuito
+        planName = 'Gratuito';
         logStep("Processando reembolso/chargeback", { eventType: eventTypeLower });
         break;
 
       default:
-        // FALLBACK: Verificar campos de cancelamento mesmo se eventType não for reconhecido
         if (isCancellationEvent(payload)) {
           subscriptionStatus = 'canceled';
           planName = 'Gratuito';
@@ -313,7 +355,6 @@ serve(async (req) => {
         }
     }
 
-    // Verificação adicional de cancelamento (double-check)
     if (subscriptionStatus === 'active' && isCancellationEvent(payload)) {
       subscriptionStatus = 'canceled';
       planName = 'Gratuito';
@@ -330,16 +371,13 @@ serve(async (req) => {
     });
 
     if (shouldUpdateSubscription) {
-      // Calcular período (30 dias para mensal, ajustar conforme necessário)
       const now = new Date();
       const periodEnd = new Date(now);
       
-      // Se cancelado, não estender o período
       if (subscriptionStatus !== 'canceled') {
-        periodEnd.setDate(periodEnd.getDate() + 30);
+        periodEnd.setDate(periodEnd.getDate() + durationDays);
       }
 
-      // Atualizar ou criar assinatura
       const subscriptionData = {
         user_id: userId,
         status: subscriptionStatus,
@@ -372,6 +410,7 @@ serve(async (req) => {
         userId, 
         status: subscriptionStatus, 
         planName,
+        durationDays,
         isNewUser
       });
     }
@@ -382,7 +421,8 @@ serve(async (req) => {
       user_id: userId,
       is_new_user: isNewUser,
       subscription_status: subscriptionStatus,
-      plan_name: planName
+      plan_name: planName,
+      duration_days: durationDays
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
