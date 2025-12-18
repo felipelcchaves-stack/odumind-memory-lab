@@ -1,13 +1,19 @@
 import { Button } from "@/components/ui/button";
 import { BookOpen, Menu } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useFreePlanSettings } from "@/hooks/useFreePlanSettings";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
   const { isFreePlanEnabled } = useFreePlanSettings();
+
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    element?.scrollIntoView({ behavior: 'smooth' });
+    setIsMenuOpen(false);
+  };
 
   const handleCtaClick = () => {
     if (isFreePlanEnabled) {
@@ -29,20 +35,19 @@ const Header = () => {
             <span className="text-2xl font-bold">Isesemind</span>
           </div>
 
-          {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-sm font-medium hover:text-primary transition-smooth">
+            <button onClick={() => scrollToSection('features')} className="text-sm font-medium hover:text-primary transition-smooth">
               Funcionalidades
-            </a>
-            <a href="#learning" className="text-sm font-medium hover:text-primary transition-smooth">
+            </button>
+            <button onClick={() => scrollToSection('learning')} className="text-sm font-medium hover:text-primary transition-smooth">
               Aprendizado
-            </a>
-            <a href="/biblioteca-yoruba" className="text-sm font-medium hover:text-primary transition-smooth">
+            </button>
+            <Link to="/biblioteca-yoruba" className="text-sm font-medium hover:text-primary transition-smooth">
               Biblioteca
-            </a>
-            <a href="#pricing" className="text-sm font-medium hover:text-primary transition-smooth">
+            </Link>
+            <button onClick={() => scrollToSection('pricing')} className="text-sm font-medium hover:text-primary transition-smooth">
               Planos
-            </a>
+            </button>
           </nav>
 
           {/* CTA Buttons */}
@@ -68,18 +73,18 @@ const Header = () => {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-border">
             <nav className="flex flex-col gap-4">
-              <a href="#features" className="text-sm font-medium hover:text-primary transition-smooth">
+              <button onClick={() => scrollToSection('features')} className="text-sm font-medium hover:text-primary transition-smooth text-left">
                 Funcionalidades
-              </a>
-              <a href="#learning" className="text-sm font-medium hover:text-primary transition-smooth">
+              </button>
+              <button onClick={() => scrollToSection('learning')} className="text-sm font-medium hover:text-primary transition-smooth text-left">
                 Aprendizado
-              </a>
-              <a href="/biblioteca-yoruba" className="text-sm font-medium hover:text-primary transition-smooth">
+              </button>
+              <Link to="/biblioteca-yoruba" className="text-sm font-medium hover:text-primary transition-smooth">
                 Biblioteca
-              </a>
-              <a href="#pricing" className="text-sm font-medium hover:text-primary transition-smooth">
+              </Link>
+              <button onClick={() => scrollToSection('pricing')} className="text-sm font-medium hover:text-primary transition-smooth text-left">
                 Planos
-              </a>
+              </button>
               <div className="flex flex-col gap-2 pt-4">
                 <Button variant="ghost" size="sm" onClick={() => navigate('/auth')}>
                   Entrar
