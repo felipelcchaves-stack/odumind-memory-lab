@@ -50,3 +50,9 @@ verify_jwt = false
 
 [functions.generate-exit-popup-coupon]
 verify_jwt = false
+
+[functions.validate-session]
+verify_jwt = false
+
+[functions.enforce-single-session]
+verify_jwt = true
