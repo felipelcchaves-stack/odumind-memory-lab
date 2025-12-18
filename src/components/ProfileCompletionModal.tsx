@@ -37,9 +37,16 @@ export function ProfileCompletionModal({ open, onComplete }: ProfileCompletionMo
       return;
     }
 
+    if (!user?.id) {
+      toast.error('Usuário não identificado');
+      return;
+    }
+
     setLoading(true);
 
     try {
+      console.log('[ProfileModal] Saving profile data for user:', user.id);
+      
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -49,16 +56,42 @@ export function ProfileCompletionModal({ open, onComplete }: ProfileCompletionMo
           sexo: formData.sexo,
           profile_completed: true
         })
-        .eq('user_id', user?.id);
+        .eq('user_id', user.id);
 
       if (error) throw error;
 
+      // Verificar se realmente persistiu no banco
+      const { data: verification, error: verifyError } = await supabase
+        .from('profiles')
+        .select('profile_completed')
+        .eq('user_id', user.id)
+        .single();
+
+      if (verifyError) {
+        console.error('[ProfileModal] Verification error:', verifyError);
+        throw verifyError;
+      }
+
+      if (!verification?.profile_completed) {
+        console.error('[ProfileModal] Profile not marked as complete after save');
+        toast.error('Erro ao salvar perfil. Tentando novamente...');
+        
+        // Retry uma vez
+        const { error: retryError } = await supabase
+          .from('profiles')
+          .update({ profile_completed: true })
+          .eq('user_id', user.id);
+        
+        if (retryError) throw retryError;
+      }
+
+      console.log('[ProfileModal] Profile saved and verified successfully');
       toast.success('Perfil completado com sucesso!');
       
-      // Chama onComplete diretamente - ProfileCompletionChecker vai mostrar OnboardingModal
+      // Chama onComplete - ProfileCompletionChecker vai mostrar OnboardingModal
       onComplete();
     } catch (error) {
-      console.error('Error completing profile:', error);
+      console.error('[ProfileModal] Error completing profile:', error);
       toast.error('Erro ao salvar informações do perfil');
     } finally {
       setLoading(false);
@@ -67,7 +100,11 @@ export function ProfileCompletionModal({ open, onComplete }: ProfileCompletionMo
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-[500px]" onInteractOutside={(e) => e.preventDefault()}>
+      <DialogContent 
+        className="sm:max-w-[500px]" 
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertCircle className="h-5 w-5 text-primary" />

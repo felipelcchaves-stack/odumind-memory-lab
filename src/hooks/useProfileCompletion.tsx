@@ -8,6 +8,7 @@ export function useProfileCompletion() {
   const [isOnboardingComplete, setIsOnboardingComplete] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const lastCheckRef = useRef<number>(0);
+  const isMountedRef = useRef(true);
 
   const checkProfileCompletion = useCallback(async () => {
     if (!user) {
@@ -21,12 +22,16 @@ export function useProfileCompletion() {
     const now = Date.now();
     if (now - lastCheckRef.current < 1000) {
       console.log('[ProfileCompletion] Debounced check, skipping');
+      // IMPORTANTE: Resetar loading mesmo em debounce para evitar estado travado
+      setLoading(false);
       return;
     }
     lastCheckRef.current = now;
 
     try {
       console.log('[ProfileCompletion] Checking profile for user:', user.id);
+      setLoading(true);
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('profile_completed, onboarding_completed, pais, estado, data_nascimento, sexo')
@@ -35,30 +40,56 @@ export function useProfileCompletion() {
 
       if (error) throw error;
 
+      // Verificar se o componente ainda está montado
+      if (!isMountedRef.current) return;
+
       const isComplete = data?.profile_completed || false;
       const isOnboarded = data?.onboarding_completed || false;
       
-      console.log('[ProfileCompletion] Results:', { isComplete, isOnboarded });
+      console.log('[ProfileCompletion] Results:', { 
+        isComplete, 
+        isOnboarded,
+        rawData: {
+          profile_completed: data?.profile_completed,
+          onboarding_completed: data?.onboarding_completed
+        }
+      });
       
       setIsProfileComplete(isComplete);
       setIsOnboardingComplete(isOnboarded);
     } catch (error) {
       console.error('[ProfileCompletion] Error checking profile:', error);
-      setIsProfileComplete(false);
-      setIsOnboardingComplete(false);
+      if (isMountedRef.current) {
+        setIsProfileComplete(false);
+        setIsOnboardingComplete(false);
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   }, [user]);
 
   useEffect(() => {
+    isMountedRef.current = true;
     checkProfileCompletion();
+    
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, [checkProfileCompletion]);
+
+  // Função de refetch com delay opcional para garantir sincronização do DB
+  const refetch = useCallback(async () => {
+    // Reset debounce para permitir refetch imediato
+    lastCheckRef.current = 0;
+    await checkProfileCompletion();
   }, [checkProfileCompletion]);
 
   return { 
     isProfileComplete, 
     isOnboardingComplete,
     loading, 
-    refetch: checkProfileCompletion 
+    refetch 
   };
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { ProfileCompletionModal } from '@/components/ProfileCompletionModal';
@@ -13,6 +13,17 @@ export function ProfileCompletionChecker() {
   const location = useLocation();
   const { isProfileComplete, isOnboardingComplete, loading, refetch } = useProfileCompletion();
   
+  // Estados reativos para flags de sessão (localStorage como fonte inicial)
+  const [profileCompletedSession, setProfileCompletedSession] = useState(() => 
+    localStorage.getItem('profile_modal_completed_session') === 'true'
+  );
+  const [onboardingCompletedSession, setOnboardingCompletedSession] = useState(() => 
+    localStorage.getItem('onboarding_modal_completed_session') === 'true'
+  );
+  
+  // Flag para evitar re-abertura durante transição
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  
   // Estado local para controle de visibilidade dos modais
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
@@ -22,57 +33,97 @@ export function ProfileCompletionChecker() {
     location.pathname === route || location.pathname.startsWith('/familia/aceitar')
   );
 
-  // Verificar flags de localStorage
-  const profileCompletedSession = localStorage.getItem('profile_modal_completed_session') === 'true';
-  const onboardingCompletedSession = localStorage.getItem('onboarding_modal_completed_session') === 'true';
-
   // Efeito para determinar qual modal mostrar
   useEffect(() => {
-    // Não executar em rotas públicas ou sem usuário
-    if (isPublicRoute || !user || loading) {
-      setShowProfileModal(false);
-      setShowOnboardingModal(false);
+    console.log('[ProfileChecker] State check:', {
+      isPublicRoute,
+      user: !!user,
+      loading,
+      isProfileComplete,
+      isOnboardingComplete,
+      profileCompletedSession,
+      onboardingCompletedSession,
+      isTransitioning
+    });
+
+    // Não executar em rotas públicas, sem usuário, carregando ou em transição
+    if (isPublicRoute || !user || loading || isTransitioning) {
+      if (isPublicRoute) {
+        setShowProfileModal(false);
+        setShowOnboardingModal(false);
+      }
       return;
     }
 
     // Se perfil não está completo E não foi completado nesta sessão
     if (isProfileComplete === false && !profileCompletedSession) {
+      console.log('[ProfileChecker] Showing profile modal');
       setShowProfileModal(true);
       setShowOnboardingModal(false);
       return;
     }
 
     // Se perfil está completo mas onboarding não E não foi completado nesta sessão
-    if (isProfileComplete === true && isOnboardingComplete === false && !onboardingCompletedSession) {
+    if ((isProfileComplete === true || profileCompletedSession) && 
+        isOnboardingComplete === false && 
+        !onboardingCompletedSession) {
+      console.log('[ProfileChecker] Showing onboarding modal');
       setShowProfileModal(false);
       setShowOnboardingModal(true);
       return;
     }
 
     // Caso contrário, não mostrar nenhum modal
+    console.log('[ProfileChecker] No modal needed');
     setShowProfileModal(false);
     setShowOnboardingModal(false);
-  }, [user, loading, isProfileComplete, isOnboardingComplete, isPublicRoute, profileCompletedSession, onboardingCompletedSession]);
+  }, [user, loading, isProfileComplete, isOnboardingComplete, isPublicRoute, profileCompletedSession, onboardingCompletedSession, isTransitioning]);
 
-  const handleProfileComplete = async () => {
-    console.log('[ProfileChecker] Profile completed, setting localStorage flag');
+  const handleProfileComplete = useCallback(async () => {
+    console.log('[ProfileChecker] Profile completed, setting session flags');
+    
+    // Marcar transição para evitar re-abertura
+    setIsTransitioning(true);
+    
+    // Atualizar estado PRIMEIRO (reativo) e localStorage
+    setProfileCompletedSession(true);
     localStorage.setItem('profile_modal_completed_session', 'true');
+    
+    // Fechar modal imediatamente
     setShowProfileModal(false);
     
-    // Aguardar um pouco para o DB sincronizar antes de refetch
-    await new Promise(resolve => setTimeout(resolve, 500));
-    refetch();
-  };
+    // Aguardar DB sincronizar antes de refetch
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Refetch para verificar se onboarding é necessário
+    await refetch();
+    
+    // Liberar transição
+    setIsTransitioning(false);
+  }, [refetch]);
 
-  const handleOnboardingComplete = async () => {
-    console.log('[ProfileChecker] Onboarding completed, setting localStorage flag');
+  const handleOnboardingComplete = useCallback(async () => {
+    console.log('[ProfileChecker] Onboarding completed, setting session flags');
+    
+    // Marcar transição
+    setIsTransitioning(true);
+    
+    // Atualizar estado e localStorage
+    setOnboardingCompletedSession(true);
     localStorage.setItem('onboarding_modal_completed_session', 'true');
+    
+    // Fechar modal imediatamente
     setShowOnboardingModal(false);
     
-    // Aguardar um pouco para o DB sincronizar antes de refetch
+    // Aguardar DB sincronizar
     await new Promise(resolve => setTimeout(resolve, 500));
-    refetch();
-  };
+    
+    // Refetch final
+    await refetch();
+    
+    // Liberar transição
+    setIsTransitioning(false);
+  }, [refetch]);
 
   // Não renderizar nada em rotas públicas
   if (isPublicRoute) {
