@@ -108,9 +108,17 @@ const Features = () => {
 
         {/* Feature Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-20">
-          {featuresList.map((feature, index) => <Card key={index} className="border-2 hover:border-primary/50 transition-smooth hover:shadow-medium group">
-              
-            </Card>)}
+          {featuresList.map((feature, index) => (
+            <Card key={index} className="border-2 hover:border-primary/50 transition-smooth hover:shadow-medium group">
+              <CardContent className="pt-6">
+                <div className={`w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4`}>
+                  <feature.icon className={`w-6 h-6 ${feature.color}`} />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+                <p className="text-muted-foreground">{feature.description}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* Feature Highlights */}
