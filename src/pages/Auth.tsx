@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
-import { Mail, Lock, User, ArrowLeft, Sparkles, Shield, Zap } from 'lucide-react';
+import { Mail, Lock, User, ArrowLeft, Sparkles, Shield, Zap, Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { usePixelTracking } from '@/hooks/usePixelTracking';
 import { useFreePlanSettings } from '@/hooks/useFreePlanSettings';
 
@@ -25,7 +26,38 @@ export default function Auth() {
   const { signIn, signUp, resetPassword, user } = useAuth();
   const navigate = useNavigate();
   const { trackSignUp } = usePixelTracking();
-  const { isFreePlanEnabled } = useFreePlanSettings();
+  const { isFreePlanEnabled, loading: loadingSettings } = useFreePlanSettings();
+
+  // Loading state enquanto carrega configurações
+  if (loadingSettings) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
+        </div>
+        <div className="w-full max-w-md relative z-10">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
+              Isesemind
+            </h1>
+            <p className="text-muted-foreground">Carregando...</p>
+          </div>
+          <Card className="shadow-2xl border-primary/10">
+            <CardHeader className="space-y-1 pb-4">
+              <Skeleton className="h-8 w-32 mx-auto" />
+              <Skeleton className="h-4 w-48 mx-auto mt-2" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (user) {
