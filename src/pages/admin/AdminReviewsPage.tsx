@@ -3,7 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Star, Check, X, Sparkles, TrendingUp, MessageSquare } from 'lucide-react';
+import { Star, Check, X, Sparkles, TrendingUp, MessageSquare, User, Mail } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,9 +24,10 @@ interface Review {
   xp_at_review: number;
   display_name: string | null;
   created_at: string;
-  profile?: {
+  profiles?: {
     nome: string | null;
-  };
+  } | null;
+  user_email?: string | null;
 }
 
 interface ReviewStats {
@@ -56,7 +58,12 @@ export default function AdminReviewsPage() {
       // Load reviews with profile info
       let query = supabase
         .from('user_reviews')
-        .select('*')
+        .select(`
+          *,
+          profiles:user_id (
+            nome
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (filter === '5-stars') {
@@ -68,7 +75,28 @@ export default function AdminReviewsPage() {
       }
 
       const { data: reviewsData } = await query;
-      setReviews(reviewsData || []);
+      
+      // Get user emails for all reviews
+      if (reviewsData && reviewsData.length > 0) {
+        const userIds = reviewsData.map(r => r.user_id);
+        const { data: emailsData } = await supabase.rpc('get_user_emails', { user_ids: userIds });
+        
+        const emailMap = new Map<string, string>();
+        if (emailsData) {
+          emailsData.forEach((e: { user_id: string; email: string }) => {
+            emailMap.set(e.user_id, e.email);
+          });
+        }
+        
+        const reviewsWithEmails = reviewsData.map(review => ({
+          ...review,
+          user_email: emailMap.get(review.user_id) || null
+        }));
+        
+        setReviews(reviewsWithEmails);
+      } else {
+        setReviews([]);
+      }
 
       // Load stats
       const { data: allReviews } = await supabase
@@ -265,8 +293,22 @@ export default function AdminReviewsPage() {
                   {reviews.map((review) => (
                     <TableRow key={review.id}>
                       <TableCell>
-                        <div>
+                        <div className="space-y-1">
                           <p className="font-medium">{review.display_name || 'Anônimo'}</p>
+                          {review.profiles?.nome && review.profiles.nome !== review.display_name && (
+                            <p className="text-xs text-muted-foreground">
+                              Perfil: {review.profiles.nome}
+                            </p>
+                          )}
+                          {review.user_email && (
+                            <a 
+                              href={`mailto:${review.user_email}`}
+                              className="text-xs text-blue-500 hover:underline flex items-center gap-1"
+                            >
+                              <Mail className="h-3 w-3" />
+                              {review.user_email}
+                            </a>
+                          )}
                           <p className="text-xs text-muted-foreground">
                             {format(new Date(review.created_at), "dd/MM/yyyy", { locale: ptBR })}
                           </p>
@@ -300,6 +342,16 @@ export default function AdminReviewsPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            asChild
+                            title="Ver perfil do usuário"
+                          >
+                            <Link to={`/admin/user/${review.user_id}`}>
+                              <User className="h-4 w-4" />
+                            </Link>
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"

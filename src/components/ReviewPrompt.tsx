@@ -1,13 +1,19 @@
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Star, X, Sparkles } from 'lucide-react';
+import { Star, Sparkles } from 'lucide-react';
 import { useUserReview } from '@/hooks/useUserReview';
 import confetti from 'canvas-confetti';
 import { cn } from '@/lib/utils';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 export const ReviewPrompt = () => {
   const { 
@@ -26,6 +32,7 @@ export const ReviewPrompt = () => {
   const [comment, setComment] = useState(userReview?.comment || '');
   const [displayName, setDisplayName] = useState(userReview?.display_name || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [nameError, setNameError] = useState(false);
 
   if (loading || !canReview || !isOpen) {
     return null;
@@ -38,6 +45,11 @@ export const ReviewPrompt = () => {
 
   const handleSubmit = async () => {
     if (rating === 0) return;
+    
+    if (!displayName.trim()) {
+      setNameError(true);
+      return;
+    }
     
     setIsSubmitting(true);
     const success = await submitReview(rating, comment, displayName);
@@ -57,105 +69,104 @@ export const ReviewPrompt = () => {
     }
   };
 
-  const xpNeeded = settings.minXp - userXp;
-  const xpProgress = Math.min(100, (userXp / settings.minXp) * 100);
-
   return (
-    <Card className="relative border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute right-2 top-2 h-6 w-6"
-        onClick={() => setIsOpen(false)}
-      >
-        <X className="h-4 w-4" />
-      </Button>
-
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
-          <CardTitle className="text-lg">
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
             {hasReviewed ? 'Editar sua avaliação' : 'Avalie o Isesemind!'}
-          </CardTitle>
-        </div>
-        <CardDescription>
-          {hasReviewed 
-            ? 'Você pode atualizar sua avaliação a qualquer momento'
-            : 'Sua opinião é muito importante para nós. Ganhe +50 XP!'
-          }
-        </CardDescription>
-      </CardHeader>
+          </DialogTitle>
+          <DialogDescription>
+            {hasReviewed 
+              ? 'Você pode atualizar sua avaliação a qualquer momento'
+              : 'Sua opinião é muito importante para nós. Ganhe +50 XP!'
+            }
+          </DialogDescription>
+        </DialogHeader>
 
-      <CardContent className="space-y-4">
-        {/* Star Rating */}
-        <div className="space-y-2">
-          <Label>Como você avalia sua experiência?</Label>
-          <div className="flex gap-1">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <button
-                key={star}
-                type="button"
-                onClick={() => setRating(star)}
-                onMouseEnter={() => setHoveredRating(star)}
-                onMouseLeave={() => setHoveredRating(0)}
-                className="p-1 transition-transform hover:scale-110"
-              >
-                <Star
-                  className={cn(
-                    'h-8 w-8 transition-colors',
-                    (hoveredRating || rating) >= star
-                      ? 'fill-yellow-400 text-yellow-400'
-                      : 'text-muted-foreground'
-                  )}
-                />
-              </button>
-            ))}
+        <div className="space-y-4 py-4">
+          {/* Star Rating */}
+          <div className="space-y-2">
+            <Label>Como você avalia sua experiência?</Label>
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setRating(star)}
+                  onMouseEnter={() => setHoveredRating(star)}
+                  onMouseLeave={() => setHoveredRating(0)}
+                  className="p-1 transition-transform hover:scale-110"
+                >
+                  <Star
+                    className={cn(
+                      'h-8 w-8 transition-colors',
+                      (hoveredRating || rating) >= star
+                        ? 'fill-yellow-400 text-yellow-400'
+                        : 'text-muted-foreground'
+                    )}
+                  />
+                </button>
+              ))}
+            </div>
           </div>
+
+          {/* Display Name - REQUIRED */}
+          <div className="space-y-2">
+            <Label htmlFor="displayName">
+              Como quer ser chamado? <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="displayName"
+              placeholder="Ex: Bàbá João, Ìyá Maria..."
+              value={displayName}
+              onChange={(e) => {
+                setDisplayName(e.target.value);
+                if (e.target.value.trim()) setNameError(false);
+              }}
+              maxLength={50}
+              className={nameError ? 'border-destructive' : ''}
+            />
+            {nameError && (
+              <p className="text-xs text-destructive">
+                Por favor, informe como deseja ser chamado
+              </p>
+            )}
+          </div>
+
+          {/* Comment */}
+          <div className="space-y-2">
+            <Label htmlFor="comment">Deixe um comentário (opcional)</Label>
+            <Textarea
+              id="comment"
+              placeholder="Conte-nos sobre sua experiência com o Isesemind..."
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              maxLength={200}
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground text-right">
+              {comment.length}/200
+            </p>
+          </div>
+
+          {/* Info about 5-star reviews */}
+          {rating === 5 && (
+            <p className="text-sm text-primary bg-primary/10 p-2 rounded-md">
+              ⭐ Avaliações 5 estrelas podem ser exibidas em nossa página inicial!
+            </p>
+          )}
+
+          <Button 
+            onClick={handleSubmit} 
+            disabled={rating === 0 || !displayName.trim() || isSubmitting}
+            className="w-full"
+          >
+            {isSubmitting ? 'Enviando...' : hasReviewed ? 'Atualizar Avaliação' : 'Enviar Avaliação'}
+          </Button>
         </div>
-
-        {/* Display Name */}
-        <div className="space-y-2">
-          <Label htmlFor="displayName">Como quer ser chamado? (opcional)</Label>
-          <Input
-            id="displayName"
-            placeholder="Ex: Bàbá João, Ìyá Maria..."
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            maxLength={50}
-          />
-        </div>
-
-        {/* Comment */}
-        <div className="space-y-2">
-          <Label htmlFor="comment">Deixe um comentário (opcional)</Label>
-          <Textarea
-            id="comment"
-            placeholder="Conte-nos sobre sua experiência com o Isesemind..."
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            maxLength={200}
-            rows={3}
-          />
-          <p className="text-xs text-muted-foreground text-right">
-            {comment.length}/200
-          </p>
-        </div>
-
-        {/* Info about 5-star reviews */}
-        {rating === 5 && (
-          <p className="text-sm text-primary bg-primary/10 p-2 rounded-md">
-            ⭐ Avaliações 5 estrelas podem ser exibidas em nossa página inicial!
-          </p>
-        )}
-
-        <Button 
-          onClick={handleSubmit} 
-          disabled={rating === 0 || isSubmitting}
-          className="w-full"
-        >
-          {isSubmitting ? 'Enviando...' : hasReviewed ? 'Atualizar Avaliação' : 'Enviar Avaliação'}
-        </Button>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 };
