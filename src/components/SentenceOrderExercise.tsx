@@ -10,7 +10,8 @@ import {
   RotateCcw, 
   Lightbulb,
   GripVertical,
-  ListOrdered
+  ListOrdered,
+  SkipForward
 } from "lucide-react";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
 
@@ -161,6 +162,10 @@ export const SentenceOrderExercise = memo(function SentenceOrderExercise({
     setHintsUsed(prev => prev + 1);
     setTimeout(() => setShowHint(false), 4000);
   }, []);
+
+  const handleSkip = useCallback(() => {
+    onComplete(false, 0);
+  }, [onComplete]);
 
   const getPositionStatus = useCallback((sentence: Sentence, index: number) => {
     if (!isSubmitted) return 'neutral';
@@ -325,6 +330,14 @@ export const SentenceOrderExercise = memo(function SentenceOrderExercise({
           {!isSubmitted ? (
             <>
               <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSkip}
+              >
+                <SkipForward className="h-4 w-4 mr-1" />
+                Pular
+              </Button>
+              <Button
                 variant="outline"
                 size="sm"
                 onClick={handleShowHint}
@@ -338,7 +351,7 @@ export const SentenceOrderExercise = memo(function SentenceOrderExercise({
                 Verificar
               </Button>
             </>
-          ) : !isCorrect && attempts < 3 ? (
+          ) : !isCorrect ? (
             <>
               <Button variant="outline" onClick={handleGiveUp}>
                 Ver Resposta
