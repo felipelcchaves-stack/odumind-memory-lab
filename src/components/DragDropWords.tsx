@@ -69,6 +69,9 @@ const DragDropWords: React.FC<DragDropWordsProps> = ({
 
   // Handle dropping a word into a slot
   const handleDrop = useCallback((slotIndex: number, word: WordSlot) => {
+    // Check if there's already a word in the target slot
+    const existingWord = placedWords.get(slotIndex);
+    
     setPlacedWords(prev => {
       const newMap = new Map(prev);
       
@@ -84,9 +87,20 @@ const DragDropWords: React.FC<DragDropWordsProps> = ({
       return newMap;
     });
 
-    // Remove from available words
-    setAvailableWords(prev => prev.filter(w => w.id !== word.id));
-  }, []);
+    // Update available words:
+    // 1. Remove the word being placed
+    // 2. Return the replaced word to available (if there was one)
+    setAvailableWords(prev => {
+      let updated = prev.filter(w => w.id !== word.id);
+      
+      // If there was a word in the slot, return it to available
+      if (existingWord && existingWord.id !== word.id) {
+        updated = [...updated, existingWord];
+      }
+      
+      return updated;
+    });
+  }, [placedWords]);
 
   // Handle removing a word from a slot
   const handleRemove = useCallback((slotIndex: number) => {
