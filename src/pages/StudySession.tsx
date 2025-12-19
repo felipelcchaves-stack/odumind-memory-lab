@@ -15,6 +15,7 @@ import confetti from 'canvas-confetti';
 import Flashcard from "@/components/Flashcard";
 import OduPresentation from "@/components/OduPresentation";
 import Quiz from "@/components/Quiz";
+import ClozeExercise from "@/components/ClozeExercise";
 import XPNotification from "@/components/XPNotification";
 import BadgesDisplay from "@/components/BadgesDisplay";
 import DashboardHeader from "@/components/DashboardHeader";
@@ -82,7 +83,7 @@ interface SessionStats {
   startTime: number;
 }
 
-type StudyMode = "flashcard" | "quiz";
+type StudyMode = "flashcard" | "quiz" | "cloze";
 
 const FREE_LIMIT = 5; // Limite para usuários gratuitos (agora progressivo)
 
@@ -513,15 +514,27 @@ export default function StudySession() {
         });
     }
     
-    // Force flashcard mode when pool < 4 (quiz needs 4 options)
-    // Also force flashcard in low-odu mode for simplicity
-    const selectedMode = (Math.random() > 0.5 ? "flashcard" : "quiz") as StudyMode;
-    if (selectedMode === "quiz" && (pool.length < 4 || lowOduMode)) {
-      console.log("⚠️ Pool < 4 ou modo poucos Odus, forçando flashcard mode");
-      setMode("flashcard");
+    // Select study mode: flashcard, quiz, or cloze
+    // Cloze only works if verso_resumido exists (needs content to create gaps)
+    const hasClozeContent = selectedOdu.verso_resumido && selectedOdu.verso_resumido.length > 20;
+    const canDoQuiz = pool.length >= 4 && !lowOduMode;
+    
+    // Weighted random selection: 40% flashcard, 35% quiz (if available), 25% cloze (if available)
+    const random = Math.random();
+    let selectedMode: StudyMode;
+    
+    if (random < 0.4) {
+      selectedMode = "flashcard";
+    } else if (random < 0.75 && canDoQuiz) {
+      selectedMode = "quiz";
+    } else if (hasClozeContent) {
+      selectedMode = "cloze";
     } else {
-      setMode(selectedMode);
+      selectedMode = "flashcard";
     }
+    
+    console.log(`🎲 Modo selecionado: ${selectedMode} (hasCloze: ${hasClozeContent}, canQuiz: ${canDoQuiz})`);
+    setMode(selectedMode);
   }
 
   async function handleFlashcardRate(difficulty: number) {
@@ -847,6 +860,38 @@ export default function StudySession() {
 
   async function handleQuizAnswer(isCorrect: boolean) {
     const difficulty = isCorrect ? 5 : 1;
+    await handleFlashcardRate(difficulty);
+  }
+
+  // Handler para exercício de completar a frase (Cloze Deletion)
+  async function handleClozeAnswer(isCorrect: boolean, score: number) {
+    // Converter score (0-100) para difficulty (1-5)
+    // score 100 = difficulty 5 (fácil)
+    // score 0 = difficulty 1 (difícil)
+    let difficulty: number;
+    if (score >= 80) {
+      difficulty = 5; // Excelente
+    } else if (score >= 60) {
+      difficulty = 4; // Bom
+    } else if (score >= 40) {
+      difficulty = 3; // Médio
+    } else if (score >= 20) {
+      difficulty = 2; // Difícil
+    } else {
+      difficulty = 1; // Muito difícil
+    }
+    
+    // Bonus XP por usar técnica Cloze (mais engajamento)
+    const bonusXP = isCorrect ? 10 : 0;
+    setSessionStats(prev => ({
+      ...prev,
+      totalXP: prev.totalXP + bonusXP
+    }));
+    
+    if (bonusXP > 0) {
+      toast.success(`🧩 +${bonusXP} XP bônus por Complete a Frase!`, { duration: 2000 });
+    }
+    
     await handleFlashcardRate(difficulty);
   }
 
@@ -1492,13 +1537,24 @@ export default function StudySession() {
           />
         ) : mode === "quiz" && generateQuizQuestion ? (
           <Quiz question={generateQuizQuestion} onAnswer={handleQuizAnswer} />
+        ) : mode === "cloze" && currentOdu.verso_resumido ? (
+          <ClozeExercise
+            numero={currentOdu.numero}
+            nome={currentOdu.nome}
+            versoResumido={currentOdu.verso_resumido}
+            significado={currentOdu.significado}
+            onAnswer={handleClozeAnswer}
+            hideNumber={storyMode}
+          />
         ) : (
-          // ✅ FALLBACK: Se quiz não disponível, mostrar flashcard
+          // ✅ FALLBACK: Se modo não disponível, mostrar flashcard
           <Flashcard
             numero={currentOdu.numero}
             nome={currentOdu.nome}
             texto={currentOdu.texto_principal}
             verso={currentOdu.verso}
+            versoResumido={currentOdu.verso_resumido}
+            significado={currentOdu.significado}
             onRate={handleFlashcardRate}
             currentRevisoes={currentMemorizationData.revisoes}
             currentStrength={currentMemorizationData.forca_memoria}
