@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,32 +8,56 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
-import { Mail, Lock, User, ArrowLeft, Sparkles, Shield, Zap, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, ArrowLeft, Sparkles, Shield, Zap, Loader2, KeyRound } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePixelTracking } from '@/hooks/usePixelTracking';
 import { useFreePlanSettings } from '@/hooks/useFreePlanSettings';
+import { supabase } from '@/integrations/supabase/client';
 
 const emailSchema = z.string().email('Email inválido');
 const passwordSchema = z.string().min(6, 'Senha deve ter no mínimo 6 caracteres');
 const nomeSchema = z.string().trim().min(2, 'Nome deve ter no mínimo 2 caracteres').max(100, 'Nome deve ter no máximo 100 caracteres');
 
 export default function Auth() {
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [nome, setNome] = useState('');
   const [loading, setLoading] = useState(false);
   const [showReset, setShowReset] = useState(false);
-  const { signIn, signUp, resetPassword, user, loading: authLoading } = useAuth();
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const { signIn, signUp, resetPassword, updatePassword, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { trackSignUp } = usePixelTracking();
   const { isFreePlanEnabled, loading: loadingSettings } = useFreePlanSettings();
 
-  // CRÍTICO: useEffect ANTES de qualquer return condicional
+  // Detectar modo de reset de senha via URL
   useEffect(() => {
-    if (user && !authLoading) {
+    const mode = searchParams.get('mode');
+    if (mode === 'reset') {
+      setIsResettingPassword(true);
+    }
+  }, [searchParams]);
+
+  // Detectar evento PASSWORD_RECOVERY do Supabase
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsResettingPassword(true);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Redirecionar se já estiver logado (exceto durante reset de senha)
+  useEffect(() => {
+    if (user && !authLoading && !isResettingPassword) {
       navigate('/dashboard');
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, navigate, isResettingPassword]);
 
   // Loading state combinado - DEPOIS dos hooks
   if (loadingSettings || authLoading) {
@@ -208,6 +232,55 @@ export default function Auth() {
     setLoading(false);
   };
 
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validar nova senha
+    try {
+      passwordSchema.parse(newPassword);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: 'Erro de validação',
+          description: error.errors[0].message,
+          variant: 'destructive'
+        });
+        return;
+      }
+    }
+
+    // Validar confirmação de senha
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: 'Erro de validação',
+        description: 'As senhas não coincidem',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await updatePassword(newPassword);
+    
+    if (error) {
+      toast({
+        title: 'Erro ao atualizar senha',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } else {
+      toast({
+        title: 'Senha atualizada!',
+        description: 'Sua senha foi redefinida com sucesso'
+      });
+      setIsResettingPassword(false);
+      setNewPassword('');
+      setConfirmPassword('');
+      navigate('/dashboard');
+    }
+    setLoading(false);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
       {/* Background decorative elements */}
@@ -233,8 +306,81 @@ export default function Auth() {
           </p>
         </div>
 
-        {showReset ? (
-          // Reset Password Form
+        {isResettingPassword ? (
+          // New Password Form (after clicking email link)
+          <Card className="shadow-2xl border-primary/10">
+            <CardHeader className="space-y-1">
+              <div className="flex justify-center mb-4">
+                <div className="rounded-full bg-primary/10 p-4">
+                  <KeyRound className="w-8 h-8 text-primary" />
+                </div>
+              </div>
+              <CardTitle className="text-2xl font-bold text-center">Definir Nova Senha</CardTitle>
+              <CardDescription className="text-center">
+                Digite sua nova senha abaixo
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleUpdatePassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">Nova Senha</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="new-password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="pl-10"
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Mínimo de 6 caracteres
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirmar Senha</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="pl-10"
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                  {confirmPassword && newPassword !== confirmPassword && (
+                    <p className="text-xs text-destructive">
+                      As senhas não coincidem
+                    </p>
+                  )}
+                  {confirmPassword && newPassword === confirmPassword && (
+                    <p className="text-xs text-green-600">
+                      Senhas coincidem ✓
+                    </p>
+                  )}
+                </div>
+
+                <Button 
+                  type="submit" 
+                  className="w-full"
+                  disabled={loading || newPassword !== confirmPassword}
+                >
+                  {loading ? 'Atualizando...' : 'Definir Nova Senha'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        ) : showReset ? (
+          // Reset Password Form (request email)
           <Card className="shadow-2xl border-primary/10">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold">Recuperar Senha</CardTitle>
