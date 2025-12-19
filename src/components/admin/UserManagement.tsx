@@ -7,11 +7,21 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shield, ShieldOff, Eye, Search, X, Edit, UserPlus, Settings, Download, Upload, CheckCircle2, Circle, RefreshCw, Mail } from 'lucide-react';
+import { Shield, ShieldOff, Eye, Search, X, Edit, UserPlus, Settings, Download, Upload, CheckCircle2, Circle, RefreshCw, Mail, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import UserEditDialog from './UserEditDialog';
 import UserRoleDialog from './UserRoleDialog';
 import { CollaboratorPermissionsDialog } from './CollaboratorPermissionsDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface UserProfile {
   user_id: string;
@@ -47,6 +57,13 @@ export default function UserManagement() {
   const [permissionsUserId, setPermissionsUserId] = useState<string>('');
   const [permissionsUserName, setPermissionsUserName] = useState<string>('');
   const [resendingPasswordFor, setResendingPasswordFor] = useState<string | null>(null);
+  
+  // Delete dialog states
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState<string>('');
+  const [deletingUserName, setDeletingUserName] = useState<string>('');
+  const [deletingUserEmail, setDeletingUserEmail] = useState<string>('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     loadUsers();
@@ -365,6 +382,54 @@ export default function UserManagement() {
     }
   };
 
+  const handleDeleteUser = (userId: string, userName: string, email: string | undefined, userRole: string) => {
+    // Prevent deleting admin users from UI
+    if (userRole === 'admin') {
+      toast.error('Não é permitido excluir usuários administradores');
+      return;
+    }
+    setDeletingUserId(userId);
+    setDeletingUserName(userName);
+    setDeletingUserEmail(email || '');
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!deletingUserId) return;
+    
+    setIsDeleting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Sessão expirada. Faça login novamente.');
+        return;
+      }
+
+      const response = await supabase.functions.invoke('admin-delete-user', {
+        body: { user_id: deletingUserId },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Erro ao excluir usuário');
+      }
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.error || 'Erro ao excluir usuário');
+      }
+
+      // Remove user from local state
+      setUsers(prev => prev.filter(u => u.user_id !== deletingUserId));
+      
+      toast.success(`Usuário ${deletingUserName} excluído com sucesso`);
+      setDeleteDialogOpen(false);
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      toast.error(error.message || 'Erro ao excluir usuário');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <>
       <Card>
@@ -591,6 +656,21 @@ export default function UserManagement() {
                           Permissões
                         </Button>
                       )}
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteUser(
+                          user.user_id,
+                          user.nome || user.email || 'Usuário',
+                          user.email,
+                          userRole
+                        )}
+                        disabled={userRole === 'admin' || isDeleting}
+                        title={userRole === 'admin' ? 'Não é possível excluir administradores' : 'Excluir usuário'}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Excluir
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -625,6 +705,45 @@ export default function UserManagement() {
       userId={permissionsUserId}
       userName={permissionsUserName}
     />
+
+    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="text-destructive flex items-center gap-2">
+            <Trash2 className="h-5 w-5" />
+            Excluir Usuário
+          </AlertDialogTitle>
+          <AlertDialogDescription className="space-y-2">
+            <p>
+              Você está prestes a excluir permanentemente o usuário:
+            </p>
+            <div className="bg-muted p-3 rounded-md">
+              <p className="font-medium">{deletingUserName}</p>
+              {deletingUserEmail && (
+                <p className="text-sm text-muted-foreground">{deletingUserEmail}</p>
+              )}
+            </div>
+            <p className="text-destructive font-medium">
+              Esta ação é irreversível!
+            </p>
+            <p className="text-sm">
+              Todos os dados serão removidos, incluindo: progresso de memorização, 
+              badges, conquistas, assinatura, notas pessoais e histórico de estudo.
+            </p>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={confirmDeleteUser}
+            disabled={isDeleting}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {isDeleting ? 'Excluindo...' : 'Excluir Permanentemente'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }
