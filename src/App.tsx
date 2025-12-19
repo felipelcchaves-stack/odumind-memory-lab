@@ -53,6 +53,7 @@ import AdminGuruPage from "./pages/admin/AdminGuruPage";
 import AdminFeaturesPage from "./pages/admin/AdminFeaturesPage";
 import AdminAnnouncementsPage from "./pages/admin/AdminAnnouncementsPage";
 import AdminCouponsPage from "./pages/admin/AdminCouponsPage";
+import AdminCaminhosPage from "./pages/admin/AdminCaminhosPage";
 
 const queryClient = new QueryClient();
 
@@ -107,6 +108,7 @@ function AppContent() {
             <Route index element={<AdminDashboard />} />
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="odu" element={<AdminOduPage />} />
+            <Route path="caminhos" element={<AdminCaminhosPage />} />
             <Route path="rituais" element={<AdminRituaisPage />} />
               <Route path="users" element={<AdminUsersPage />} />
               <Route path="analytics" element={<AdminAnalyticsPage />} />
