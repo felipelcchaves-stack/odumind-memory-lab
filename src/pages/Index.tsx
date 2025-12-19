@@ -8,6 +8,7 @@ import Pricing from "@/components/Pricing";
 import Footer from "@/components/Footer";
 import { TopReferrers } from "@/components/TopReferrers";
 import { ExitIntentPopup } from "@/components/ExitIntentPopup";
+import { TestimonialsSection } from "@/components/TestimonialsSection";
 import { useScrollTracking } from "@/hooks/useScrollTracking";
 import { useTimeTracking } from "@/hooks/useTimeTracking";
 import { useSectionTracking } from "@/hooks/useSectionTracking";
@@ -18,6 +19,7 @@ import { useCustomScripts } from "@/hooks/useCustomScripts";
 const TRACKED_SECTIONS = [
   { id: 'hero', name: 'Hero' },
   { id: 'features', name: 'Features' },
+  { id: 'testimonials', name: 'Testimonials' },
   { id: 'pricing', name: 'Pricing' },
 ];
 
@@ -47,6 +49,9 @@ const Index = () => {
         <TopReferrers />
         <div id="features">
           <Features />
+        </div>
+        <div id="testimonials">
+          <TestimonialsSection />
         </div>
         <div id="pricing">
           <Pricing />

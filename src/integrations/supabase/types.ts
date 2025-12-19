@@ -2046,6 +2046,53 @@ export type Database = {
           },
         ]
       }
+      user_reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          is_approved: boolean
+          is_featured: boolean
+          rating: number
+          updated_at: string
+          user_id: string
+          xp_at_review: number
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_approved?: boolean
+          is_featured?: boolean
+          rating: number
+          updated_at?: string
+          user_id: string
+          xp_at_review?: number
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_approved?: boolean
+          is_featured?: boolean
+          rating?: number
+          updated_at?: string
+          user_id?: string
+          xp_at_review?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       user_ritual_progress: {
         Row: {
           created_at: string | null
