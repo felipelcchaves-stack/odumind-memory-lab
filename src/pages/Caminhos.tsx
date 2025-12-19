@@ -169,7 +169,7 @@ function PathSkeleton() {
 
 export default function Caminhos() {
   const { user, loading: authLoading } = useAuth();
-  const { paths, loading, error } = useAllLearningPaths();
+  const { activePaths, comingSoonPaths, loading, error } = useAllLearningPaths();
   const navigate = useNavigate();
 
   if (authLoading) {
@@ -184,22 +184,6 @@ export default function Caminhos() {
     navigate('/auth');
     return null;
   }
-
-  const activePaths = paths.filter(p => p.ativo);
-  const comingSoonPaths = [
-    {
-      nome: 'Caminho de Oogun',
-      descricao: 'Medicina Yorubá: ervas sagradas, preparações e tratamentos tradicionais.',
-      icone: 'Leaf',
-      cor: 'green',
-    },
-    {
-      nome: 'Caminho de Orin',
-      descricao: 'Cantos e rezas sagradas: aprenda a pronúncia e os significados profundos.',
-      icone: 'Music',
-      cor: 'purple',
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -219,7 +203,7 @@ export default function Caminhos() {
           </div>
         )}
 
-        <section className="mb-12">
+        <section className={comingSoonPaths.length > 0 ? "mb-12" : ""}>
           <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
             <GraduationCap className="w-5 h-5 text-primary" />
             Cursos Disponíveis
@@ -244,48 +228,59 @@ export default function Caminhos() {
           </div>
         </section>
 
-        <section>
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-amber-500" />
-            Em Breve
-          </h2>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {comingSoonPaths.map((path, index) => {
-              const Icon = iconMap[path.icone] || BookOpen;
-              const colors = colorMap[path.cor] || colorMap.amber;
-              
-              return (
-                <Card 
-                  key={index}
-                  className="opacity-60 border-dashed"
-                >
-                  <CardHeader>
-                    <div className="flex items-start justify-between mb-2">
-                      <div className={cn("p-3 rounded-xl", colors.bg)}>
-                        <Icon className={cn("w-6 h-6", colors.text)} />
+        {comingSoonPaths.length > 0 && (
+          <section>
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-500" />
+              Em Breve
+            </h2>
+            
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {comingSoonPaths.map((path) => {
+                const Icon = iconMap[path.icone] || BookOpen;
+                const colors = colorMap[path.cor] || colorMap.amber;
+                
+                return (
+                  <Card 
+                    key={path.id}
+                    className="opacity-60 border-dashed"
+                  >
+                    {path.imagem_url && (
+                      <div className="h-32 overflow-hidden rounded-t-lg">
+                        <img 
+                          src={path.imagem_url} 
+                          alt={path.nome}
+                          className="w-full h-full object-cover grayscale"
+                        />
                       </div>
-                      <Badge variant="outline" className="gap-1">
-                        <Clock className="w-3 h-3" /> Em Breve
-                      </Badge>
-                    </div>
+                    )}
+                    <CardHeader className={!path.imagem_url ? "pt-6" : undefined}>
+                      <div className="flex items-start justify-between mb-2">
+                        <div className={cn("p-3 rounded-xl", colors.bg)}>
+                          <Icon className={cn("w-6 h-6", colors.text)} />
+                        </div>
+                        <Badge variant="outline" className="gap-1">
+                          <Clock className="w-3 h-3" /> Em Breve
+                        </Badge>
+                      </div>
+                      
+                      <CardTitle className="text-xl">{path.nome}</CardTitle>
+                      <CardDescription className="line-clamp-2">
+                        {path.descricao}
+                      </CardDescription>
+                    </CardHeader>
                     
-                    <CardTitle className="text-xl">{path.nome}</CardTitle>
-                    <CardDescription className="line-clamp-2">
-                      {path.descricao}
-                    </CardDescription>
-                  </CardHeader>
-                  
-                  <CardContent>
-                    <Button variant="ghost" className="w-full" disabled>
-                      Aguarde o lançamento
-                    </Button>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </section>
+                    <CardContent>
+                      <Button variant="ghost" className="w-full" disabled>
+                        Aguarde o lançamento
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </main>
     </div>
   );

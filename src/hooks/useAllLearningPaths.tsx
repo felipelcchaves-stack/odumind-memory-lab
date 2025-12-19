@@ -29,7 +29,8 @@ export interface LearningPathWithProgress extends LearningPath {
 
 export function useAllLearningPaths() {
   const { user } = useAuth();
-  const [paths, setPaths] = useState<LearningPathWithProgress[]>([]);
+  const [activePaths, setActivePaths] = useState<LearningPathWithProgress[]>([]);
+  const [comingSoonPaths, setComingSoonPaths] = useState<LearningPathWithProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,11 +39,10 @@ export function useAllLearningPaths() {
       setLoading(true);
       setError(null);
 
-      // Load all active learning paths
+      // Load all learning paths (both active and inactive)
       const { data: pathsData, error: pathsError } = await supabase
         .from('learning_paths')
         .select('*')
-        .eq('ativo', true)
         .order('ordem', { ascending: true });
 
       if (pathsError) throw pathsError;
@@ -115,7 +115,9 @@ export function useAllLearningPaths() {
         };
       });
 
-      setPaths(pathsWithProgress);
+      // Separate active and coming soon paths
+      setActivePaths(pathsWithProgress.filter(p => p.ativo));
+      setComingSoonPaths(pathsWithProgress.filter(p => !p.ativo));
     } catch (err) {
       console.error('Error loading learning paths:', err);
       setError('Erro ao carregar caminhos de aprendizado');
@@ -125,15 +127,17 @@ export function useAllLearningPaths() {
   }, [user]);
 
   const getPathBySlug = useCallback((slug: string): LearningPathWithProgress | undefined => {
-    return paths.find(p => p.slug === slug);
-  }, [paths]);
+    return [...activePaths, ...comingSoonPaths].find(p => p.slug === slug);
+  }, [activePaths, comingSoonPaths]);
 
   useEffect(() => {
     loadPaths();
   }, [loadPaths]);
 
   return {
-    paths,
+    paths: activePaths, // Backwards compatibility
+    activePaths,
+    comingSoonPaths,
     loading,
     error,
     refresh: loadPaths,
