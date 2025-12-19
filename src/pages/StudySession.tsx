@@ -166,6 +166,61 @@ export default function StudySession() {
   // Presentation mode state - for first contact with new Odus
   const [isShowingPresentation, setIsShowingPresentation] = useState(false);
 
+  // Phase progress for completion screen
+  const [phaseProgress, setPhaseProgress] = useState<{ memorized: number; total: number } | null>(null);
+
+  // Calculate accuracy rate
+  const accuracyRate = sessionMetrics.totalCards > 0 
+    ? Math.round((sessionMetrics.correctAnswers / sessionMetrics.totalCards) * 100) 
+    : 0;
+
+  // Trigger confetti when session completes
+  useEffect(() => {
+    if (sessionComplete && sessionStats.cardsStudied > 0) {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+    }
+  }, [sessionComplete, sessionStats.cardsStudied]);
+
+  // Fetch phase progress when session completes
+  useEffect(() => {
+    async function fetchPhaseProgress() {
+      if (!sessionComplete || !user || !currentPhaseInfo) return;
+      
+      try {
+        const phaseOduNumbers = currentPhaseInfo.odus_incluidos;
+        
+        const { data: phaseOdus } = await supabase
+          .from('odu')
+          .select('id')
+          .in('numero', phaseOduNumbers);
+        
+        if (!phaseOdus) return;
+        
+        const phaseOduIds = phaseOdus.map(o => o.id);
+        
+        const { count } = await supabase
+          .from('memorizacao')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('status', 'memorizado')
+          .in('odu_id', phaseOduIds);
+        
+        setPhaseProgress({
+          memorized: count || 0,
+          total: phaseOduNumbers.length
+        });
+      } catch (error) {
+        console.error('Error fetching phase progress:', error);
+      }
+    }
+    
+    fetchPhaseProgress();
+  }, [sessionComplete, user, currentPhaseInfo]);
+
   // Load phase info from slug
   useEffect(() => {
     async function loadPhaseInfo() {
@@ -1200,63 +1255,6 @@ export default function StudySession() {
       </div>
     );
   }
-
-  // Trigger confetti when session completes
-  useEffect(() => {
-    if (sessionComplete && sessionStats.cardsStudied > 0) {
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
-    }
-  }, [sessionComplete, sessionStats.cardsStudied]);
-
-  // Calculate accuracy rate
-  const accuracyRate = sessionMetrics.totalCards > 0 
-    ? Math.round((sessionMetrics.correctAnswers / sessionMetrics.totalCards) * 100) 
-    : 0;
-
-  // Calculate phase progress for completion screen
-  const [phaseProgress, setPhaseProgress] = useState<{ memorized: number; total: number } | null>(null);
-  
-  useEffect(() => {
-    async function fetchPhaseProgress() {
-      if (!sessionComplete || !user || !currentPhaseInfo) return;
-      
-      try {
-        // Get all Odus in this phase
-        const phaseOduNumbers = currentPhaseInfo.odus_incluidos;
-        
-        // Get Odu IDs for this phase
-        const { data: phaseOdus } = await supabase
-          .from('odu')
-          .select('id')
-          .in('numero', phaseOduNumbers);
-        
-        if (!phaseOdus) return;
-        
-        const phaseOduIds = phaseOdus.map(o => o.id);
-        
-        // Count memorized Odus in this phase
-        const { count } = await supabase
-          .from('memorizacao')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .eq('status', 'memorizado')
-          .in('odu_id', phaseOduIds);
-        
-        setPhaseProgress({
-          memorized: count || 0,
-          total: phaseOduNumbers.length
-        });
-      } catch (error) {
-        console.error('Error fetching phase progress:', error);
-      }
-    }
-    
-    fetchPhaseProgress();
-  }, [sessionComplete, user, currentPhaseInfo]);
 
   if (sessionComplete) {
     return (
