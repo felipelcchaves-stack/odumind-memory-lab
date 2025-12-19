@@ -56,3 +56,6 @@ verify_jwt = false
 
 [functions.enforce-single-session]
 verify_jwt = true
+
+[functions.notify-course-launch]
+verify_jwt = true
