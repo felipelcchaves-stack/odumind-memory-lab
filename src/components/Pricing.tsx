@@ -5,77 +5,30 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGuruCheckout } from "@/hooks/useGuruCheckout";
 import { useLandingTracking } from "@/hooks/useLandingTracking";
-import { usePlanVisibility } from "@/hooks/usePlanVisibility";
+import { useSubscriptionPlans } from "@/hooks/useSubscriptionPlans";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Pricing = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isGuruEnabled, openGuruCheckout, loading: guruLoading } = useGuruCheckout();
   const { trackCTAClick, trackInitiateCheckout, trackAddToCart } = useLandingTracking();
-  const { visiblePlans, loading: plansLoading } = usePlanVisibility();
+  const { plans, loading: plansLoading, getLandingPlans } = useSubscriptionPlans();
 
-  // Dados específicos para a landing page (preços podem variar por promoção)
-  const landingPlanData: Record<string, { price: string; priceValue: number; period: string; description: string; features: string[]; stripeId?: string; icon?: typeof Users }> = {
-    gratuito: {
-      price: "R$ 0",
-      priceValue: 0,
-      period: "/7 dias",
-      description: "Experimente tudo por 7 dias, sem compromisso",
-      features: [
-        "Todos os 256 Odu Ifá por 7 dias",
-        "Flashcards completos",
-        "Repetição espaçada",
-        "Progresso detalhado",
-        "Após 7 dias, upgrade necessário",
-      ],
-    },
-    awo: {
-      price: "R$ 97,00",
-      priceValue: 97.00,
-      period: "/mês",
-      description: "O plano ideal para dominar os 256 Odu",
-      features: [
-        "Todos os 256 Odu Ifá",
-        "Flashcards avançados com IA",
-        "Mapas mentais interativos",
-        "Repetição espaçada personalizada",
-        "Storytelling completo",
-        "Testes e simulados ilimitados",
-        "Suporte prioritário",
-      ],
-      stripeId: "price_1SUQe8Do1RHWW8lpTManIdtD",
-    },
-    egbe: {
-      price: "R$ 129,90",
-      priceValue: 129.90,
-      period: "/mês",
-      description: "Para grupos e terreiros que estudam juntos",
-      features: [
-        "Até 5 contas com acesso completo",
-        "Todos os 256 Odu Ifá (cada conta)",
-        "Dashboard compartilhado de progresso",
-        "Todos os recursos do Awo",
-        "Perfeito para grupos de estudo",
-        "Gestão centralizada",
-        "Suporte dedicado",
-      ],
-      stripeId: "price_1SVYDfDo1RHWW8lpGhLjNjoV",
-      icon: Users,
-    },
-  };
+  const visiblePlans = getLandingPlans();
 
-  const handleCTAClick = async (planName: string, priceValue: number) => {
+  const handleCTAClick = async (plan: typeof visiblePlans[0]) => {
     // Track CTA click
-    trackCTAClick(`começar_${planName.toLowerCase()}`, 'pricing', planName, priceValue);
+    trackCTAClick(`começar_${plan.nome.toLowerCase()}`, 'pricing', plan.nome, plan.preco);
     
     // Track AddToCart for interest tracking
-    trackAddToCart(planName, priceValue);
+    trackAddToCart(plan.nome, plan.preco);
     
     // Track InitiateCheckout
-    trackInitiateCheckout(planName, priceValue, 'pricing');
+    trackInitiateCheckout(plan.nome, plan.preco, 'pricing');
 
     // Se for plano gratuito, vai para auth/subscription
-    if (planName.toLowerCase() === "gratuito") {
+    if (plan.plan_level === 'gratuito') {
       navigate(user ? '/subscription' : '/auth');
       return;
     }
@@ -88,12 +41,17 @@ const Pricing = () => {
       await new Promise(resolve => setTimeout(resolve, 500));
     }
 
-    // Se GURU está habilitado e tem link configurado, abre direto
-    console.log('[PRICING] Tentando abrir GURU para:', planName);
+    // Se tem checkout_url direto, usa
+    if (plan.checkout_url) {
+      window.open(plan.checkout_url, '_blank');
+      return;
+    }
 
-    if (isGuruEnabled && openGuruCheckout(planName, false)) {
+    // Se GURU está habilitado, tenta usar checkout GURU
+    console.log('[PRICING] Tentando abrir GURU para:', plan.nome);
+    if (isGuruEnabled && openGuruCheckout(plan.nome, false)) {
       console.log('[PRICING] GURU checkout aberto com sucesso');
-      return; // Sucesso - abriu checkout GURU
+      return;
     }
 
     console.log('[PRICING] Fallback: redirecionando para subscription/auth');
@@ -101,11 +59,47 @@ const Pricing = () => {
     navigate(user ? '/subscription' : '/auth');
   };
 
+  // Ícones por plan_level
+  const getIcon = (planLevel: string) => {
+    if (planLevel === 'egbe') return Users;
+    return null;
+  };
+
+  // Período formatado
+  const formatPeriod = (periodo: string) => {
+    const periods: Record<string, string> = {
+      mensal: '/mês',
+      trimestral: '/trimestre',
+      semestral: '/semestre',
+      anual: '/ano',
+      unico: '',
+    };
+    return periods[periodo] || '';
+  };
+
+  // Formatar preço
+  const formatPrice = (preco: number, moeda: string) => {
+    if (preco === 0) return 'R$ 0';
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: moeda,
+      minimumFractionDigits: 2
+    }).format(preco);
+  };
+
   if (plansLoading) {
     return (
       <section id="pricing" className="py-24 px-4 bg-background">
-        <div className="container mx-auto flex items-center justify-center min-h-[400px]">
-          <div className="animate-pulse text-muted-foreground">Carregando planos...</div>
+        <div className="container mx-auto">
+          <div className="text-center max-w-3xl mx-auto mb-12 space-y-4">
+            <Skeleton className="h-12 w-3/4 mx-auto" />
+            <Skeleton className="h-6 w-1/2 mx-auto" />
+          </div>
+          <div className="grid gap-6 max-w-5xl mx-auto md:grid-cols-3">
+            {[1, 2, 3].map(i => (
+              <Skeleton key={i} className="h-[500px] w-full rounded-lg" />
+            ))}
+          </div>
         </div>
       </section>
     );
@@ -128,26 +122,29 @@ const Pricing = () => {
         </div>
 
         {/* Pricing Cards */}
-        <div className={`grid gap-6 max-w-5xl mx-auto ${visiblePlans.length === 1 ? 'max-w-md' : visiblePlans.length === 2 ? 'md:grid-cols-2 max-w-3xl' : 'md:grid-cols-3'}`}>
-          {visiblePlans.map((plan, index) => {
-            const planData = landingPlanData[plan.id];
-            if (!planData) return null;
+        <div className={`grid gap-6 max-w-5xl mx-auto ${
+          visiblePlans.length === 1 ? 'max-w-md' : 
+          visiblePlans.length === 2 ? 'md:grid-cols-2 max-w-3xl' : 
+          'md:grid-cols-3'
+        }`}>
+          {visiblePlans.map((plan) => {
+            const PlanIcon = getIcon(plan.plan_level);
+            const isPopular = plan.badge_text?.toLowerCase().includes('popular');
             
-            const PlanIcon = planData.icon;
             return (
               <Card
-                key={index}
+                key={plan.id}
                 className={`relative transition-smooth hover:shadow-medium ${
-                  plan.popular
+                  isPopular
                     ? "border-2 border-primary shadow-medium md:scale-105"
                     : "border-2 hover:border-primary/50"
                 }`}
               >
-                {plan.popular && (
+                {plan.badge_text && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2">
                     <div className="flex items-center gap-1 px-4 py-1.5 rounded-full bg-gradient-secondary text-sm font-semibold shadow-soft">
                       <Crown className="w-4 h-4" />
-                      Mais Popular
+                      {plan.badge_text}
                     </div>
                   </div>
                 )}
@@ -158,36 +155,49 @@ const Pricing = () => {
                       <PlanIcon className="w-6 h-6 text-accent" />
                     </div>
                   )}
-                  <CardTitle className="text-2xl mb-2">{plan.name}</CardTitle>
+                  <CardTitle className="text-2xl mb-2">{plan.nome}</CardTitle>
 
                   <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-4xl font-bold">{planData.price}</span>
-                    <span className="text-muted-foreground text-sm">{planData.period}</span>
+                    {plan.preco_original && plan.preco_original > plan.preco && (
+                      <span className="text-lg text-muted-foreground line-through mr-2">
+                        {formatPrice(plan.preco_original, plan.moeda)}
+                      </span>
+                    )}
+                    <span className="text-4xl font-bold">{formatPrice(plan.preco, plan.moeda)}</span>
+                    <span className="text-muted-foreground text-sm">{formatPeriod(plan.periodo)}</span>
                   </div>
 
-                  <p className="text-sm text-muted-foreground mt-4">{planData.description}</p>
+                  {plan.descricao && (
+                    <p className="text-sm text-muted-foreground mt-4">{plan.descricao}</p>
+                  )}
                 </CardHeader>
 
                 <CardContent className="space-y-6">
                   <ul className="space-y-3">
-                    {planData.features.map((feature, i) => (
+                    {plan.features.map((feature, i) => (
                       <li key={i} className="flex items-start gap-2">
-                        <div className="rounded-full p-0.5 bg-primary/10 mt-0.5 flex-shrink-0">
-                          <Check className="w-3.5 h-3.5 text-primary" />
+                        <div className={`rounded-full p-0.5 mt-0.5 flex-shrink-0 ${
+                          feature.included ? 'bg-primary/10' : 'bg-muted'
+                        }`}>
+                          <Check className={`w-3.5 h-3.5 ${
+                            feature.included ? 'text-primary' : 'text-muted-foreground'
+                          }`} />
                         </div>
-                        <span className="text-sm">{feature}</span>
+                        <span className={`text-sm ${!feature.included && 'text-muted-foreground line-through'}`}>
+                          {feature.text}
+                        </span>
                       </li>
                     ))}
                   </ul>
 
                   <Button
                     className="w-full"
-                    variant={plan.variant}
+                    variant={plan.variant === 'premium' ? 'default' : plan.variant}
                     size="lg"
-                    onClick={() => handleCTAClick(plan.name, planData.priceValue)}
+                    onClick={() => handleCTAClick(plan)}
                   >
-                    {plan.cta}
-                    {plan.popular && <Sparkles className="ml-2 w-4 h-4" />}
+                    {plan.cta_text}
+                    {isPopular && <Sparkles className="ml-2 w-4 h-4" />}
                   </Button>
                 </CardContent>
               </Card>
