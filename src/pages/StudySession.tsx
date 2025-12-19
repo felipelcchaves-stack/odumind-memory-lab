@@ -17,6 +17,7 @@ import OduPresentation from "@/components/OduPresentation";
 import Quiz from "@/components/Quiz";
 import ClozeExercise from "@/components/ClozeExercise";
 import DragDropWords from "@/components/DragDropWords";
+import { SentenceOrderExercise } from "@/components/SentenceOrderExercise";
 import XPNotification from "@/components/XPNotification";
 import BadgesDisplay from "@/components/BadgesDisplay";
 import DashboardHeader from "@/components/DashboardHeader";
@@ -84,7 +85,7 @@ interface SessionStats {
   startTime: number;
 }
 
-type StudyMode = "flashcard" | "quiz" | "cloze" | "dragdrop";
+type StudyMode = "flashcard" | "quiz" | "cloze" | "dragdrop" | "sentence-order";
 
 const FREE_LIMIT = 5; // Limite para usuários gratuitos (agora progressivo)
 
@@ -515,23 +516,25 @@ export default function StudySession() {
         });
     }
     
-    // Select study mode: flashcard, quiz, cloze, or dragdrop
-    // Cloze/dragdrop only works if verso_resumido exists (needs content to create gaps)
+    // Select study mode: flashcard, quiz, cloze, dragdrop, or sentence-order
+    // Cloze/dragdrop/sentence-order only works if verso_resumido exists
     const hasClozeContent = selectedOdu.verso_resumido && selectedOdu.verso_resumido.length > 20;
     const canDoQuiz = pool.length >= 4 && !lowOduMode;
     
-    // Weighted random selection: 35% flashcard, 30% quiz (if available), 20% cloze, 15% dragdrop (if available)
+    // Weighted random selection: 30% flashcard, 25% quiz, 18% cloze, 15% dragdrop, 12% sentence-order
     const random = Math.random();
     let selectedMode: StudyMode;
     
-    if (random < 0.35) {
+    if (random < 0.30) {
       selectedMode = "flashcard";
-    } else if (random < 0.65 && canDoQuiz) {
+    } else if (random < 0.55 && canDoQuiz) {
       selectedMode = "quiz";
-    } else if (random < 0.85 && hasClozeContent) {
+    } else if (random < 0.73 && hasClozeContent) {
       selectedMode = "cloze";
-    } else if (hasClozeContent) {
+    } else if (random < 0.88 && hasClozeContent) {
       selectedMode = "dragdrop";
+    } else if (hasClozeContent) {
+      selectedMode = "sentence-order";
     } else {
       selectedMode = "flashcard";
     }
@@ -539,7 +542,6 @@ export default function StudySession() {
     console.log(`🎲 Modo selecionado: ${selectedMode} (hasCloze: ${hasClozeContent}, canQuiz: ${canDoQuiz})`);
     setMode(selectedMode);
   }
-
   async function handleFlashcardRate(difficulty: number) {
     if (!user || !currentOdu) return;
 
@@ -1556,6 +1558,13 @@ export default function StudySession() {
             versoResumido={currentOdu.verso_resumido}
             onComplete={handleClozeAnswer}
             onSkip={() => selectRandomOdu()}
+          />
+        ) : mode === "sentence-order" && currentOdu.verso_resumido ? (
+          <SentenceOrderExercise
+            numero={currentOdu.numero}
+            nome={currentOdu.nome}
+            versoResumido={currentOdu.verso_resumido}
+            onComplete={handleClozeAnswer}
           />
         ) : (
           // ✅ FALLBACK: Se modo não disponível, mostrar flashcard
