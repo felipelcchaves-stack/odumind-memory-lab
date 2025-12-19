@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,20 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
+const REVIEW_DISMISSED_KEY = 'review_prompt_dismissed_at';
+const DAYS_UNTIL_SHOW_AGAIN = 15;
+
+// Check if enough time has passed since last dismissal
+const canShowReviewPrompt = (): boolean => {
+  const dismissedAt = localStorage.getItem(REVIEW_DISMISSED_KEY);
+  if (!dismissedAt) return true;
+  
+  const dismissedDate = new Date(dismissedAt);
+  const daysSinceDismissal = (Date.now() - dismissedDate.getTime()) / (1000 * 60 * 60 * 24);
+  
+  return daysSinceDismissal >= DAYS_UNTIL_SHOW_AGAIN;
+};
+
 export const ReviewPrompt = () => {
   const { 
     userReview, 
@@ -26,13 +40,32 @@ export const ReviewPrompt = () => {
     submitReview 
   } = useUserReview();
   
-  const [isOpen, setIsOpen] = useState(true);
+  // Only open if user hasn't dismissed recently AND hasn't already reviewed
+  const [isOpen, setIsOpen] = useState(() => {
+    return canShowReviewPrompt() && !hasReviewed;
+  });
   const [rating, setRating] = useState(userReview?.rating || 0);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [comment, setComment] = useState(userReview?.comment || '');
   const [displayName, setDisplayName] = useState(userReview?.display_name || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [nameError, setNameError] = useState(false);
+
+  // Update isOpen when hasReviewed changes (after loading)
+  useEffect(() => {
+    if (!loading && hasReviewed) {
+      setIsOpen(false);
+    }
+  }, [loading, hasReviewed]);
+
+  // Handle dialog close - save dismissal timestamp
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      // User closed the modal - save timestamp
+      localStorage.setItem(REVIEW_DISMISSED_KEY, new Date().toISOString());
+    }
+    setIsOpen(open);
+  };
 
   if (loading || !canReview || !isOpen) {
     return null;
@@ -70,7 +103,7 @@ export const ReviewPrompt = () => {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
