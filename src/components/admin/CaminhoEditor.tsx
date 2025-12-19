@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Save, X, Loader2 } from 'lucide-react';
+import { Save, X, Loader2, Mail } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -14,6 +14,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface CaminhoEditorProps {
   caminhoId?: string;
@@ -60,6 +70,11 @@ interface FormData {
 export default function CaminhoEditor({ caminhoId, onSaved, onCancel }: CaminhoEditorProps) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [sendingNotifications, setSendingNotifications] = useState(false);
+  const [showNotificationDialog, setShowNotificationDialog] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
+  const originalAtivoRef = useRef<boolean | null>(null);
+  
   const [formData, setFormData] = useState<FormData>({
     slug: '',
     nome: '',
@@ -76,7 +91,6 @@ export default function CaminhoEditor({ caminhoId, onSaved, onCancel }: CaminhoE
     if (caminhoId) {
       loadCaminho();
     } else {
-      // Get next order number for new paths
       loadNextOrder();
     }
   }, [caminhoId]);
@@ -92,6 +106,9 @@ export default function CaminhoEditor({ caminhoId, onSaved, onCancel }: CaminhoE
 
       if (error) throw error;
       
+      const ativoValue = data.ativo ?? true;
+      originalAtivoRef.current = ativoValue;
+      
       setFormData({
         slug: data.slug,
         nome: data.nome,
@@ -99,7 +116,7 @@ export default function CaminhoEditor({ caminhoId, onSaved, onCancel }: CaminhoE
         icone: data.icone,
         cor: data.cor,
         ordem: data.ordem,
-        ativo: data.ativo ?? true,
+        ativo: ativoValue,
         requer_assinatura: data.requer_assinatura ?? true,
         imagem_url: data.imagem_url || '',
       });
@@ -144,6 +161,38 @@ export default function CaminhoEditor({ caminhoId, onSaved, onCancel }: CaminhoE
     }));
   }
 
+  async function sendLaunchNotifications(data: FormData) {
+    setSendingNotifications(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        throw new Error('Sessão não encontrada');
+      }
+
+      const response = await supabase.functions.invoke('notify-course-launch', {
+        body: {
+          courseId: caminhoId,
+          courseName: data.nome,
+          courseDescription: data.descricao,
+          courseSlug: data.slug,
+        },
+      });
+
+      if (response.error) {
+        console.error('Error sending notifications:', response.error);
+        toast.error('Erro ao enviar notificações por email');
+      } else {
+        const stats = response.data?.stats;
+        toast.success(`Notificações enviadas: ${stats?.successCount || 0} emails`);
+      }
+    } catch (error) {
+      console.error('Error sending launch notifications:', error);
+      toast.error('Erro ao enviar notificações');
+    } finally {
+      setSendingNotifications(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     
@@ -152,18 +201,33 @@ export default function CaminhoEditor({ caminhoId, onSaved, onCancel }: CaminhoE
       return;
     }
 
+    // Check if course is being activated (was inactive, now active)
+    const isBeingActivated = caminhoId && 
+      originalAtivoRef.current === false && 
+      formData.ativo === true;
+
+    if (isBeingActivated) {
+      setPendingFormData(formData);
+      setShowNotificationDialog(true);
+      return;
+    }
+
+    await saveForm(formData);
+  }
+
+  async function saveForm(data: FormData, sendNotifications: boolean = false) {
     setSaving(true);
     try {
       const payload = {
-        slug: formData.slug,
-        nome: formData.nome,
-        descricao: formData.descricao || null,
-        icone: formData.icone,
-        cor: formData.cor,
-        ordem: formData.ordem,
-        ativo: formData.ativo,
-        requer_assinatura: formData.requer_assinatura,
-        imagem_url: formData.imagem_url || null,
+        slug: data.slug,
+        nome: data.nome,
+        descricao: data.descricao || null,
+        icone: data.icone,
+        cor: data.cor,
+        ordem: data.ordem,
+        ativo: data.ativo,
+        requer_assinatura: data.requer_assinatura,
+        imagem_url: data.imagem_url || null,
       };
 
       if (caminhoId) {
@@ -183,12 +247,25 @@ export default function CaminhoEditor({ caminhoId, onSaved, onCancel }: CaminhoE
         toast.success('Caminho criado com sucesso');
       }
 
+      // Send notifications if requested
+      if (sendNotifications) {
+        await sendLaunchNotifications(data);
+      }
+
       onSaved();
     } catch (error: any) {
       console.error('Error saving path:', error);
       toast.error(error.message || 'Erro ao salvar caminho');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleNotificationDialogConfirm(sendNotifications: boolean) {
+    setShowNotificationDialog(false);
+    if (pendingFormData) {
+      await saveForm(pendingFormData, sendNotifications);
+      setPendingFormData(null);
     }
   }
 
@@ -201,150 +278,176 @@ export default function CaminhoEditor({ caminhoId, onSaved, onCancel }: CaminhoE
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
-      <div className="grid grid-cols-2 gap-4">
+    <>
+      <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="nome">Nome *</Label>
+            <Input
+              id="nome"
+              value={formData.nome}
+              onChange={(e) => handleNomeChange(e.target.value)}
+              placeholder="Ex: Caminho de Oogun"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="slug">Slug *</Label>
+            <Input
+              id="slug"
+              value={formData.slug}
+              onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+              placeholder="caminho-de-oogun"
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              Usado na URL: /caminho/{formData.slug || 'slug'}
+            </p>
+          </div>
+        </div>
+
         <div className="space-y-2">
-          <Label htmlFor="nome">Nome *</Label>
+          <Label htmlFor="descricao">Descrição</Label>
+          <Textarea
+            id="descricao"
+            value={formData.descricao}
+            onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))}
+            placeholder="Descreva o conteúdo deste caminho de aprendizado..."
+            rows={3}
+          />
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="icone">Ícone</Label>
+            <Select
+              value={formData.icone}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, icone: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ICON_OPTIONS.map((icon) => (
+                  <SelectItem key={icon.value} value={icon.value}>
+                    {icon.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="cor">Cor</Label>
+            <Select
+              value={formData.cor}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, cor: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {COLOR_OPTIONS.map((color) => (
+                  <SelectItem key={color.value} value={color.value}>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-4 h-4 rounded-full" 
+                        style={{ backgroundColor: color.hex }}
+                      />
+                      {color.label}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="ordem">Ordem</Label>
+            <Input
+              id="ordem"
+              type="number"
+              min="1"
+              value={formData.ordem}
+              onChange={(e) => setFormData(prev => ({ ...prev, ordem: parseInt(e.target.value) || 1 }))}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="imagem_url">URL da Imagem de Capa</Label>
           <Input
-            id="nome"
-            value={formData.nome}
-            onChange={(e) => handleNomeChange(e.target.value)}
-            placeholder="Ex: Caminho de Oogun"
-            required
+            id="imagem_url"
+            value={formData.imagem_url}
+            onChange={(e) => setFormData(prev => ({ ...prev, imagem_url: e.target.value }))}
+            placeholder="https://exemplo.com/imagem.jpg"
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="slug">Slug *</Label>
-          <Input
-            id="slug"
-            value={formData.slug}
-            onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-            placeholder="caminho-de-oogun"
-            required
-          />
-          <p className="text-xs text-muted-foreground">
-            Usado na URL: /caminho/{formData.slug || 'slug'}
-          </p>
-        </div>
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="descricao">Descrição</Label>
-        <Textarea
-          id="descricao"
-          value={formData.descricao}
-          onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))}
-          placeholder="Descreva o conteúdo deste caminho de aprendizado..."
-          rows={3}
-        />
-      </div>
+        <div className="flex items-center gap-8 py-4 border-t">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="ativo"
+              checked={formData.ativo}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, ativo: checked }))}
+            />
+            <Label htmlFor="ativo">Ativo</Label>
+          </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="icone">Ícone</Label>
-          <Select
-            value={formData.icone}
-            onValueChange={(value) => setFormData(prev => ({ ...prev, icone: value }))}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {ICON_OPTIONS.map((icon) => (
-                <SelectItem key={icon.value} value={icon.value}>
-                  {icon.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="requer_assinatura"
+              checked={formData.requer_assinatura}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, requer_assinatura: checked }))}
+            />
+            <Label htmlFor="requer_assinatura">Requer Assinatura Premium</Label>
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="cor">Cor</Label>
-          <Select
-            value={formData.cor}
-            onValueChange={(value) => setFormData(prev => ({ ...prev, cor: value }))}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {COLOR_OPTIONS.map((color) => (
-                <SelectItem key={color.value} value={color.value}>
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="w-4 h-4 rounded-full" 
-                      style={{ backgroundColor: color.hex }}
-                    />
-                    {color.label}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex gap-2 pt-4 border-t">
+          <Button type="submit" disabled={saving || sendingNotifications}>
+            {saving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                {caminhoId ? 'Salvar Alterações' : 'Criar Caminho'}
+              </>
+            )}
+          </Button>
+          <Button type="button" variant="outline" onClick={onCancel}>
+            <X className="h-4 w-4 mr-2" />
+            Cancelar
+          </Button>
         </div>
+      </form>
 
-        <div className="space-y-2">
-          <Label htmlFor="ordem">Ordem</Label>
-          <Input
-            id="ordem"
-            type="number"
-            min="1"
-            value={formData.ordem}
-            onChange={(e) => setFormData(prev => ({ ...prev, ordem: parseInt(e.target.value) || 1 }))}
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="imagem_url">URL da Imagem de Capa</Label>
-        <Input
-          id="imagem_url"
-          value={formData.imagem_url}
-          onChange={(e) => setFormData(prev => ({ ...prev, imagem_url: e.target.value }))}
-          placeholder="https://exemplo.com/imagem.jpg"
-        />
-      </div>
-
-      <div className="flex items-center gap-8 py-4 border-t">
-        <div className="flex items-center gap-2">
-          <Switch
-            id="ativo"
-            checked={formData.ativo}
-            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, ativo: checked }))}
-          />
-          <Label htmlFor="ativo">Ativo</Label>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Switch
-            id="requer_assinatura"
-            checked={formData.requer_assinatura}
-            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, requer_assinatura: checked }))}
-          />
-          <Label htmlFor="requer_assinatura">Requer Assinatura Premium</Label>
-        </div>
-      </div>
-
-      <div className="flex gap-2 pt-4 border-t">
-        <Button type="submit" disabled={saving}>
-          {saving ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Salvando...
-            </>
-          ) : (
-            <>
-              <Save className="h-4 w-4 mr-2" />
-              {caminhoId ? 'Salvar Alterações' : 'Criar Caminho'}
-            </>
-          )}
-        </Button>
-        <Button type="button" variant="outline" onClick={onCancel}>
-          <X className="h-4 w-4 mr-2" />
-          Cancelar
-        </Button>
-      </div>
-    </form>
+      <AlertDialog open={showNotificationDialog} onOpenChange={setShowNotificationDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Curso sendo lançado!
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Você está ativando o curso <strong>"{formData.nome}"</strong>. 
+              Deseja enviar um email de notificação para todos os usuários informando sobre o lançamento?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => handleNotificationDialogConfirm(false)}>
+              Não enviar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleNotificationDialogConfirm(true)}>
+              <Mail className="h-4 w-4 mr-2" />
+              Enviar notificações
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
