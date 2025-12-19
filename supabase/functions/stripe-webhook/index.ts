@@ -248,17 +248,18 @@ async function updateSubscription(
 
     const priceId = subscription.items.data[0].price.id;
     
+    // Mapear price IDs para nomes de planos unificados (Awo/Egbe)
     let planName = 'Gratuito';
     if (priceId === 'price_1SUQd7Do1RHWW8lpaKCqKH8g') {
-      planName = 'Premium';
+      planName = 'Awo'; // Monthly (antigo Premium)
     } else if (priceId === 'price_1SVYC4Do1RHWW8lprTS45LGC') {
-      planName = 'Premium'; // Annual
+      planName = 'Awo'; // Annual (antigo Premium)
     } else if (priceId === 'price_1SUQe8Do1RHWW8lpTManIdtD') {
-      planName = 'Profissional';
+      planName = 'Awo'; // Monthly (antigo Profissional)
     } else if (priceId === 'price_1SVYDGDo1RHWW8lpDluZOrfK') {
-      planName = 'Profissional'; // Annual
+      planName = 'Awo'; // Annual (antigo Profissional)
     } else if (priceId === 'price_1SVYDfDo1RHWW8lpGhLjNjoV') {
-      planName = 'Família';
+      planName = 'Egbe'; // Família
     }
 
     // Safely convert timestamps to ISO strings

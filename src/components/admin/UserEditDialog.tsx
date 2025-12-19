@@ -278,13 +278,12 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
         // Update subscription via edge function if changed
         if (selectedPlan !== originalPlan) {
           // ✅ VALIDAÇÃO: Prevenir mudança para o mesmo plano (considerando aliases)
-          const normalizedNew = selectedPlan === 'Egbe' ? 'Família' : 
-                               selectedPlan === 'Akapo' ? 'Premium' : 
-                               selectedPlan === 'Awo' ? 'Profissional' : selectedPlan;
-          
-          const normalizedOld = originalPlan === 'Egbe' ? 'Família' : 
-                               originalPlan === 'Akapo' ? 'Premium' : 
-                               originalPlan === 'Awo' ? 'Profissional' : originalPlan;
+          const planAliases: Record<string, string> = {
+            'Premium': 'Awo', 'Profissional': 'Awo', 'Akapo': 'Awo',
+            'Família': 'Egbe', 'Family': 'Egbe',
+          };
+          const normalizedNew = planAliases[selectedPlan] || selectedPlan;
+          const normalizedOld = planAliases[originalPlan] || originalPlan;
           
           if (normalizedNew === normalizedOld) {
             console.log('⚠️ Plano selecionado é o mesmo (considerando aliases)');
@@ -458,21 +457,15 @@ export default function UserEditDialog({ open, onOpenChange, userId, onSave, isC
                         <span className="text-sm text-muted-foreground">Plano básico</span>
                       </div>
                     </SelectItem>
-                    <SelectItem value="Premium">
+                    <SelectItem value="Awo">
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary">Premium</Badge>
+                        <Badge variant="default">Awo</Badge>
                         <span className="text-sm text-muted-foreground">R$ 49,90/mês</span>
                       </div>
                     </SelectItem>
-                    <SelectItem value="Profissional">
+                    <SelectItem value="Egbe">
                       <div className="flex items-center gap-2">
-                        <Badge variant="default">Profissional</Badge>
-                        <span className="text-sm text-muted-foreground">R$ 97,00/mês</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="Família">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">Família</Badge>
+                        <Badge className="bg-purple-600">Egbe</Badge>
                         <span className="text-sm text-muted-foreground">R$ 129,90/mês (até 5 contas)</span>
                       </div>
                     </SelectItem>
