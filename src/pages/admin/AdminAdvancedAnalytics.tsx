@@ -5,11 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp, Users, DollarSign, Target, UserMinus, MapPin, Calendar } from 'lucide-react';
+import { TrendingUp, Users, DollarSign, Target, UserMinus, MapPin, Calendar, CalendarClock, BarChart3 } from 'lucide-react';
 import { calculateAdvancedMetrics, getMonthlyComparison, getDemographicData, AdvancedMetrics, MonthlyComparison, DemographicData } from '@/lib/advancedAnalytics';
 import { Skeleton } from '@/components/ui/skeleton';
 import { startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { MarketingInsights } from '@/components/admin/MarketingInsights';
+import { RenewalForecast } from '@/components/admin/RenewalForecast';
+import { SalesTrend } from '@/components/admin/SalesTrend';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))', 'hsl(var(--muted))', 'hsl(var(--chart-1))', 'hsl(var(--chart-2))'];
 
@@ -181,6 +183,30 @@ export default function AdminAdvancedAnalytics() {
           description="Receita anual recorrente"
           icon={TrendingUp}
         />
+      </div>
+
+      {/* Renewal Forecast & Sales Trend */}
+      <div className="grid gap-6 lg:grid-cols-1">
+        <Tabs defaultValue="renewals" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-grid">
+            <TabsTrigger value="renewals" className="flex items-center gap-2">
+              <CalendarClock className="h-4 w-4" />
+              Renovações
+            </TabsTrigger>
+            <TabsTrigger value="sales" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Tendência de Vendas
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="renewals">
+            <RenewalForecast />
+          </TabsContent>
+
+          <TabsContent value="sales">
+            <SalesTrend months={period === '3months' ? 3 : period === '6months' ? 6 : 12} />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* AI Marketing Insights */}
