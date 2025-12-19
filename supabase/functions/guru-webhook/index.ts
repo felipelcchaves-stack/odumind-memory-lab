@@ -48,9 +48,27 @@ function mapGuruProductToPlan(productId: string, productName: string): string | 
 }
 
 function isCancellationEvent(payload: any): boolean {
-  if (payload.cancel_at_cycle_end === true) return true;
+  // Check explicit cancellation flags
+  if (payload.cancel_at_cycle_end === true || payload.cancel_at_cycle_end === 1) return true;
   if (payload.last_status === 'cancelled' || payload.last_status === 'canceled') return true;
-  if (payload.cancelled_by || payload.canceled_by) return true;
+  
+  // CORREÇÃO: Verificar se cancelled_by tem valores REAIS (não apenas se existe)
+  // O Guru sempre envia cancelled_by: {} vazio, que é truthy em JS
+  const cancelledBy = payload.cancelled_by || payload.canceled_by;
+  if (cancelledBy && typeof cancelledBy === 'object') {
+    // Só considerar cancelamento se tiver email, nome ou data preenchidos
+    const hasEmail = cancelledBy.email && String(cancelledBy.email).trim() !== '';
+    const hasName = cancelledBy.name && String(cancelledBy.name).trim() !== '';
+    const hasDate = cancelledBy.date && String(cancelledBy.date).trim() !== '';
+    
+    if (hasEmail || hasName || hasDate) {
+      logStep("Cancelamento detectado via cancelled_by com dados válidos", { cancelledBy });
+      return true;
+    }
+    // Se cancelled_by existe mas está vazio, NÃO é cancelamento
+    logStep("cancelled_by presente mas vazio - ignorando como cancelamento", { cancelledBy });
+  }
+  
   if (payload.subscription?.status === 'cancelled' || payload.subscription?.status === 'canceled') return true;
   if (payload.subscription?.status === 'inactive') return true;
   if (payload.status === 'cancelled' || payload.status === 'canceled') return true;
@@ -472,6 +490,29 @@ serve(async (req) => {
         subscriptionStatus = 'canceled';
         planName = 'Gratuito';
         logStep("Processando reembolso/chargeback", { eventType: eventTypeLower });
+        break;
+
+      case 'subscription':
+        // Quando webhook_type é genérico "subscription", verificar last_status
+        if (payload.last_status === 'active' || payload.last_status === 'approved') {
+          subscriptionStatus = 'active';
+          logStep("Assinatura ativa detectada via last_status", { last_status: payload.last_status });
+        } else if (payload.last_status === 'cancelled' || payload.last_status === 'canceled') {
+          subscriptionStatus = 'canceled';
+          planName = 'Gratuito';
+          logStep("Cancelamento detectado via last_status", { last_status: payload.last_status });
+        } else if (payload.last_status === 'inactive' || payload.last_status === 'expired') {
+          subscriptionStatus = 'canceled';
+          planName = 'Gratuito';
+          logStep("Assinatura inativa/expirada via last_status", { last_status: payload.last_status });
+        } else {
+          // last_status não reconhecido ou não presente, assumir ativo
+          subscriptionStatus = 'active';
+          logStep("Evento 'subscription' sem last_status reconhecido, assumindo ativo", { 
+            last_status: payload.last_status,
+            webhook_type: payload.webhook_type 
+          });
+        }
         break;
 
       default:
