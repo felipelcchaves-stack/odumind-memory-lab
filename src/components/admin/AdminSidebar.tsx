@@ -59,11 +59,11 @@ export function AdminSidebar({ isAdmin }: AdminSidebarProps) {
     {
       label: "Sistema",
       items: [
+        { title: "Planos", url: "/admin/planos", icon: CreditCard, adminOnly: true },
         { title: "Funcionalidades", url: "/admin/features", icon: ToggleRight, adminOnly: true },
         { title: "Anúncios", url: "/admin/announcements", icon: Bell, adminOnly: true },
         { title: "Cupons", url: "/admin/coupons", icon: Ticket, adminOnly: true },
         { title: "Configurações", url: "/admin/settings", icon: Settings, adminOnly: true },
-        { title: "GURU Checkout", url: "/admin/guru", icon: CreditCard, adminOnly: true },
         { title: "Ferramentas", url: "/admin/tools", icon: Wrench, permission: "tools" as const },
         { title: "Restaurar", url: "/admin/restore", icon: History, adminOnly: true },
       ],

@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useGuruCheckout } from '@/hooks/useGuruCheckout';
-import { usePlanVisibility } from '@/hooks/usePlanVisibility';
+import { useSubscriptionPlans, SubscriptionPlan } from '@/hooks/useSubscriptionPlans';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,58 +17,7 @@ import { toast } from 'sonner';
 import { usePixelTracking } from '@/hooks/usePixelTracking';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-
-// Dados dos planos para a página de subscription
-const plansData = [
-  {
-    name: "Gratuito",
-    price: "R$ 0",
-    period: "/7 dias",
-    description: "Experimente tudo por 7 dias, sem compromisso",
-    features: [
-      "Todos os 256 Odu Ifá por 7 dias",
-      "Flashcards completos",
-      "Repetição espaçada",
-      "Progresso detalhado",
-      "Após 7 dias, upgrade necessário",
-    ],
-    planId: "free",
-  },
-  {
-    name: "Awo",
-    price: "R$ 97,00",
-    period: "/mês",
-    description: "O plano ideal para dominar os 256 Odu",
-    features: [
-      "Todos os 256 Odu Ifá",
-      "Flashcards avançados com IA",
-      "Mapas mentais interativos",
-      "Repetição espaçada personalizada",
-      "Storytelling completo",
-      "Testes e simulados ilimitados",
-      "Suporte prioritário",
-    ],
-    planId: "awo",
-    stripeId: "price_1SUQe8Do1RHWW8lpTManIdtD",
-  },
-  {
-    name: "Egbe (Família)",
-    price: "R$ 129,90",
-    period: "/mês",
-    description: "Para grupos e terreiros que estudam juntos",
-    features: [
-      "Até 5 contas com acesso completo",
-      "Todos os 256 Odu Ifá (cada conta)",
-      "Dashboard compartilhado de progresso",
-      "Todos os recursos do Awo",
-      "Perfeito para grupos de estudo",
-      "Gestão centralizada",
-      "Suporte dedicado",
-    ],
-    planId: "family",
-    stripeId: "price_1SVYDfDo1RHWW8lpGhLjNjoV",
-  },
-];
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Subscription() {
   const { user, loading: authLoading } = useAuth();
@@ -85,19 +34,13 @@ export default function Subscription() {
     createRetentionOffer,
   } = useSubscription();
   const { isGuruEnabled, openGuruCheckout, openMemberArea, loading: guruLoading } = useGuruCheckout();
-  const { visiblePlans: visiblePlanConfigs, loading: plansLoading } = usePlanVisibility();
+  const { plans, loading: plansLoading, getSubscriptionPlans, getPlanHierarchy } = useSubscriptionPlans();
   const navigate = useNavigate();
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
   const [managingSubscription, setManagingSubscription] = useState(false);
   const { trackInitiateCheckout } = usePixelTracking();
   
-  // Map visible plan configs to actual plan data
-  const visiblePlans = plansData.filter(plan => {
-    const planId = plan.name.toLowerCase().replace(' (família)', '').replace('egbe', 'egbe');
-    const normalizedId = plan.name === 'Gratuito' ? 'gratuito' : 
-                         plan.name === 'Awo' ? 'awo' : 'egbe';
-    return visiblePlanConfigs.some(p => p.id === normalizedId);
-  });
+  const visiblePlans = getSubscriptionPlans();
   
   // Retention offer state
   const [showRetentionOffer, setShowRetentionOffer] = useState(false);
@@ -116,15 +59,23 @@ export default function Subscription() {
     }
   }, []);
 
-  // Plan hierarchy for determining if downgrade is allowed
-  const planHierarchy = ['Gratuito', 'Awo', 'Egbe'];
-  const getCurrentPlanIndex = () => {
+  // Get current plan hierarchy
+  const getCurrentPlanHierarchy = () => {
     const currentPlanName = subscription?.plan_name || 'Gratuito';
-    // Normalize plan name for hierarchy check
-    const normalizedName = currentPlanName.includes('Egbe') || currentPlanName.includes('Família') 
-      ? 'Egbe' 
-      : currentPlanName;
-    return planHierarchy.indexOf(normalizedName);
+    // Map old plan names to plan_level
+    const planLevelMap: Record<string, string> = {
+      'Gratuito': 'gratuito',
+      'free': 'gratuito',
+      'Awo': 'awo',
+      'Premium': 'awo',
+      'Profissional': 'awo',
+      'Egbe': 'egbe',
+      'Egbe (Família)': 'egbe',
+      'Família': 'egbe',
+      'Family': 'egbe',
+    };
+    const planLevel = planLevelMap[currentPlanName] || 'gratuito';
+    return getPlanHierarchy(planLevel);
   };
 
   useEffect(() => {
@@ -187,12 +138,12 @@ export default function Subscription() {
     );
   }
 
-  const handleDowngrade = async (planName: string) => {
+  const handleDowngrade = async (plan: SubscriptionPlan) => {
     const currentPlanName = subscription?.plan_name || '';
     
     // Validação especial para plano Família
     if ((currentPlanName === 'Egbe' || currentPlanName === 'Egbe (Família)' || currentPlanName === 'Família') && 
-        planName !== 'Egbe') {
+        plan.plan_level !== 'egbe') {
       
       // Verificar se é owner de grupo com membros
       try {
@@ -224,15 +175,15 @@ export default function Subscription() {
     }
     
     // If downgrading to Gratuito, show retention offer first
-    if (planName === 'Gratuito') {
+    if (plan.plan_level === 'gratuito') {
       // Don't show retention offer if already on Gratuito
       if (currentPlanName === 'Gratuito') {
         toast.info('Você já está no plano Gratuito');
         return;
       }
 
-      setProcessingPlan(planName);
-      setPendingDowngradePlan(planName);
+      setProcessingPlan(plan.slug);
+      setPendingDowngradePlan(plan.nome);
       
       try {
         // Create retention offer
@@ -243,18 +194,18 @@ export default function Subscription() {
           setShowRetentionOffer(true);
         } else {
           // If offer creation fails, proceed with downgrade
-          await proceedWithDowngrade(planName);
+          await proceedWithDowngrade(plan.nome);
         }
       } catch (error) {
         console.error('Error creating retention offer:', error);
         // If error, proceed with downgrade anyway
-        await proceedWithDowngrade(planName);
+        await proceedWithDowngrade(plan.nome);
       } finally {
         setProcessingPlan(null);
       }
     } else {
       // For other downgrades, proceed directly
-      await proceedWithDowngrade(planName);
+      await proceedWithDowngrade(plan.nome);
     }
   };
 
@@ -283,23 +234,32 @@ export default function Subscription() {
       return;
     }
 
-    // Get the current plan's stripe ID
-    const currentPlan = plansData.find(p => p.name === subscription.plan_name);
-    if (!currentPlan?.stripeId) {
-      toast.error('Plano não encontrado');
+    // Get the current plan from DB
+    const currentPlan = plans.find(p => 
+      p.nome === subscription.plan_name || 
+      p.plan_level === subscription.plan_name.toLowerCase()
+    );
+    
+    if (!currentPlan?.checkout_url) {
+      toast.error('Plano não configurado corretamente');
       return;
     }
 
     try {
-      // Create checkout with the coupon
-      const url = await createCheckoutWithCoupon(
-        currentPlan.stripeId, 
-        retentionOfferData.couponCode
-      );
-      
-      if (url) {
-        window.open(url, '_blank');
-        toast.success('Redirecionando para checkout com desconto...');
+      // Open checkout with coupon if available, otherwise just open checkout
+      if (retentionOfferData.couponCode) {
+        const url = await createCheckoutWithCoupon(
+          currentPlan.checkout_url, 
+          retentionOfferData.couponCode
+        );
+        
+        if (url) {
+          window.open(url, '_blank');
+          toast.success('Redirecionando para checkout com desconto...');
+          setShowRetentionOffer(false);
+        }
+      } else if (currentPlan.checkout_url) {
+        window.open(currentPlan.checkout_url, '_blank');
         setShowRetentionOffer(false);
       }
     } catch (error) {
@@ -314,21 +274,17 @@ export default function Subscription() {
     }
   };
 
-  const handleSubscribe = async (planId: string, stripeId?: string) => {
-    if (planId === 'free') {
+  const handleSubscribe = async (plan: SubscriptionPlan) => {
+    if (plan.plan_level === 'gratuito') {
       toast.info('Você já está no plano gratuito');
       return;
     }
 
-    setProcessingPlan(planId);
+    setProcessingPlan(plan.slug);
     
     try {
       // Track checkout initiation
-      const plan = plansData.find(p => p.planId === planId);
-      if (plan) {
-        const price = parseFloat(plan.price.replace('R$ ', '').replace(',', '.'));
-        trackInitiateCheckout(plan.name, price);
-      }
+      trackInitiateCheckout(plan.nome, plan.preco);
       
       console.log('[CHECKOUT] Estado GURU:', { isGuruEnabled, guruLoading });
       
@@ -339,10 +295,17 @@ export default function Subscription() {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
       
-      // Se GURU está habilitado, tenta usar checkout GURU primeiro
-      if (isGuruEnabled && plan) {
-        console.log('[CHECKOUT] Tentando abrir GURU para:', plan.name);
-        const opened = openGuruCheckout(plan.name, false);
+      // Se tem checkout_url direto, usa
+      if (plan.checkout_url) {
+        window.open(plan.checkout_url, '_blank');
+        toast.success('Redirecionando para checkout...');
+        return;
+      }
+      
+      // Se GURU está habilitado, tenta usar checkout GURU
+      if (isGuruEnabled) {
+        console.log('[CHECKOUT] Tentando abrir GURU para:', plan.nome);
+        const opened = openGuruCheckout(plan.nome, false);
         console.log('[CHECKOUT] GURU abriu?', opened);
         if (opened) {
           toast.success('Redirecionando para checkout...');
@@ -350,24 +313,8 @@ export default function Subscription() {
         }
       }
 
-      // Fallback para Stripe
-      console.log('[CHECKOUT] Fallback para Stripe, stripeId:', stripeId);
-      if (!stripeId) {
-        toast.error('Link de checkout não configurado. Entre em contato com o suporte.');
-        return;
-      }
-      
-      // Use special checkout for family plan
-      let url;
-      if (planId === 'family') {
-        url = await createFamilyCheckout(stripeId);
-      } else {
-        url = await createCheckout(stripeId);
-      }
-      
-      if (url) {
-        window.open(url, '_blank');
-      }
+      // Fallback message
+      toast.error('Link de checkout não configurado. Entre em contato com o suporte.');
     } catch (error) {
       console.error('Error subscribing:', error);
       toast.error('Erro ao processar assinatura');
@@ -404,16 +351,57 @@ export default function Subscription() {
     }
   };
 
+  // Format price
+  const formatPrice = (preco: number, moeda: string) => {
+    if (preco === 0) return 'R$ 0';
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: moeda,
+      minimumFractionDigits: 2
+    }).format(preco);
+  };
+
+  // Format period
+  const formatPeriod = (periodo: string) => {
+    const periods: Record<string, string> = {
+      mensal: '/mês',
+      trimestral: '/trimestre',
+      semestral: '/semestre',
+      anual: '/ano',
+      unico: '',
+    };
+    return periods[periodo] || '';
+  };
+
+  // Check if plan is current
+  const isCurrentPlan = (plan: SubscriptionPlan) => {
+    const currentPlanName = subscription?.plan_name || 'Gratuito';
+    const normalizedCurrent = currentPlanName.toLowerCase().replace(' (família)', '').replace('família', 'egbe');
+    return plan.nome.toLowerCase() === normalizedCurrent || 
+           plan.plan_level === normalizedCurrent ||
+           (plan.plan_level === 'egbe' && (currentPlanName === 'Egbe' || currentPlanName === 'Família' || currentPlanName === 'Egbe (Família)'));
+  };
+
   if (authLoading || subLoading || plansLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20 flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Carregando...</div>
+      <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20">
+        <DashboardHeader />
+        <div className="container max-w-6xl mx-auto px-4 py-8">
+          <Skeleton className="h-10 w-48 mb-8" />
+          <Skeleton className="h-32 w-full mb-8" />
+          <div className="grid gap-6 md:grid-cols-3">
+            {[1, 2, 3].map(i => (
+              <Skeleton key={i} className="h-[400px] w-full rounded-lg" />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
 
   const currentPlanName = subscription?.plan_name || 'Gratuito';
   const isActive = subscription?.status === 'active' || subscription?.status === 'trialing';
+  const currentHierarchy = getCurrentPlanHierarchy();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20">
@@ -518,30 +506,29 @@ export default function Subscription() {
         )}
 
         {/* Plans Grid */}
-        <div className={`grid gap-6 ${visiblePlans.length === 2 ? 'md:grid-cols-2 max-w-3xl mx-auto' : 'md:grid-cols-3'}`}>
-          {visiblePlans.map((plan, index) => {
-            const isCurrentPlan = plan.name === currentPlanName || 
-              (plan.name === 'Egbe (Família)' && (currentPlanName === 'Egbe' || currentPlanName === 'Família'));
-            const currentPlanIdx = getCurrentPlanIndex();
-            
-            // Normalize plan name for hierarchy check
-            const planNameNormalized = plan.name.includes('Egbe') ? 'Egbe' : plan.name;
-            const thisPlanIdx = planHierarchy.indexOf(planNameNormalized);
-            
-            const isDowngrade = thisPlanIdx < currentPlanIdx;
-            const isUpgrade = thisPlanIdx > currentPlanIdx;
-            const isFamilyPlan = plan.planId === 'family';
+        <div className={`grid gap-6 ${
+          visiblePlans.length === 1 ? 'max-w-md mx-auto' :
+          visiblePlans.length === 2 ? 'md:grid-cols-2 max-w-3xl mx-auto' : 
+          'md:grid-cols-3'
+        }`}>
+          {visiblePlans.map((plan) => {
+            const isCurrent = isCurrentPlan(plan);
+            const planHierarchy = plan.hierarquia;
+            const isDowngrade = planHierarchy < currentHierarchy;
+            const isUpgrade = planHierarchy > currentHierarchy;
+            const isFamilyPlan = plan.plan_level === 'egbe';
+            const isPopular = plan.badge_text?.toLowerCase().includes('popular');
 
             return (
               <Card
-                key={index}
+                key={plan.id}
                 className={`relative transition-all ${
-                  isCurrentPlan 
+                  isCurrent 
                     ? 'border-2 border-primary shadow-lg' 
                     : 'border hover:border-primary/50'
                 }`}
               >
-                {isCurrentPlan && (
+                {isCurrent && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <Badge variant="default" className="bg-primary">
                       Seu Plano
@@ -549,11 +536,11 @@ export default function Subscription() {
                   </div>
                 )}
 
-                {plan.name === 'Awo' && !isCurrentPlan && (
+                {!isCurrent && plan.badge_text && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <Badge variant="secondary" className="bg-gradient-secondary">
-                      <Crown className="w-3 h-3 mr-1" />
-                      Mais Popular
+                      {isPopular && <Crown className="w-3 h-3 mr-1" />}
+                      {plan.badge_text}
                     </Badge>
                   </div>
                 )}
@@ -564,55 +551,66 @@ export default function Subscription() {
                       <Users className="w-6 h-6 text-accent" />
                     </div>
                   )}
-                  <CardTitle className="text-xl">{plan.name}</CardTitle>
+                  <CardTitle className="text-xl">{plan.nome}</CardTitle>
                   <div className="flex items-baseline justify-center gap-1 mt-2">
-                    <span className="text-3xl font-bold">{plan.price}</span>
-                    <span className="text-muted-foreground text-sm">{plan.period}</span>
+                    {plan.preco_original && plan.preco_original > plan.preco && (
+                      <span className="text-lg text-muted-foreground line-through mr-2">
+                        {formatPrice(plan.preco_original, plan.moeda)}
+                      </span>
+                    )}
+                    <span className="text-3xl font-bold">{formatPrice(plan.preco, plan.moeda)}</span>
+                    <span className="text-muted-foreground text-sm">{formatPeriod(plan.periodo)}</span>
                   </div>
-                  <CardDescription className="mt-2">{plan.description}</CardDescription>
+                  {plan.descricao && (
+                    <CardDescription className="mt-2">{plan.descricao}</CardDescription>
+                  )}
                 </CardHeader>
 
                 <CardContent className="space-y-4">
                   <ul className="space-y-2">
                     {plan.features.map((feature, i) => (
                       <li key={i} className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                        <span className="text-sm">{feature}</span>
+                        <Check className={`h-4 w-4 mt-0.5 flex-shrink-0 ${
+                          feature.included ? 'text-primary' : 'text-muted-foreground'
+                        }`} />
+                        <span className={`text-sm ${!feature.included && 'text-muted-foreground line-through'}`}>
+                          {feature.text}
+                        </span>
                       </li>
                     ))}
                   </ul>
 
                   <div className="pt-4">
-                    {isCurrentPlan ? (
+                    {isCurrent ? (
                       <Button className="w-full" variant="outline" disabled>
                         Plano Atual
                       </Button>
                     ) : isUpgrade ? (
                       <Button
                         className="w-full"
-                        variant="premium"
-                        onClick={() => handleSubscribe(plan.planId, plan.stripeId)}
-                        disabled={processingPlan === plan.planId}
+                        variant="default"
+                        onClick={() => handleSubscribe(plan)}
+                        disabled={processingPlan === plan.slug}
                       >
-                        {processingPlan === plan.planId ? 'Processando...' : 'Fazer Upgrade'}
+                        {processingPlan === plan.slug ? 'Processando...' : 'Fazer Upgrade'}
                       </Button>
                     ) : isDowngrade ? (
                       <Button
                         className="w-full"
                         variant="outline"
-                        onClick={() => handleDowngrade(plan.name)}
-                        disabled={processingPlan === plan.name}
+                        onClick={() => handleDowngrade(plan)}
+                        disabled={processingPlan === plan.slug}
                       >
-                        {processingPlan === plan.name ? 'Processando...' : 'Fazer Downgrade'}
+                        {processingPlan === plan.slug ? 'Processando...' : 'Fazer Downgrade'}
                       </Button>
                     ) : (
                       <Button
                         className="w-full"
                         variant="default"
-                        onClick={() => handleSubscribe(plan.planId, plan.stripeId)}
-                        disabled={processingPlan === plan.planId}
+                        onClick={() => handleSubscribe(plan)}
+                        disabled={processingPlan === plan.slug}
                       >
-                        {processingPlan === plan.planId ? 'Processando...' : 'Assinar'}
+                        {processingPlan === plan.slug ? 'Processando...' : plan.cta_text}
                       </Button>
                     )}
                   </div>

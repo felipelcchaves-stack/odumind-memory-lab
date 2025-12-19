@@ -1631,6 +1631,90 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_plans: {
+        Row: {
+          ativo: boolean
+          badge_text: string | null
+          checkout_url: string | null
+          cor: string | null
+          created_at: string
+          cta_text: string
+          descricao: string | null
+          duracao_dias: number | null
+          features: Json
+          guru_offer_id: string | null
+          guru_product_id: string | null
+          hierarquia: number
+          id: string
+          moeda: string
+          nome: string
+          ordem: number
+          periodo: string
+          plan_level: string
+          preco: number
+          preco_original: number | null
+          slug: string
+          updated_at: string
+          variant: string
+          visivel_landing: boolean
+          visivel_subscription: boolean
+        }
+        Insert: {
+          ativo?: boolean
+          badge_text?: string | null
+          checkout_url?: string | null
+          cor?: string | null
+          created_at?: string
+          cta_text?: string
+          descricao?: string | null
+          duracao_dias?: number | null
+          features?: Json
+          guru_offer_id?: string | null
+          guru_product_id?: string | null
+          hierarquia?: number
+          id?: string
+          moeda?: string
+          nome: string
+          ordem?: number
+          periodo?: string
+          plan_level?: string
+          preco?: number
+          preco_original?: number | null
+          slug: string
+          updated_at?: string
+          variant?: string
+          visivel_landing?: boolean
+          visivel_subscription?: boolean
+        }
+        Update: {
+          ativo?: boolean
+          badge_text?: string | null
+          checkout_url?: string | null
+          cor?: string | null
+          created_at?: string
+          cta_text?: string
+          descricao?: string | null
+          duracao_dias?: number | null
+          features?: Json
+          guru_offer_id?: string | null
+          guru_product_id?: string | null
+          hierarquia?: number
+          id?: string
+          moeda?: string
+          nome?: string
+          ordem?: number
+          periodo?: string
+          plan_level?: string
+          preco?: number
+          preco_original?: number | null
+          slug?: string
+          updated_at?: string
+          variant?: string
+          visivel_landing?: boolean
+          visivel_subscription?: boolean
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null

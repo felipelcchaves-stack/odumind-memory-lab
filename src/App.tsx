@@ -54,6 +54,7 @@ import AdminFeaturesPage from "./pages/admin/AdminFeaturesPage";
 import AdminAnnouncementsPage from "./pages/admin/AdminAnnouncementsPage";
 import AdminCouponsPage from "./pages/admin/AdminCouponsPage";
 import AdminCaminhosPage from "./pages/admin/AdminCaminhosPage";
+import AdminPlansPage from "./pages/admin/AdminPlansPage";
 
 const queryClient = new QueryClient();
 
@@ -117,6 +118,7 @@ function AppContent() {
             <Route path="tools" element={<AdminToolsPage />} />
             <Route path="changelog" element={<AdminChangelogPage />} />
             <Route path="guru" element={<AdminGuruPage />} />
+            <Route path="planos" element={<AdminPlansPage />} />
             <Route path="features" element={<AdminFeaturesPage />} />
             <Route path="announcements" element={<AdminAnnouncementsPage />} />
             <Route path="coupons" element={<AdminCouponsPage />} />
