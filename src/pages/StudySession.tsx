@@ -966,9 +966,9 @@ export default function StudySession() {
       console.error("Erro ao marcar Odu como estudando:", error);
     }
     
-    // Sair do modo apresentação e ir para flashcard
+    // ✅ CORREÇÃO: Apenas sair do modo apresentação
+    // O modo (cloze, dragdrop, flashcard, quiz) já foi definido em selectRandomOdu
     setIsShowingPresentation(false);
-    setMode("flashcard"); // Primeira prática sempre em flashcard
     
     toast.success("🎯 Agora vamos praticar o que você aprendeu!", { duration: 3000 });
   }
