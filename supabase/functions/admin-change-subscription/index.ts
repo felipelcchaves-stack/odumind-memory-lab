@@ -13,26 +13,11 @@ const logStep = (step: string, details?: any) => {
 };
 
 // Mapping de planos para price IDs (valores corretos do Stripe)
-const PRICE_IDS = {
-  'Premium': {
-    monthly: 'price_1SUQd7Do1RHWW8lpaKCqKH8g',  // R$ 49,90/mês
-    annual: 'price_1SVYC4Do1RHWW8lprTS45LGC'   // R$ 499,90/ano
-  },
-  'Akapo': {
-    monthly: 'price_1SUQd7Do1RHWW8lpaKCqKH8g',  // R$ 49,90/mês
-    annual: 'price_1SVYC4Do1RHWW8lprTS45LGC'   // R$ 499,90/ano
-  },
-  'Profissional': {
-    monthly: 'price_1SUQe8Do1RHWW8lpTManIdtD',  // R$ 97,00/mês
-    annual: 'price_1SVYDGDo1RHWW8lpDluZOrfK'   // R$ 999,90/ano
-  },
+// IMPORTANTE: Os nomes canônicos agora são Awo e Egbe
+const PRICE_IDS: Record<string, { monthly: string; annual: string | null }> = {
   'Awo': {
-    monthly: 'price_1SUQe8Do1RHWW8lpTManIdtD',  // R$ 97,00/mês
-    annual: 'price_1SVYDGDo1RHWW8lpDluZOrfK'   // R$ 999,90/ano
-  },
-  'Família': {
-    monthly: 'price_1SVYDfDo1RHWW8lpGhLjNjoV',  // R$ 129,90/mês
-    annual: null  // Não tem plano anual ainda
+    monthly: 'price_1SUQe8Do1RHWW8lpTManIdtD',  // R$ 49,90/mês
+    annual: 'price_1SVYDGDo1RHWW8lpDluZOrfK'   // R$ 499,90/ano
   },
   'Egbe': {
     monthly: 'price_1SVYDfDo1RHWW8lpGhLjNjoV',  // R$ 129,90/mês (Família)
@@ -40,16 +25,28 @@ const PRICE_IDS = {
   }
 };
 
-// Aliases de planos (nomes alternativos que mapeiam para nomes canônicos)
+// Aliases de planos (nomes antigos mapeiam para nomes canônicos: Awo ou Egbe)
 const PLAN_ALIASES: Record<string, string> = {
-  'Egbe': 'Família',
-  'Akapo': 'Premium',
-  'Awo': 'Profissional'
+  // Awo = plano individual premium
+  'premium': 'Awo',
+  'profissional': 'Awo',
+  'professional': 'Awo',
+  'akapo': 'Awo',
+  'awo': 'Awo',
+  // Egbe = plano família
+  'família': 'Egbe',
+  'familia': 'Egbe',
+  'family': 'Egbe',
+  'egbe': 'Egbe',
+  // Gratuito
+  'gratuito': 'Gratuito',
+  'free': 'Gratuito',
 };
 
-// Helper para normalizar nome do plano
+// Helper para normalizar nome do plano (case-insensitive)
 const normalizePlanName = (plan: string): string => {
-  const normalized = PLAN_ALIASES[plan] || plan;
+  const lowerPlan = plan.toLowerCase();
+  const normalized = PLAN_ALIASES[lowerPlan] || plan;
   logStep("Plan name normalized", { original: plan, normalized });
   return normalized;
 };

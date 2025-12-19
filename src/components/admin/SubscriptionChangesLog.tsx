@@ -131,16 +131,15 @@ export function SubscriptionChangesLog() {
   }
 
   const getPlanBadgeVariant = (plan: string) => {
-    switch (plan.toLowerCase()) {
-      case 'premium':
-        return 'default';
-      case 'profissional':
-        return 'secondary';
-      case 'família':
-        return 'success';
-      default:
-        return 'outline';
+    const lowerPlan = plan.toLowerCase();
+    // Awo = Premium/Profissional, Egbe = Família
+    if (['awo', 'premium', 'profissional', 'professional', 'akapo'].includes(lowerPlan)) {
+      return 'default';
     }
+    if (['egbe', 'família', 'familia', 'family'].includes(lowerPlan)) {
+      return 'secondary';
+    }
+    return 'outline';
   };
 
   if (loading) {
@@ -193,9 +192,8 @@ export function SubscriptionChangesLog() {
             <SelectContent>
               <SelectItem value="all">Todos os planos</SelectItem>
               <SelectItem value="Gratuito">Gratuito</SelectItem>
-              <SelectItem value="Premium">Premium</SelectItem>
-              <SelectItem value="Profissional">Profissional</SelectItem>
-              <SelectItem value="Família">Família</SelectItem>
+              <SelectItem value="Awo">Awo</SelectItem>
+              <SelectItem value="Egbe">Egbe</SelectItem>
             </SelectContent>
           </Select>
         </div>

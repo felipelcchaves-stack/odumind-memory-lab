@@ -44,7 +44,7 @@ export default function UserManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'colaborador' | 'aluno'>('all');
   const [activityFilter, setActivityFilter] = useState<'all' | 'active' | 'inactive'>('all');
-  const [planFilter, setPlanFilter] = useState<'all' | 'Gratuito' | 'Premium' | 'Profissional' | 'Família'>('all');
+  const [planFilter, setPlanFilter] = useState<'all' | 'Gratuito' | 'Awo' | 'Egbe'>('all');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | undefined>(undefined);
   const [isCreating, setIsCreating] = useState(false);
@@ -207,12 +207,11 @@ export default function UserManagement() {
       if (activityFilter === 'inactive' && isActive) return false;
     }
 
-    // Plan filter - aceita nomes alternativos (GURU usa nomes diferentes)
+    // Plan filter - aceita nomes alternativos (unificados para Awo/Egbe)
     if (planFilter !== 'all') {
       const planAliases: Record<string, string[]> = {
-        'Premium': ['Premium', 'Akapo'],
-        'Profissional': ['Profissional', 'Awo'],
-        'Família': ['Família', 'Egbe', 'Family'],
+        'Awo': ['Awo', 'Premium', 'Profissional', 'Akapo', 'professional', 'premium'],
+        'Egbe': ['Egbe', 'Família', 'Family', 'familia'],
         'Gratuito': ['Gratuito', 'free', 'Free'],
       };
       const acceptedPlans = planAliases[planFilter] || [planFilter];
@@ -513,9 +512,8 @@ export default function UserManagement() {
               <SelectContent>
                 <SelectItem value="all">Todos os Planos</SelectItem>
                 <SelectItem value="Gratuito">Gratuito</SelectItem>
-                <SelectItem value="Premium">Premium</SelectItem>
-                <SelectItem value="Profissional">Profissional</SelectItem>
-                <SelectItem value="Família">Família</SelectItem>
+                <SelectItem value="Awo">Awo</SelectItem>
+                <SelectItem value="Egbe">Egbe</SelectItem>
               </SelectContent>
             </Select>
           </div>
