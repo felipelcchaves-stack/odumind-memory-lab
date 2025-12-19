@@ -25,6 +25,8 @@ export default function Auth() {
   const [nome, setNome] = useState('');
   const [loading, setLoading] = useState(false);
   const [showReset, setShowReset] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -58,6 +60,14 @@ export default function Auth() {
       navigate('/dashboard');
     }
   }, [user, authLoading, navigate, isResettingPassword]);
+
+  // Cooldown timer para reenvio de email
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
 
   // Loading state combinado - DEPOIS dos hooks
   if (loadingSettings || authLoading) {
@@ -197,8 +207,8 @@ export default function Auth() {
     setLoading(false);
   };
 
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleResetPassword = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     
     try {
       emailSchema.parse(email);
@@ -223,11 +233,12 @@ export default function Auth() {
         variant: 'destructive'
       });
     } else {
+      setResetEmailSent(true);
+      setResendCooldown(60); // 60 segundos de cooldown
       toast({
         title: 'Email enviado!',
-        description: 'Verifique sua caixa de entrada para redefinir sua senha'
+        description: 'Verifique sua caixa de entrada e também a pasta de SPAM'
       });
-      setShowReset(false);
     }
     setLoading(false);
   };
@@ -383,47 +394,144 @@ export default function Auth() {
           // Reset Password Form (request email)
           <Card className="shadow-2xl border-primary/10">
             <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl font-bold">Recuperar Senha</CardTitle>
-              <CardDescription>
-                Digite seu email para receber o link de redefinição
+              <div className="flex justify-center mb-4">
+                <div className="rounded-full bg-primary/10 p-4">
+                  <Mail className="w-8 h-8 text-primary" />
+                </div>
+              </div>
+              <CardTitle className="text-2xl font-bold text-center">Recuperar Senha</CardTitle>
+              <CardDescription className="text-center">
+                {resetEmailSent 
+                  ? 'Verifique seu email para continuar'
+                  : 'Digite seu email para receber o link de redefinição'}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleResetPassword} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="reset-email">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="reset-email"
-                      type="email"
-                      placeholder="seu@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10"
-                      required
-                    />
+              {resetEmailSent ? (
+                // Success state - email sent
+                <div className="space-y-4">
+                  {/* Success message */}
+                  <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-4 text-center">
+                    <div className="flex justify-center mb-2">
+                      <div className="rounded-full bg-green-100 dark:bg-green-900/50 p-2">
+                        <Mail className="w-5 h-5 text-green-600 dark:text-green-400" />
+                      </div>
+                    </div>
+                    <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                      Email enviado para <strong>{email}</strong>
+                    </p>
+                  </div>
+
+                  {/* SPAM warning */}
+                  <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-full bg-amber-100 dark:bg-amber-900/50 p-1.5 mt-0.5">
+                        <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-1">
+                          Não encontrou o email?
+                        </p>
+                        <ul className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
+                          <li>• Verifique sua <strong>pasta de SPAM</strong> ou Lixo Eletrônico</li>
+                          <li>• O email pode demorar alguns minutos</li>
+                          <li>• Verifique se digitou o email corretamente</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Resend button */}
+                  <div className="space-y-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      disabled={loading || resendCooldown > 0}
+                      onClick={() => handleResetPassword()}
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Enviando...
+                        </>
+                      ) : resendCooldown > 0 ? (
+                        `Reenviar em ${resendCooldown}s`
+                      ) : (
+                        'Reenviar Email'
+                      )}
+                    </Button>
+                    
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full"
+                      onClick={() => {
+                        setShowReset(false);
+                        setResetEmailSent(false);
+                        setResendCooldown(0);
+                      }}
+                    >
+                      Voltar para login
+                    </Button>
+                  </div>
+
+                  {/* Change email */}
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      className="text-xs text-muted-foreground hover:text-foreground underline"
+                      onClick={() => setResetEmailSent(false)}
+                    >
+                      Usar outro email
+                    </button>
                   </div>
                 </div>
+              ) : (
+                // Initial state - enter email
+                <form onSubmit={handleResetPassword} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="reset-email">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="reset-email"
+                        type="email"
+                        placeholder="seu@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="pl-10"
+                        required
+                      />
+                    </div>
+                  </div>
 
-                <div className="space-y-2">
-                  <Button 
-                    type="submit" 
-                    className="w-full"
-                    disabled={loading}
-                  >
-                    {loading ? 'Enviando...' : 'Enviar Link de Recuperação'}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="w-full"
-                    onClick={() => setShowReset(false)}
-                  >
-                    Voltar para login
-                  </Button>
-                </div>
-              </form>
+                  <div className="space-y-2">
+                    <Button 
+                      type="submit" 
+                      className="w-full"
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Enviando...
+                        </>
+                      ) : (
+                        'Enviar Link de Recuperação'
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full"
+                      onClick={() => setShowReset(false)}
+                    >
+                      Voltar para login
+                    </Button>
+                  </div>
+                </form>
+              )}
             </CardContent>
           </Card>
         ) : (
