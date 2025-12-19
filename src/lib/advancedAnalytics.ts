@@ -28,23 +28,37 @@ export interface DemographicData {
 
 export async function calculateAdvancedMetrics(startDate: Date, endDate: Date): Promise<AdvancedMetrics> {
   try {
+    // Plan prices with interval info (monthly or yearly)
+    const planPrices: Record<string, { price: number; interval: 'monthly' | 'yearly' }> = {
+      'Akapo': { price: 49.90, interval: 'monthly' },
+      'Awo': { price: 97.00, interval: 'monthly' },
+      'Egbe': { price: 129.90, interval: 'monthly' },
+      'Família': { price: 129.90, interval: 'monthly' },
+      'Premium': { price: 97.00, interval: 'monthly' },
+      'Profissional': { price: 697.00, interval: 'yearly' }, // Guru annual plan
+      'Gratuito': { price: 0, interval: 'monthly' },
+    };
+
     // Total users
     const { count: totalUsers } = await supabase
       .from('profiles')
       .select('*', { count: 'exact', head: true })
       .lte('created_at', endDate.toISOString());
 
-    // Active subscriptions in period
-    const { data: activeSubscriptions } = await supabase
+    // All currently active subscriptions (for MRR calculation - no date filter)
+    const { data: currentSubscriptions } = await supabase
       .from('subscriptions')
-      .select('*')
-      .in('status', ['active', 'trialing'])
-      .gte('created_at', startDate.toISOString())
-      .lte('created_at', endDate.toISOString());
+      .select('plan_name, user_id')
+      .in('status', ['active', 'trialing']);
 
-    const activeUsersCount = activeSubscriptions?.length || 0;
+    // Count active paying users (exclude free plan)
+    const activePayingSubscriptions = currentSubscriptions?.filter(
+      sub => sub.plan_name !== 'Gratuito' && sub.plan_name !== 'free'
+    ) || [];
+    
+    const activeUsersCount = activePayingSubscriptions.length;
 
-    // Conversion rate: (active subscriptions / total users) * 100
+    // Conversion rate: (paying subscriptions / total users) * 100
     const conversionRate = totalUsers ? (activeUsersCount / (totalUsers || 1)) * 100 : 0;
 
     // Users who started in previous month
@@ -70,21 +84,13 @@ export async function calculateAdvancedMetrics(startDate: Date, endDate: Date): 
     // Churn rate: 100 - retention rate
     const churnRate = 100 - retentionRate;
 
-    // MRR calculation (assuming plan prices)
-    const planPrices: Record<string, number> = {
-      'Akapo': 49.90,
-      'Awo': 97.00,
-      'Egbe': 129.90
-    };
-
-    const { data: currentSubscriptions } = await supabase
-      .from('subscriptions')
-      .select('plan_name')
-      .in('status', ['active', 'trialing']);
-
-    const mrr = currentSubscriptions?.reduce((sum, sub) => {
-      return sum + (planPrices[sub.plan_name] || 0);
-    }, 0) || 0;
+    // MRR calculation - considers yearly plans divided by 12
+    const mrr = activePayingSubscriptions.reduce((sum, sub) => {
+      const plan = planPrices[sub.plan_name];
+      if (!plan || plan.price === 0) return sum;
+      // Divide annual plans by 12 to get monthly revenue
+      return sum + (plan.interval === 'yearly' ? plan.price / 12 : plan.price);
+    }, 0);
 
     const arr = mrr * 12;
 
