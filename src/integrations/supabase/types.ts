@@ -1348,6 +1348,68 @@ export type Database = {
           },
         ]
       }
+      renewal_offers: {
+        Row: {
+          coupon_id: string | null
+          created_at: string
+          discount_percent: number
+          email_sent_to: string | null
+          expires_at: string | null
+          id: string
+          offer_type: string
+          opened_at: string | null
+          original_value: number | null
+          plan_name: string | null
+          sent_at: string | null
+          status: string
+          updated_at: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          coupon_id?: string | null
+          created_at?: string
+          discount_percent?: number
+          email_sent_to?: string | null
+          expires_at?: string | null
+          id?: string
+          offer_type?: string
+          opened_at?: string | null
+          original_value?: number | null
+          plan_name?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          coupon_id?: string | null
+          created_at?: string
+          discount_percent?: number
+          email_sent_to?: string | null
+          expires_at?: string | null
+          id?: string
+          offer_type?: string
+          opened_at?: string | null
+          original_value?: number | null
+          plan_name?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renewal_offers_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "discount_coupons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ritual_content: {
         Row: {
           audio_url: string | null
