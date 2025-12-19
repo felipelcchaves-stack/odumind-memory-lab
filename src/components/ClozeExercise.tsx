@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CheckCircle2, XCircle, Sparkles, HelpCircle, RotateCcw } from "lucide-react";
+import { CheckCircle2, XCircle, Sparkles, HelpCircle, RotateCcw, Eye, SkipForward } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ClozeExerciseProps {
@@ -100,6 +100,7 @@ const ClozeExercise = memo(function ClozeExercise({
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [attempts, setAttempts] = useState(0);
+  const [wasRevealed, setWasRevealed] = useState(false);
   
   // Inicializa o exercício
   useEffect(() => {
@@ -189,6 +190,29 @@ const ClozeExercise = memo(function ClozeExercise({
       userInput: gap.isCorrect ? gap.userInput : '',
       isCorrect: gap.isCorrect ? true : null
     })));
+  };
+  
+  // Revela todas as respostas (com penalidade)
+  const handleReveal = () => {
+    setGaps(prev => prev.map(gap => ({
+      ...gap,
+      userInput: gap.word,
+      isCorrect: true,
+      showHint: true
+    })));
+    setIsSubmitted(true);
+    setShowResult(true);
+    setWasRevealed(true);
+    
+    // Pontuação reduzida por revelar (30% do máximo = 30 XP)
+    setTimeout(() => {
+      onAnswer(true, 30);
+    }, 2000);
+  };
+  
+  // Pula o exercício (0 XP)
+  const handleSkip = () => {
+    onAnswer(false, 0);
   };
   
   // Renderiza o texto com inputs nas lacunas
@@ -339,9 +363,23 @@ const ClozeExercise = memo(function ClozeExercise({
           {showResult && (
             <div className={cn(
               "p-4 rounded-lg text-center",
-              allCorrect ? "bg-green-50 dark:bg-green-900/20 border border-green-500" : "bg-amber-50 dark:bg-amber-900/20 border border-amber-500"
+              wasRevealed 
+                ? "bg-amber-50 dark:bg-amber-900/20 border border-amber-500"
+                : allCorrect 
+                  ? "bg-green-50 dark:bg-green-900/20 border border-green-500" 
+                  : "bg-amber-50 dark:bg-amber-900/20 border border-amber-500"
             )}>
-              {allCorrect ? (
+              {wasRevealed ? (
+                <div className="space-y-2">
+                  <Eye className="h-8 w-8 mx-auto text-amber-500" />
+                  <p className="font-semibold text-amber-700 dark:text-amber-300">
+                    Respostas reveladas
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    +30 XP (penalidade por revelar)
+                  </p>
+                </div>
+              ) : allCorrect ? (
                 <div className="space-y-2">
                   <CheckCircle2 className="h-8 w-8 mx-auto text-green-500" />
                   <p className="font-semibold text-green-700 dark:text-green-300">
@@ -379,25 +417,59 @@ const ClozeExercise = memo(function ClozeExercise({
           
           {/* Botões de ação */}
           {!showResult && (
-            <div className="flex gap-3 justify-center pt-2">
+            <div className="flex flex-wrap gap-3 justify-center pt-2">
+              {/* Botão Pular - sempre visível antes de mostrar resultado */}
+              <Button 
+                onClick={handleSkip}
+                variant="ghost"
+                className="min-w-[100px]"
+              >
+                <SkipForward className="h-4 w-4 mr-2" />
+                Pular
+              </Button>
+              
               {!isSubmitted ? (
-                <Button 
-                  onClick={handleSubmit}
-                  className="min-w-[150px]"
-                  disabled={gaps.some(g => !g.userInput.trim())}
-                >
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Verificar
-                </Button>
+                <>
+                  {/* Botão Revelar */}
+                  <Button 
+                    onClick={handleReveal}
+                    variant="outline"
+                    className="min-w-[120px]"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Revelar
+                  </Button>
+                  
+                  {/* Botão Verificar */}
+                  <Button 
+                    onClick={handleSubmit}
+                    className="min-w-[120px]"
+                  >
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Verificar
+                  </Button>
+                </>
               ) : someWrong ? (
-                <Button 
-                  onClick={handleRetry}
-                  variant="outline"
-                  className="min-w-[150px]"
-                >
-                  <RotateCcw className="h-4 w-4 mr-2" />
-                  Tentar Novamente
-                </Button>
+                <>
+                  {/* Botão Revelar (após tentar e errar) */}
+                  <Button 
+                    onClick={handleReveal}
+                    variant="outline"
+                    className="min-w-[120px]"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Revelar
+                  </Button>
+                  
+                  {/* Botão Tentar Novamente */}
+                  <Button 
+                    onClick={handleRetry}
+                    className="min-w-[150px]"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Tentar Novamente
+                  </Button>
+                </>
               ) : null}
             </div>
           )}
