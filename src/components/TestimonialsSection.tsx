@@ -90,8 +90,13 @@ const TestimonialCard = ({ name, comment, rating }: TestimonialCardProps) => (
 export const TestimonialsSection = () => {
   const { reviews, totalCount, shouldShow, loading } = usePublicReviews();
 
-  // Use real reviews if available and meets threshold, otherwise use fallbacks
-  const displayTestimonials = shouldShow && reviews.length > 0
+  // Não renderiza nada até atingir o threshold de 50 avaliações 5 estrelas
+  if (!loading && !shouldShow) {
+    return null;
+  }
+
+  // Use real reviews when threshold is met
+  const displayTestimonials = reviews.length > 0
     ? reviews.map(r => ({
         id: r.id,
         display_name: r.display_name,
