@@ -20,7 +20,7 @@ interface RenewalForecastProps {
   onRefresh?: () => void;
 }
 
-export function RenewalForecast({ onRefresh }: RenewalForecastProps) {
+export function RenewalForecast({ onRefresh: _onRefresh }: RenewalForecastProps) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<RenewalSummary | null>(null);
   const [expandedPeriod, setExpandedPeriod] = useState<'30' | '90' | '12' | null>(null);
