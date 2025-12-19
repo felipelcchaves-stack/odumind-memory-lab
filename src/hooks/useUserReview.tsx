@@ -28,7 +28,7 @@ export const useUserReview = () => {
   const [userXp, setUserXp] = useState<number>(0);
   const [settings, setSettings] = useState<ReviewSettings>({
     minXp: 500,
-    minCountToShow: 100,
+    minCountToShow: 50,
     showOnLanding: true
   });
   const [loading, setLoading] = useState(true);
@@ -205,7 +205,7 @@ export const usePublicReviews = () => {
         if (settingsData) {
           const settingsMap: Record<string, string> = {};
           settingsData.forEach(s => { settingsMap[s.key] = s.value || ''; });
-          setMinCountToShow(parseInt(settingsMap['review_min_count_to_show'] || '100'));
+          setMinCountToShow(parseInt(settingsMap['review_min_count_to_show'] || '50'));
           setShowOnLanding(settingsMap['review_show_on_landing'] === 'true');
         }
 
