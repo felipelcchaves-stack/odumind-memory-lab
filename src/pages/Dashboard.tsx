@@ -37,6 +37,7 @@ import confetti from 'canvas-confetti';
 import { useContentFeatures } from '@/hooks/useContentFeatures';
 import { CaminhoIfaMiniMap } from '@/components/CaminhoIfaMiniMap';
 import { PWAInstallBanner } from '@/components/PWAInstallBanner';
+import { ReviewPrompt } from '@/components/ReviewPrompt';
 
 interface ProfileData {
   xp: number;
@@ -494,6 +495,13 @@ export default function Dashboard() {
         {!simplifiedMode && (
           <div className="mb-6">
             <ReferralBanner />
+          </div>
+        )}
+
+        {/* Review Prompt - aparece quando usuário atinge XP mínimo */}
+        {!simplifiedMode && (
+          <div className="mb-6">
+            <ReviewPrompt />
           </div>
         )}
 

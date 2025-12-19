@@ -55,7 +55,7 @@ import AdminAnnouncementsPage from "./pages/admin/AdminAnnouncementsPage";
 import AdminCouponsPage from "./pages/admin/AdminCouponsPage";
 import AdminCaminhosPage from "./pages/admin/AdminCaminhosPage";
 import AdminPlansPage from "./pages/admin/AdminPlansPage";
-
+import AdminReviewsPage from "./pages/admin/AdminReviewsPage";
 const queryClient = new QueryClient();
 
 function SessionValidator() {
@@ -122,6 +122,7 @@ function AppContent() {
             <Route path="features" element={<AdminFeaturesPage />} />
             <Route path="announcements" element={<AdminAnnouncementsPage />} />
             <Route path="coupons" element={<AdminCouponsPage />} />
+            <Route path="reviews" element={<AdminReviewsPage />} />
             <Route path="restore" element={<AdminRestorePage />} />
           </Route>
           <Route path="/profile" element={<Profile />} />

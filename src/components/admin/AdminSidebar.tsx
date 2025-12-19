@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, Scroll, Users, BarChart3, Settings, Wrench, History, Megaphone, TrendingUp, CreditCard, ToggleRight, Bell, Ticket, Route } from "lucide-react";
+import { LayoutDashboard, FileText, Scroll, Users, BarChart3, Settings, Wrench, History, Megaphone, TrendingUp, CreditCard, ToggleRight, Bell, Ticket, Route, Star } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
   Sidebar,
@@ -63,6 +63,7 @@ export function AdminSidebar({ isAdmin }: AdminSidebarProps) {
         { title: "Funcionalidades", url: "/admin/features", icon: ToggleRight, adminOnly: true },
         { title: "Anúncios", url: "/admin/announcements", icon: Bell, adminOnly: true },
         { title: "Cupons", url: "/admin/coupons", icon: Ticket, adminOnly: true },
+        { title: "Avaliações", url: "/admin/reviews", icon: Star, adminOnly: true },
         { title: "Configurações", url: "/admin/settings", icon: Settings, adminOnly: true },
         { title: "Ferramentas", url: "/admin/tools", icon: Wrench, permission: "tools" as const },
         { title: "Restaurar", url: "/admin/restore", icon: History, adminOnly: true },
