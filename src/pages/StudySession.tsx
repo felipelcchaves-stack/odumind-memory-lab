@@ -146,6 +146,7 @@ export default function StudySession() {
   const [mode, setMode] = useState<StudyMode>("flashcard");
   const [loading, setLoading] = useState(true);
   const [isLoadingNext, setIsLoadingNext] = useState(false);
+  const [isProcessingAnswer, setIsProcessingAnswer] = useState(false); // Proteção anti-clique-duplo
   const [sessionComplete, setSessionComplete] = useState(false);
   const [showXPNotification, setShowXPNotification] = useState(false);
   const [lastXPGain, setLastXPGain] = useState(0);
@@ -485,8 +486,10 @@ export default function StudySession() {
     const totalOdus = totalInDb || totalOdusInDb;
     const lowOduMode = totalOdus > 0 && totalOdus < 5;
     
-    console.log('📊 selectRandomOdu - Estado:', {
-      poolLength: pool.length,
+    console.log('🔍 selectRandomOdu - INÍCIO:', {
+      poolRecebido: odusPool?.length ?? 'N/A',
+      poolAtual: pool.length,
+      poolOdus: pool.slice(0, 3).map(o => `${o.numero}-${o.nome}`),
       totalOdusInDb: totalOdus,
       isRecycling,
       studiedInSession: studiedInSession.size,
@@ -517,11 +520,13 @@ export default function StudySession() {
     if (pool.length <= 3 && !isRecycling && user && !lowOduMode && pool.length < totalOdus) {
       console.log("Pool crítico, aguardando pré-carregamento...");
       setIsLoadingNext(true);
-      const loaded = await preloadMoreOdus();
+      const newOdus = await preloadMoreOdus();
       setIsLoadingNext(false);
       
-      if (loaded) {
-        pool = availableOdus;
+      // ✅ CORREÇÃO: Usar o array retornado diretamente em vez de confiar no estado
+      if (newOdus && newOdus.length > 0) {
+        pool = newOdus;
+        console.log('✅ Pool atualizado com Odus pré-carregados:', pool.length);
       }
     } else if (pool.length <= 3 && lowOduMode) {
       console.log('📊 Poucos Odus cadastrados, usando todos disponíveis sem pré-carregar');
@@ -598,7 +603,23 @@ export default function StudySession() {
     setMode(selectedMode);
   }
   async function handleFlashcardRate(difficulty: number) {
-    if (!user || !currentOdu) return;
+    // ✅ Proteção anti-clique-duplo
+    if (!user || !currentOdu || isProcessingAnswer) {
+      console.log('⚠️ handleFlashcardRate bloqueado:', { 
+        noUser: !user, 
+        noOdu: !currentOdu, 
+        isProcessing: isProcessingAnswer 
+      });
+      return;
+    }
+    
+    setIsProcessingAnswer(true);
+    console.log('🎯 handleFlashcardRate - INÍCIO:', {
+      odu: currentOdu.nome,
+      numero: currentOdu.numero,
+      difficulty,
+      poolRestante: availableOdus.length
+    });
 
     const qualidade = difficulty; // 1=difícil, 3=médio, 5=fácil
     const responseTime = Math.floor((Date.now() - cardStartTime) / 1000);
@@ -812,16 +833,28 @@ export default function StudySession() {
 
       // Remove studied Odu from pool and select next
       const remainingOdus = availableOdus.filter(o => o.id !== currentOdu.id);
+      
+      console.log('🔄 Transição de Odu:', {
+        estudado: `${currentOdu.numero}-${currentOdu.nome}`,
+        poolAntes: availableOdus.length,
+        poolDepois: remainingOdus.length,
+        proximosNaFila: remainingOdus.slice(0, 3).map(o => `${o.numero}-${o.nome}`)
+      });
+      
       setAvailableOdus(remainingOdus);
       
+      // ✅ CORREÇÃO: Usar callback com tempo reduzido e passar pool diretamente
       setTimeout(() => {
         setShowXPNotification(false);
+        setIsProcessingAnswer(false);
+        // Passar remainingOdus diretamente para evitar usar estado desatualizado
         selectRandomOdu(remainingOdus);
-      }, 1000);
+      }, 800);
 
     } catch (error) {
       console.error("Error handling flashcard rate:", error);
       toast.error("Erro ao processar resposta");
+      setIsProcessingAnswer(false); // Liberar lock em caso de erro
     }
   }
 
@@ -881,8 +914,9 @@ export default function StudySession() {
     }
   }
   
-  async function preloadMoreOdus(): Promise<boolean> {
-    if (!user || isRecycling) return false;
+  // ✅ CORREÇÃO: Retornar array de Odus em vez de boolean para evitar race condition
+  async function preloadMoreOdus(): Promise<Odu[] | null> {
+    if (!user || isRecycling) return null;
     
     try {
       console.log("⏳ Pré-carregando mais Odus...");
@@ -894,7 +928,7 @@ export default function StudySession() {
       
       if (!allOdus || allOdus.length === 0) {
         console.warn("Nenhum Odu disponível para pré-carregar");
-        return false;
+        return null;
       }
       
       // Criar novo mix intercalado
@@ -906,15 +940,16 @@ export default function StudySession() {
       const newOdus = prioritizedOdus.filter(o => !currentIds.has(o.id));
       
       if (newOdus.length > 0) {
-        setAvailableOdus(prev => [...prev, ...newOdus]);
-        console.log(`✅ Pré-carregados ${newOdus.length} novos Odus`);
-        return true;
+        const mergedOdus = [...availableOdus, ...newOdus];
+        setAvailableOdus(mergedOdus);
+        console.log(`✅ Pré-carregados ${newOdus.length} novos Odus, total: ${mergedOdus.length}`);
+        return mergedOdus; // Retornar array atualizado para uso imediato
       }
       
-      return false;
+      return availableOdus; // Retornar pool atual se não há novos
     } catch (error) {
       console.error("Erro ao pré-carregar Odus:", error);
-      return false;
+      return null;
     }
   }
 
