@@ -598,6 +598,54 @@ export type Database = {
         }
         Relationships: []
       }
+      learning_paths: {
+        Row: {
+          ativo: boolean | null
+          cor: string
+          created_at: string | null
+          descricao: string | null
+          icone: string
+          id: string
+          imagem_url: string | null
+          nome: string
+          ordem: number
+          requer_assinatura: boolean | null
+          slug: string
+          total_conteudos: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          cor?: string
+          created_at?: string | null
+          descricao?: string | null
+          icone?: string
+          id?: string
+          imagem_url?: string | null
+          nome: string
+          ordem?: number
+          requer_assinatura?: boolean | null
+          slug: string
+          total_conteudos?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          cor?: string
+          created_at?: string | null
+          descricao?: string | null
+          icone?: string
+          id?: string
+          imagem_url?: string | null
+          nome?: string
+          ordem?: number
+          requer_assinatura?: boolean | null
+          slug?: string
+          total_conteudos?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       learning_phases: {
         Row: {
           cor: string
@@ -608,6 +656,7 @@ export type Database = {
           nome: string
           odus_incluidos: number[]
           ordem: number
+          path_id: string | null
           prerequisito_fase_id: string | null
           prerequisito_percentual: number | null
           slug: string
@@ -621,6 +670,7 @@ export type Database = {
           nome: string
           odus_incluidos?: number[]
           ordem: number
+          path_id?: string | null
           prerequisito_fase_id?: string | null
           prerequisito_percentual?: number | null
           slug: string
@@ -634,11 +684,19 @@ export type Database = {
           nome?: string
           odus_incluidos?: number[]
           ordem?: number
+          path_id?: string | null
           prerequisito_fase_id?: string | null
           prerequisito_percentual?: number | null
           slug?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "learning_phases_path_id_fkey"
+            columns: ["path_id"]
+            isOneToOne: false
+            referencedRelation: "learning_paths"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "learning_phases_prerequisito_fase_id_fkey"
             columns: ["prerequisito_fase_id"]
@@ -977,6 +1035,93 @@ export type Database = {
             columns: ["odu_id"]
             isOneToOne: false
             referencedRelation: "odu"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      path_content: {
+        Row: {
+          ativo: boolean | null
+          audio_url: string | null
+          contexto_historico: string | null
+          created_at: string | null
+          dificuldade: string | null
+          exemplos_praticos: string | null
+          id: string
+          imagem_url: string | null
+          materiais_necessarios: string[] | null
+          nome: string
+          numero: number | null
+          ordem: number | null
+          path_id: string | null
+          phase_id: string | null
+          significado: string | null
+          tags: string[] | null
+          tempo_execucao: number | null
+          texto_principal: string
+          updated_at: string | null
+          verso: string | null
+          verso_resumido: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          audio_url?: string | null
+          contexto_historico?: string | null
+          created_at?: string | null
+          dificuldade?: string | null
+          exemplos_praticos?: string | null
+          id?: string
+          imagem_url?: string | null
+          materiais_necessarios?: string[] | null
+          nome: string
+          numero?: number | null
+          ordem?: number | null
+          path_id?: string | null
+          phase_id?: string | null
+          significado?: string | null
+          tags?: string[] | null
+          tempo_execucao?: number | null
+          texto_principal: string
+          updated_at?: string | null
+          verso?: string | null
+          verso_resumido?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          audio_url?: string | null
+          contexto_historico?: string | null
+          created_at?: string | null
+          dificuldade?: string | null
+          exemplos_praticos?: string | null
+          id?: string
+          imagem_url?: string | null
+          materiais_necessarios?: string[] | null
+          nome?: string
+          numero?: number | null
+          ordem?: number | null
+          path_id?: string | null
+          phase_id?: string | null
+          significado?: string | null
+          tags?: string[] | null
+          tempo_execucao?: number | null
+          texto_principal?: string
+          updated_at?: string | null
+          verso?: string | null
+          verso_resumido?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "path_content_path_id_fkey"
+            columns: ["path_id"]
+            isOneToOne: false
+            referencedRelation: "learning_paths"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "path_content_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "learning_phases"
             referencedColumns: ["id"]
           },
         ]
@@ -1647,6 +1792,69 @@ export type Database = {
           weak_odus?: string[] | null
         }
         Relationships: []
+      }
+      user_path_content_progress: {
+        Row: {
+          content_id: string | null
+          created_at: string | null
+          facilidade: number | null
+          forca_memoria: number | null
+          id: string
+          intervalo: number | null
+          path_id: string | null
+          proxima_revisao: string | null
+          revisoes: number | null
+          status: string | null
+          ultima_revisao: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          content_id?: string | null
+          created_at?: string | null
+          facilidade?: number | null
+          forca_memoria?: number | null
+          id?: string
+          intervalo?: number | null
+          path_id?: string | null
+          proxima_revisao?: string | null
+          revisoes?: number | null
+          status?: string | null
+          ultima_revisao?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          content_id?: string | null
+          created_at?: string | null
+          facilidade?: number | null
+          forca_memoria?: number | null
+          id?: string
+          intervalo?: number | null
+          path_id?: string | null
+          proxima_revisao?: string | null
+          revisoes?: number | null
+          status?: string | null
+          ultima_revisao?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_path_content_progress_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "path_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_path_content_progress_path_id_fkey"
+            columns: ["path_id"]
+            isOneToOne: false
+            referencedRelation: "learning_paths"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_phase_progress: {
         Row: {
