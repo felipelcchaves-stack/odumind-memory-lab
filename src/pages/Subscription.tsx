@@ -48,7 +48,7 @@ const plansData = [
       "Testes e simulados ilimitados",
       "Suporte prioritário",
     ],
-    planId: "professional",
+    planId: "awo",
     stripeId: "price_1SUQe8Do1RHWW8lpTManIdtD",
   },
   {

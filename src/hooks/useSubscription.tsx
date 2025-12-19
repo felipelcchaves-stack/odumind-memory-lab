@@ -335,13 +335,18 @@ export const useSubscription = () => {
   };
 
   const normalizePlanName = (planName: string): string => {
+    const lowerName = planName.toLowerCase();
     const aliases: { [key: string]: string } = {
-      'Egbe (Família)': 'Egbe',
-      'Família': 'Egbe',
-      'Profissional': 'Awo',
-      'Premium': 'Akapo',
+      'egbe (família)': 'Egbe',
+      'família': 'Egbe',
+      'familia': 'Egbe',
+      'family': 'Egbe',
+      'profissional': 'Awo',
+      'professional': 'Awo',
+      'premium': 'Awo',
+      'akapo': 'Awo',
     };
-    return aliases[planName] || planName;
+    return aliases[lowerName] || planName;
   };
 
   const changeOwnSubscription = async (newPlan: string): Promise<boolean> => {
@@ -401,22 +406,19 @@ export const useSubscription = () => {
     // Admins and Colaboradores have premium access
     if (isAdmin || isColaborador) return true;
     
+    const planName = subscription?.plan_name?.toLowerCase() || '';
     return hasActiveSubscription() && (
-      subscription?.plan_name === 'Premium' || 
-      subscription?.plan_name === 'Akapo' ||
-      subscription?.plan_name?.includes('Premium')
+      planName === 'awo' || 
+      planName === 'premium' ||
+      planName === 'profissional' ||
+      planName === 'professional' ||
+      planName === 'akapo'
     );
   };
 
   const isProfessional = () => {
-    // Admins and Colaboradores have professional access
-    if (isAdmin || isColaborador) return true;
-    
-    return hasActiveSubscription() && (
-      subscription?.plan_name === 'Profissional' || 
-      subscription?.plan_name === 'Awo' ||
-      subscription?.plan_name?.includes('Profissional')
-    );
+    // Alias for isPremium - both refer to Awo plan
+    return isPremium();
   };
 
   const isFamily = () => {

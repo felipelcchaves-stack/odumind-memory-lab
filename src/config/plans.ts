@@ -99,6 +99,11 @@ export const PLAN_HIERARCHY: Record<string, number> = {
   'gratuito': 0,
   'free': 0,
   'awo': 1,
+  'professional': 1,
+  'profissional': 1,
+  'premium': 1,
+  'akapo': 1,
   'egbe': 2,
   'familia': 2,
+  'family': 2,
 };

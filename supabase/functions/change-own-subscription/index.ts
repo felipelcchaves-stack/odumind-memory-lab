@@ -12,20 +12,25 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CHANGE-OWN-SUBSCRIPTION] ${step}${detailsStr}`);
 };
 
-// Mapeamento de aliases de planos
+// Mapeamento de aliases de planos (case-insensitive)
 const PLAN_ALIASES: { [key: string]: string } = {
-  'Egbe (Família)': 'Egbe',
-  'Família': 'Egbe',
-  'Profissional': 'Awo',
-  'Premium': 'Awo',
-  'Awo': 'Awo',
-  'Akapo': 'Awo', // Akapo agora mapeia para Awo
-  'Egbe': 'Egbe',
-  'Gratuito': 'Gratuito',
+  'egbe (família)': 'Egbe',
+  'família': 'Egbe',
+  'familia': 'Egbe',
+  'family': 'Egbe',
+  'profissional': 'Awo',
+  'professional': 'Awo',
+  'premium': 'Awo',
+  'awo': 'Awo',
+  'akapo': 'Awo',
+  'egbe': 'Egbe',
+  'gratuito': 'Gratuito',
+  'free': 'Gratuito',
 };
 
 function normalizePlanName(planName: string): string {
-  return PLAN_ALIASES[planName] || planName;
+  const lowerName = planName.toLowerCase();
+  return PLAN_ALIASES[lowerName] || planName;
 }
 
 // Plan hierarchy for downgrade validation (lower index = lower tier)
