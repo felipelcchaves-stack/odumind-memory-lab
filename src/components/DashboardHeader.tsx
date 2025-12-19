@@ -34,7 +34,7 @@ export default function DashboardHeader() {
   // Navegação simplificada: apenas itens essenciais no header
   const navItems = [
     { path: '/dashboard', icon: Home, label: 'Dashboard', priority: 'high' },
-    { path: '/caminho-ifa', icon: Map, label: 'Caminho', priority: 'high' },
+    { path: '/caminhos', icon: Map, label: 'Caminhos', priority: 'high' },
     { path: '/biblioteca-yoruba', icon: BookOpen, label: 'Biblioteca', priority: 'high' },
     // Indicar - condicional baseado nas configurações
     ...(isReferralEnabled ? [{ path: '/indicar', icon: Gift, label: 'Indicar', priority: 'medium' as const }] : []),
