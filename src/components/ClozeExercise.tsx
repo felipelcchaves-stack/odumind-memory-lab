@@ -27,20 +27,36 @@ interface Gap {
 // Função para extrair palavras-chave do texto (palavras importantes para memorização)
 function extractKeywords(text: string): string[] {
   // Remove pontuação e divide em palavras
-  const words = text.replace(/[.,;:!?"""''()]/g, '').split(/\s+/);
+  const words = text.replace(/[.,;:!?"""''()]/g, '').split(/\s+/).filter(w => w.length > 0);
   
-  // Filtra palavras significativas (> 4 caracteres, não são artigos/preposições comuns)
-  const stopWords = ['que', 'para', 'com', 'uma', 'dos', 'das', 'por', 'como', 'mais', 'seu', 'sua', 'seus', 'suas', 'ele', 'ela', 'eles', 'elas', 'este', 'esta', 'esse', 'essa', 'isso', 'aqui', 'ali', 'onde', 'quando', 'porque', 'assim', 'então', 'também', 'ainda', 'sempre', 'nunca', 'muito', 'pouco'];
+  // Filtra palavras significativas (>= 3 caracteres, não são artigos/preposições comuns)
+  const stopWords = ['que', 'para', 'com', 'uma', 'dos', 'das', 'por', 'como', 'mais', 'seu', 'sua', 'seus', 'suas', 'ele', 'ela', 'eles', 'elas', 'este', 'esta', 'esse', 'essa', 'isso', 'aqui', 'ali', 'onde', 'quando', 'porque', 'assim', 'então', 'também', 'ainda', 'sempre', 'nunca', 'muito', 'pouco', 'não', 'sim', 'ser', 'ter', 'foi', 'são', 'tem', 'está', 'era', 'vai', 'vem'];
   
-  const keywords = words.filter(word => 
-    word.length > 4 && 
+  // Critério relaxado: >= 3 caracteres
+  let keywords = words.filter(word => 
+    word.length >= 3 && 
     !stopWords.includes(word.toLowerCase()) &&
     !/^\d+$/.test(word) // Não é só número
   );
   
+  // FALLBACK 1: Se não encontrou keywords, usar as maiores palavras do texto
+  if (keywords.length === 0) {
+    keywords = words
+      .filter(w => w.length >= 2 && !/^\d+$/.test(w))
+      .sort((a, b) => b.length - a.length)
+      .slice(0, 3);
+  }
+  
+  // FALLBACK 2: Se ainda não tiver nada, usar qualquer palavra com mais de 1 caractere
+  if (keywords.length === 0 && words.length > 0) {
+    keywords = words.filter(w => w.length > 1).slice(0, 2);
+  }
+  
   // Seleciona até 3 palavras-chave aleatórias para criar lacunas
   const shuffled = keywords.sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, Math.min(3, Math.max(1, Math.floor(keywords.length / 3))));
+  // Garantir pelo menos 1 lacuna, máximo 3
+  const count = Math.min(3, Math.max(1, keywords.length));
+  return shuffled.slice(0, count);
 }
 
 // Gera texto com lacunas marcadas
@@ -87,14 +103,35 @@ const ClozeExercise = memo(function ClozeExercise({
   
   // Inicializa o exercício
   useEffect(() => {
+    if (!versoResumido || versoResumido.trim().length === 0) {
+      // Verso vazio - auto-completar
+      setDisplayText('');
+      setGaps([]);
+      setIsSubmitted(true);
+      setShowResult(true);
+      setTimeout(() => onAnswer(true, 50), 1000);
+      return;
+    }
+    
     const keywords = extractKeywords(versoResumido);
     const { displayText: text, gaps: newGaps } = createClozeText(versoResumido, keywords);
+    
+    // Se não conseguiu criar lacunas, auto-completar com pontuação parcial
+    if (newGaps.length === 0) {
+      setDisplayText(versoResumido);
+      setGaps([]);
+      setIsSubmitted(true);
+      setShowResult(true);
+      setTimeout(() => onAnswer(true, 50), 1500);
+      return;
+    }
+    
     setDisplayText(text);
     setGaps(newGaps);
     setIsSubmitted(false);
     setShowResult(false);
     setAttempts(0);
-  }, [versoResumido]);
+  }, [versoResumido, onAnswer]);
   
   // Atualiza input de uma lacuna
   const handleInputChange = (index: number, value: string) => {
@@ -225,6 +262,39 @@ const ClozeExercise = memo(function ClozeExercise({
   const correctCount = gaps.filter(g => g.isCorrect === true).length;
   const allCorrect = correctCount === gaps.length && gaps.length > 0;
   const someWrong = gaps.some(g => g.isCorrect === false);
+  
+  // Se não há lacunas e já está mostrando resultado, exibir mensagem de fallback
+  if (gaps.length === 0 && showResult) {
+    return (
+      <div className="w-full max-w-2xl mx-auto">
+        <Card className="min-h-[300px]">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between mb-2">
+              {!hideNumber && (
+                <Badge variant="outline" className="text-xs px-2 py-0.5 text-muted-foreground">
+                  #{numero}
+                </Badge>
+              )}
+              <Badge className="bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20">
+                <Sparkles className="h-3 w-3 mr-1" />
+                Complete a Frase
+              </Badge>
+            </div>
+            <CardTitle className="text-xl md:text-2xl font-bold">{nome}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="p-4 bg-muted/50 rounded-lg text-center">
+              <p className="text-muted-foreground mb-2">Texto muito curto para exercício de lacunas.</p>
+              {versoResumido && (
+                <p className="font-medium italic">"{versoResumido}"</p>
+              )}
+              <p className="text-sm text-muted-foreground mt-4">Passando para o próximo exercício...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
   
   return (
     <div className="w-full max-w-2xl mx-auto">
