@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, Trophy, Lock, Clock, TrendingUp, Zap, Brain } from "lucide-react";
+import { ArrowLeft, Trophy, Lock, Clock, TrendingUp, Zap, Brain, Home, RotateCcw, CheckCircle, XCircle, Target } from "lucide-react";
 import { toast } from "sonner";
 import confetti from 'canvas-confetti';
 import Flashcard from "@/components/Flashcard";
@@ -910,6 +910,10 @@ export default function StudySession() {
     setIsSessionActive(false);
     setSessionComplete(true);
     
+    // Fetch next review date for completion screen
+    const nextReviewData = await fetchNextReviewDate();
+    setNextReview(nextReviewData);
+    
     if (sessionId && user) {
       await endStudySession(
         sessionId,
@@ -1197,45 +1201,199 @@ export default function StudySession() {
     );
   }
 
+  // Trigger confetti when session completes
+  useEffect(() => {
+    if (sessionComplete && sessionStats.cardsStudied > 0) {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+    }
+  }, [sessionComplete, sessionStats.cardsStudied]);
+
+  // Calculate accuracy rate
+  const accuracyRate = sessionMetrics.totalCards > 0 
+    ? Math.round((sessionMetrics.correctAnswers / sessionMetrics.totalCards) * 100) 
+    : 0;
+
+  // Calculate phase progress for completion screen
+  const [phaseProgress, setPhaseProgress] = useState<{ memorized: number; total: number } | null>(null);
+  
+  useEffect(() => {
+    async function fetchPhaseProgress() {
+      if (!sessionComplete || !user || !currentPhaseInfo) return;
+      
+      try {
+        // Get all Odus in this phase
+        const phaseOduNumbers = currentPhaseInfo.odus_incluidos;
+        
+        // Get Odu IDs for this phase
+        const { data: phaseOdus } = await supabase
+          .from('odu')
+          .select('id')
+          .in('numero', phaseOduNumbers);
+        
+        if (!phaseOdus) return;
+        
+        const phaseOduIds = phaseOdus.map(o => o.id);
+        
+        // Count memorized Odus in this phase
+        const { count } = await supabase
+          .from('memorizacao')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('status', 'memorizado')
+          .in('odu_id', phaseOduIds);
+        
+        setPhaseProgress({
+          memorized: count || 0,
+          total: phaseOduNumbers.length
+        });
+      } catch (error) {
+        console.error('Error fetching phase progress:', error);
+      }
+    }
+    
+    fetchPhaseProgress();
+  }, [sessionComplete, user, currentPhaseInfo]);
+
   if (sessionComplete) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="max-w-md w-full">
-          <CardHeader>
+        <Card className="max-w-lg w-full">
+          <CardHeader className="pb-4">
             <div className="flex justify-center mb-4">
-              <div className="w-20 h-20 rounded-full bg-gradient-primary flex items-center justify-center">
-                <Trophy className="h-12 w-12 text-primary-foreground" />
+              <div className="w-24 h-24 rounded-full bg-gradient-primary flex items-center justify-center animate-scale-in">
+                <Trophy className="h-14 w-14 text-primary-foreground" />
               </div>
             </div>
             <CardTitle className="text-center text-3xl">Sessão Completa!</CardTitle>
+            {currentPhaseInfo && (
+              <p className="text-center text-muted-foreground mt-2">
+                Fase: {currentPhaseInfo.nome}
+              </p>
+            )}
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="text-center space-y-3">
-              <h3 className="text-lg font-semibold">Estatísticas da Sessão</h3>
-              <div className="space-y-2">
-                <p className="text-muted-foreground">
-                  📚 {sessionStats.cardsStudied} cards revisados
-                </p>
-                <p className="text-muted-foreground">
-                  ⏱️ Tempo total: {formatDuration(sessionDuration)}
-                </p>
-              </div>
-              
-              <div className="py-6">
-                <div className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-gradient-primary">
-                  <span className="text-5xl font-bold text-primary-foreground">+{sessionStats.totalXP}</span>
-                  <span className="text-xl text-primary-foreground">XP</span>
+            {/* Detailed Stats Grid */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-4 bg-muted rounded-lg text-center">
+                <div className="text-3xl font-bold text-foreground">
+                  {sessionStats.cardsStudied}
+                </div>
+                <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
+                  <Target className="h-3 w-3" />
+                  Cards Estudados
                 </div>
               </div>
-              
-              {/* Show badges earned during session */}
-              {user && <BadgesDisplay userId={user.id} compact />}
+              <div className="p-4 bg-muted rounded-lg text-center">
+                <div className="text-3xl font-bold text-foreground">
+                  {formatDuration(sessionDuration)}
+                </div>
+                <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  Tempo Total
+                </div>
+              </div>
+              <div className="p-4 bg-green-100 dark:bg-green-900/30 rounded-lg text-center">
+                <div className="text-3xl font-bold text-green-600 dark:text-green-400">
+                  {sessionMetrics.correctAnswers}
+                </div>
+                <div className="text-sm text-green-600/80 dark:text-green-400/80 flex items-center justify-center gap-1">
+                  <CheckCircle className="h-3 w-3" />
+                  Acertos
+                </div>
+              </div>
+              <div className="p-4 bg-red-100 dark:bg-red-900/30 rounded-lg text-center">
+                <div className="text-3xl font-bold text-red-600 dark:text-red-400">
+                  {sessionMetrics.wrongAnswers}
+                </div>
+                <div className="text-sm text-red-600/80 dark:text-red-400/80 flex items-center justify-center gap-1">
+                  <XCircle className="h-3 w-3" />
+                  Erros
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Button onClick={() => navigate("/caminho-ifa")} className="w-full" variant="hero" size="lg">
-                Continuar no Caminho
+
+            {/* Accuracy Rate */}
+            <div className="p-4 bg-primary/10 rounded-lg text-center">
+              <div className="text-4xl font-bold text-primary">
+                {accuracyRate}%
+              </div>
+              <div className="text-sm text-muted-foreground">Taxa de Acerto</div>
+            </div>
+
+            {/* Phase Progress */}
+            {phaseProgress && currentPhaseInfo && (
+              <div className="p-4 bg-muted rounded-lg space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium">Progresso na Fase</span>
+                  <span className="text-muted-foreground">
+                    {phaseProgress.memorized}/{phaseProgress.total} Odus memorizados
+                  </span>
+                </div>
+                <Progress 
+                  value={(phaseProgress.memorized / phaseProgress.total) * 100} 
+                  className="h-2" 
+                />
+                {phaseProgress.memorized === phaseProgress.total && (
+                  <p className="text-sm text-green-600 dark:text-green-400 font-medium text-center mt-2">
+                    🎉 Fase completa!
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Next Review Info */}
+            {nextReview && (
+              <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-300">
+                  <Clock className="h-4 w-4" />
+                  <span>Próxima revisão: <strong>{formatNextReviewDate(nextReview.proxima_revisao)}</strong></span>
+                </div>
+                <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-1">
+                  Odu #{nextReview.odu.numero} - {nextReview.odu.nome}
+                </p>
+              </div>
+            )}
+              
+            {/* XP Earned */}
+            <div className="py-4">
+              <div className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-gradient-primary w-full">
+                <span className="text-4xl font-bold text-primary-foreground">+{sessionStats.totalXP}</span>
+                <span className="text-xl text-primary-foreground">XP</span>
+              </div>
+            </div>
+              
+            {/* Badges Earned */}
+            {user && <BadgesDisplay userId={user.id} compact />}
+
+            {/* Action Buttons */}
+            <div className="space-y-3 pt-2">
+              <Button 
+                onClick={() => navigate("/dashboard")} 
+                className="w-full" 
+                variant="hero" 
+                size="lg"
+              >
+                <Home className="h-4 w-4 mr-2" />
+                Voltar ao Dashboard
               </Button>
-              <Button onClick={() => currentPhaseInfo ? navigate(`/study?fase=${currentPhaseInfo.slug}`) : window.location.reload()} className="w-full" variant="outline" size="lg">
+              <Button 
+                onClick={() => navigate("/caminho-ifa")} 
+                className="w-full" 
+                variant="outline" 
+                size="lg"
+              >
+                Continuar no Caminho de Ifá
+              </Button>
+              <Button 
+                onClick={() => currentPhaseInfo ? navigate(`/study?fase=${currentPhaseInfo.slug}`) : window.location.reload()} 
+                className="w-full" 
+                variant="ghost"
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
                 Nova Sessão nesta Fase
               </Button>
             </div>
