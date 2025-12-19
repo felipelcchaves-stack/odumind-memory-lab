@@ -16,6 +16,7 @@ import Flashcard from "@/components/Flashcard";
 import OduPresentation from "@/components/OduPresentation";
 import Quiz from "@/components/Quiz";
 import ClozeExercise from "@/components/ClozeExercise";
+import DragDropWords from "@/components/DragDropWords";
 import XPNotification from "@/components/XPNotification";
 import BadgesDisplay from "@/components/BadgesDisplay";
 import DashboardHeader from "@/components/DashboardHeader";
@@ -83,7 +84,7 @@ interface SessionStats {
   startTime: number;
 }
 
-type StudyMode = "flashcard" | "quiz" | "cloze";
+type StudyMode = "flashcard" | "quiz" | "cloze" | "dragdrop";
 
 const FREE_LIMIT = 5; // Limite para usuários gratuitos (agora progressivo)
 
@@ -514,21 +515,23 @@ export default function StudySession() {
         });
     }
     
-    // Select study mode: flashcard, quiz, or cloze
-    // Cloze only works if verso_resumido exists (needs content to create gaps)
+    // Select study mode: flashcard, quiz, cloze, or dragdrop
+    // Cloze/dragdrop only works if verso_resumido exists (needs content to create gaps)
     const hasClozeContent = selectedOdu.verso_resumido && selectedOdu.verso_resumido.length > 20;
     const canDoQuiz = pool.length >= 4 && !lowOduMode;
     
-    // Weighted random selection: 40% flashcard, 35% quiz (if available), 25% cloze (if available)
+    // Weighted random selection: 35% flashcard, 30% quiz (if available), 20% cloze, 15% dragdrop (if available)
     const random = Math.random();
     let selectedMode: StudyMode;
     
-    if (random < 0.4) {
+    if (random < 0.35) {
       selectedMode = "flashcard";
-    } else if (random < 0.75 && canDoQuiz) {
+    } else if (random < 0.65 && canDoQuiz) {
       selectedMode = "quiz";
-    } else if (hasClozeContent) {
+    } else if (random < 0.85 && hasClozeContent) {
       selectedMode = "cloze";
+    } else if (hasClozeContent) {
+      selectedMode = "dragdrop";
     } else {
       selectedMode = "flashcard";
     }
@@ -1545,6 +1548,14 @@ export default function StudySession() {
             significado={currentOdu.significado}
             onAnswer={handleClozeAnswer}
             hideNumber={storyMode}
+          />
+        ) : mode === "dragdrop" && currentOdu.verso_resumido ? (
+          <DragDropWords
+            oduName={currentOdu.nome}
+            oduNumber={currentOdu.numero}
+            versoResumido={currentOdu.verso_resumido}
+            onComplete={handleClozeAnswer}
+            onSkip={() => selectRandomOdu()}
           />
         ) : (
           // ✅ FALLBACK: Se modo não disponível, mostrar flashcard
