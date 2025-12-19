@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, Scroll, Users, BarChart3, Settings, Wrench, History, Megaphone, TrendingUp, CreditCard, ToggleRight, Bell, Ticket } from "lucide-react";
+import { LayoutDashboard, FileText, Scroll, Users, BarChart3, Settings, Wrench, History, Megaphone, TrendingUp, CreditCard, ToggleRight, Bell, Ticket, Route } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
   Sidebar,
@@ -43,6 +43,7 @@ export function AdminSidebar({ isAdmin }: AdminSidebarProps) {
       label: "Conteúdo",
       items: [
         { title: "Odu", url: "/admin/odu", icon: FileText, permission: "odu" as const },
+        { title: "Caminhos", url: "/admin/caminhos", icon: Route, adminOnly: true },
         { title: "Rituais", url: "/admin/rituais", icon: Scroll, permission: "rituais" as const },
         { title: "Novidades", url: "/admin/changelog", icon: Megaphone, permission: "changelog" as const },
       ],
