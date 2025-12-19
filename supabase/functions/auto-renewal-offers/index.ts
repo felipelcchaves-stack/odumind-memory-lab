@@ -75,7 +75,7 @@ serve(async (req) => {
       range: { start: startRange.toISOString(), end: endRange.toISOString() }
     });
 
-    // Get subscriptions expiring in the target range
+    // Get subscriptions expiring in the target range (ONLY ANNUAL PLANS)
     const { data: expiringSubscriptions, error: subError } = await supabase
       .from('subscriptions')
       .select(`
@@ -85,7 +85,7 @@ serve(async (req) => {
         stripe_subscription_id
       `)
       .in('status', ['active', 'trialing'])
-      .neq('plan_name', 'free')
+      .in('plan_name', ['premium_yearly', 'profissional_yearly']) // Apenas planos anuais
       .gte('current_period_end', startRange.toISOString())
       .lte('current_period_end', endRange.toISOString());
 
