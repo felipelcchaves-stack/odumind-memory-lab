@@ -62,3 +62,6 @@ verify_jwt = true
 
 [functions.notify-course-launch]
 verify_jwt = true
+
+[functions.auto-renewal-offers]
+verify_jwt = false

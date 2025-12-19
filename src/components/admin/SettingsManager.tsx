@@ -11,9 +11,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePlanVisibilityAdmin } from '@/hooks/usePlanVisibility';
 import { PLANS } from '@/config/plans';
-import { Loader2, Save, Eye, EyeOff, ExternalLink, CheckCircle, AlertCircle, Code, CreditCard, Megaphone, Gift } from 'lucide-react';
+import { Loader2, Save, Eye, EyeOff, ExternalLink, CheckCircle, AlertCircle, Code, CreditCard, Megaphone, Gift, CalendarClock, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import { CustomScriptsManager } from './CustomScriptsManager';
+import { supabase } from '@/integrations/supabase/client';
 
 export function SettingsManager() {
   const { settings, loading, updateSetting, getSettingsByCategory } = useAppSettings();
@@ -33,6 +34,13 @@ export function SettingsManager() {
   const [exitPopupButtonText, setExitPopupButtonText] = useState('Quero Meu Desconto de {discount}%');
   const [exitPopupDelay, setExitPopupDelay] = useState('3');
   const [savingMarketing, setSavingMarketing] = useState(false);
+
+  // Estados para automação de ofertas
+  const [autoRenewalEnabled, setAutoRenewalEnabled] = useState(false);
+  const [autoRenewalDaysBefore, setAutoRenewalDaysBefore] = useState('7');
+  const [autoRenewalDiscount, setAutoRenewalDiscount] = useState('15');
+  const [savingAutoRenewal, setSavingAutoRenewal] = useState(false);
+  const [testingAutoRenewal, setTestingAutoRenewal] = useState(false);
 
   // Carregar valores do marketing ao iniciar
   useEffect(() => {
@@ -56,6 +64,15 @@ export function SettingsManager() {
             break;
           case 'exit_popup_delay_seconds':
             setExitPopupDelay(setting.value || '3');
+            break;
+          case 'auto_renewal_enabled':
+            setAutoRenewalEnabled(setting.value === 'true');
+            break;
+          case 'auto_renewal_days_before':
+            setAutoRenewalDaysBefore(setting.value || '7');
+            break;
+          case 'auto_renewal_discount_percent':
+            setAutoRenewalDiscount(setting.value || '15');
             break;
         }
       });
@@ -117,6 +134,41 @@ export function SettingsManager() {
     }
   };
 
+  const handleSaveAutoRenewalSettings = async () => {
+    setSavingAutoRenewal(true);
+    try {
+      await Promise.all([
+        updateSetting('auto_renewal_enabled', String(autoRenewalEnabled)),
+        updateSetting('auto_renewal_days_before', autoRenewalDaysBefore),
+        updateSetting('auto_renewal_discount_percent', autoRenewalDiscount),
+      ]);
+      toast.success('Configurações de automação salvas!');
+    } catch (error) {
+      toast.error('Erro ao salvar configurações');
+    } finally {
+      setSavingAutoRenewal(false);
+    }
+  };
+
+  const handleTestAutoRenewal = async () => {
+    setTestingAutoRenewal(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('auto-renewal-offers');
+      
+      if (error) throw error;
+      
+      toast.success(`Teste executado! Enviadas: ${data?.sent || 0} ofertas`, {
+        description: data?.message
+      });
+    } catch (error: any) {
+      toast.error('Erro ao executar teste', {
+        description: error.message
+      });
+    } finally {
+      setTestingAutoRenewal(false);
+    }
+  };
+
   const testPixel = (pixelType: string, pixelId: string) => {
     if (!pixelId) {
       toast.error('Configure o ID do pixel primeiro');
@@ -170,12 +222,12 @@ export function SettingsManager() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="plans" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-6">
+        <TabsList className="grid w-full grid-cols-5 mb-6">
           <TabsTrigger value="plans" className="gap-2">
             <CreditCard className="w-4 h-4" />
             Planos
           </TabsTrigger>
-          <TabsTrigger value="pixels">IDs dos Pixels</TabsTrigger>
+          <TabsTrigger value="pixels">Pixels</TabsTrigger>
           <TabsTrigger value="scripts" className="gap-2">
             <Code className="w-4 h-4" />
             Scripts
@@ -183,6 +235,10 @@ export function SettingsManager() {
           <TabsTrigger value="marketing" className="gap-2">
             <Megaphone className="w-4 h-4" />
             Marketing
+          </TabsTrigger>
+          <TabsTrigger value="automation" className="gap-2">
+            <CalendarClock className="w-4 h-4" />
+            Automação
           </TabsTrigger>
         </TabsList>
 
@@ -513,6 +569,145 @@ export function SettingsManager() {
                   <li>Funciona apenas em desktop (detecção de mouse saindo da janela)</li>
                   <li>O delay evita que o popup apareça imediatamente ao carregar</li>
                   <li>As mudanças são aplicadas instantaneamente após salvar</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="automation">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarClock className="w-5 h-5 text-primary" />
+                Automação de Ofertas de Renovação
+              </CardTitle>
+              <CardDescription>
+                Configure o envio automático de ofertas de desconto para usuários com assinatura próxima do vencimento.
+                O sistema verifica diariamente e envia ofertas automaticamente.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Switch para habilitar/desabilitar */}
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-base font-medium">Automação Habilitada</Label>
+                    <Badge variant={autoRenewalEnabled ? "default" : "secondary"}>
+                      {autoRenewalEnabled ? 'Ativa' : 'Inativa'}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Quando ativada, ofertas são enviadas automaticamente para usuários com vencimento próximo
+                  </p>
+                </div>
+                <Switch
+                  checked={autoRenewalEnabled}
+                  onCheckedChange={setAutoRenewalEnabled}
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {/* Dias antes do vencimento */}
+                <div className="space-y-2">
+                  <Label htmlFor="daysBefore">Dias antes do vencimento</Label>
+                  <Input
+                    id="daysBefore"
+                    type="number"
+                    min="1"
+                    max="30"
+                    value={autoRenewalDaysBefore}
+                    onChange={(e) => setAutoRenewalDaysBefore(e.target.value)}
+                    placeholder="7"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Quantos dias antes do vencimento a oferta será enviada
+                  </p>
+                </div>
+
+                {/* Percentual de desconto */}
+                <div className="space-y-2">
+                  <Label htmlFor="autoDiscount">Percentual de Desconto (%)</Label>
+                  <Input
+                    id="autoDiscount"
+                    type="number"
+                    min="5"
+                    max="50"
+                    value={autoRenewalDiscount}
+                    onChange={(e) => setAutoRenewalDiscount(e.target.value)}
+                    placeholder="15"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Desconto oferecido para renovação antecipada
+                  </p>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Preview da lógica */}
+              <div className="bg-muted/50 p-4 rounded-lg space-y-3">
+                <h4 className="font-medium text-sm">📋 Exemplo de funcionamento:</h4>
+                <div className="text-sm text-muted-foreground space-y-2">
+                  <p>
+                    Com as configurações atuais, usuários receberão um email com <strong>{autoRenewalDiscount}% de desconto</strong> quando 
+                    faltarem <strong>{autoRenewalDaysBefore} dias</strong> para o vencimento da assinatura.
+                  </p>
+                  <p>
+                    Se um usuário tem vencimento em <strong>27/12/2025</strong>, ele receberá a oferta no dia{' '}
+                    <strong>{new Date(new Date().setDate(new Date().getDate() + parseInt(autoRenewalDaysBefore || '7'))).toLocaleDateString('pt-BR')}</strong>.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                {/* Botão de salvar */}
+                <Button 
+                  onClick={handleSaveAutoRenewalSettings} 
+                  disabled={savingAutoRenewal}
+                  className="flex-1"
+                >
+                  {savingAutoRenewal ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Salvar Configurações
+                    </>
+                  )}
+                </Button>
+
+                {/* Botão de testar */}
+                <Button 
+                  variant="outline"
+                  onClick={handleTestAutoRenewal} 
+                  disabled={testingAutoRenewal || !autoRenewalEnabled}
+                >
+                  {testingAutoRenewal ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Executando...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-4 h-4 mr-2" />
+                      Executar Agora
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                <h4 className="font-medium text-sm">💡 Informações:</h4>
+                <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                  <li>O sistema verifica automaticamente todos os dias às 9h</li>
+                  <li>Cada usuário recebe apenas uma oferta por ciclo de renovação</li>
+                  <li>Os cupons gerados são únicos e de uso único</li>
+                  <li>Os cupons expiram em 14 dias após o envio</li>
+                  <li>Use "Executar Agora" para testar o envio manualmente</li>
                 </ul>
               </div>
             </CardContent>
