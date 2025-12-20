@@ -63,85 +63,78 @@ export const useSubscription = () => {
         setSubscription(localData as SubscriptionData);
       }
 
-      // Wait a bit to ensure session is fully loaded
-      await new Promise(resolve => setTimeout(resolve, 100));
+      const getValidAccessToken = async (): Promise<string | null> => {
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        if (!sessionError && sessionData.session?.access_token) return sessionData.session.access_token;
 
-      // Get current session and validate/refresh if needed
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      
-      // If session is invalid or expired, try to refresh it
-      if (sessionError || !sessionData.session) {
-        console.warn('No valid session, attempting to refresh...');
         const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        
-        if (refreshError || !refreshData.session) {
-          console.warn('Unable to refresh session, skipping Stripe sync');
-          setLoading(false);
-          return;
+        if (!refreshError && refreshData.session?.access_token) return refreshData.session.access_token;
+
+        return null;
+      };
+
+      const safeInvokeCheckSubscription = async (token: string) => {
+        try {
+          return await supabase.functions.invoke('check-subscription', {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+        } catch (err: any) {
+          // supabase-js can throw for non-2xx responses; normalize into the same shape
+          return {
+            data: null,
+            error: {
+              message: err?.message ? String(err.message) : String(err),
+            },
+          } as any;
         }
-        
-        sessionData.session = refreshData.session;
-      }
-      
-      const accessToken = sessionData.session?.access_token;
-      
-      // Only call edge function if we have a valid token
-      if (!accessToken || accessToken === 'undefined' || accessToken === 'null') {
-        console.warn('No valid access token available, skipping Stripe sync');
+      };
+
+      const isAuthExpired = (msg?: string) =>
+        !!msg && (
+          msg.includes('401') ||
+          msg.toLowerCase().includes('session expired') ||
+          msg.toLowerCase().includes('auth session missing')
+        );
+
+      const token1 = await getValidAccessToken();
+      if (!token1 || token1 === 'undefined' || token1 === 'null') {
+        console.warn('No valid access token available, skipping subscription sync');
         setLoading(false);
         return;
       }
 
-      console.log('Calling check-subscription with valid token');
-      const { data: stripeData, error } = await supabase.functions.invoke('check-subscription', {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
+      const { data: stripeData1, error: error1 } = await safeInvokeCheckSubscription(token1);
 
-      // Handle 401 specifically - try to refresh session and retry once
-      if (error && (error.message?.includes('401') || error.message?.includes('Session expired'))) {
-        console.warn('Session expired during check-subscription, attempting refresh...');
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        
-        if (!refreshError && refreshData.session?.access_token) {
-          console.log('Session refreshed, retrying check-subscription...');
-          const { data: retryData, error: retryError } = await supabase.functions.invoke('check-subscription', {
-            headers: {
-              Authorization: `Bearer ${refreshData.session.access_token}`,
-            },
-          });
-          
-          if (!retryError && retryData) {
-            // Success on retry - update state with fresh data
+      // 401 / session expired: refresh and retry once (quietly)
+      if (error1 && isAuthExpired(error1.message)) {
+        const token2 = await getValidAccessToken();
+        if (token2 && token2 !== token1) {
+          const { data: stripeData2, error: error2 } = await safeInvokeCheckSubscription(token2);
+          if (!error2 && stripeData2) {
             const { data: updatedData } = await supabase
               .from('subscriptions')
               .select('*')
               .eq('user_id', user.id)
               .maybeSingle();
 
-            if (updatedData) {
-              setSubscription(updatedData as SubscriptionData);
-            }
+            if (updatedData) setSubscription(updatedData as SubscriptionData);
             setLoading(false);
             return;
           }
         }
-        
-        // Refresh failed - use local data
-        console.warn('Session refresh failed, using local data');
+
+        // Keep local state when session is truly expired
         setLoading(false);
         return;
       }
 
-      if (error) {
-        console.error('Error checking subscription with Stripe:', error);
-        // Only show toast if user is actually logged in (not on landing page)
-        // Don't show error for auth-related issues on public pages
-        if (user && !error.message?.includes('Auth session missing')) {
+      if (error1) {
+        console.error('Error checking subscription with backend:', error1);
+        if (user && !error1.message?.includes('Auth session missing')) {
           toast.error('Erro ao verificar assinatura. Seus dados locais foram mantidos.');
         }
-        // Default to free plan on error to avoid blocking users
         if (!localData) {
           const freeData: SubscriptionData = {
             status: 'free',
@@ -153,8 +146,7 @@ export const useSubscription = () => {
         return;
       }
 
-      if (stripeData) {
-        // Update local state with fresh data from Stripe
+      if (stripeData1) {
         const { data: updatedData } = await supabase
           .from('subscriptions')
           .select('*')
