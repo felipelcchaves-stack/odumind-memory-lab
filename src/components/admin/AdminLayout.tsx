@@ -1,68 +1,91 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Outlet } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
 import { useAdmin } from "@/hooks/useAdmin";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AdminSidebar } from "./AdminSidebar";
 import DashboardHeader from "@/components/DashboardHeader";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export function AdminLayout() {
   const navigate = useNavigate();
-  const { user, session, loading: authLoading } = useAuth();
   const { isAdmin, isColaborador, loading: adminLoading } = useAdmin();
-  const [isReady, setIsReady] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [hasRedirected, setHasRedirected] = useState(false);
 
-  // Marcar como pronto apenas quando TODOS os estados estiverem definidos
+  // Get auth state directly
   useEffect(() => {
-    if (!authLoading && !adminLoading) {
-      // Pequeno delay para garantir propagação de estado
-      const timer = setTimeout(() => {
-        setIsReady(true);
-      }, 50);
-      return () => clearTimeout(timer);
-    } else {
-      setIsReady(false);
-    }
-  }, [authLoading, adminLoading]);
+    let mounted = true;
 
-  // Verificar acesso apenas quando estiver pronto
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (mounted) {
+          setUser(session?.user ?? null);
+          setAuthLoading(false);
+        }
+      } catch (error) {
+        console.error('[AdminLayout] Error getting session:', error);
+        if (mounted) {
+          setUser(null);
+          setAuthLoading(false);
+        }
+      }
+    };
+
+    initAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (mounted) {
+        setUser(session?.user ?? null);
+        setAuthLoading(false);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // Check access when loading is complete
   useEffect(() => {
-    if (!isReady || hasRedirected) return;
+    // Wait for both loadings to complete
+    if (authLoading || adminLoading || hasRedirected) return;
 
     console.log('[AdminLayout] Checking access:', { 
       user: user?.email, 
-      session: !!session,
       isColaborador, 
       isAdmin,
-      isReady 
+      authLoading,
+      adminLoading
     });
 
-    // Se não há usuário ou sessão, redirecionar para login
-    if (!user || !session) {
-      console.log('[AdminLayout] No user or session, redirecting to /');
+    // If no user, redirect to login
+    if (!user) {
+      console.log('[AdminLayout] No user, redirecting to /');
       setHasRedirected(true);
       navigate("/");
       return;
     }
 
-    // Se não é colaborador, acesso negado
+    // If not colaborador, access denied
     if (!isColaborador) {
       console.log('[AdminLayout] Not colaborador, redirecting to /dashboard');
       toast.error("Acesso negado. Apenas administradores e colaboradores podem acessar esta área.");
       setHasRedirected(true);
       navigate("/dashboard");
     }
-  }, [isReady, user, session, isColaborador, hasRedirected, navigate, isAdmin]);
+  }, [authLoading, adminLoading, user, isColaborador, hasRedirected, navigate, isAdmin]);
 
-  // Reset hasRedirected quando o usuário mudar
+  // Reset hasRedirected when user changes
   useEffect(() => {
     setHasRedirected(false);
   }, [user?.id]);
 
-  // Mostrar loading enquanto não estiver pronto
-  if (!isReady) {
+  // Show loading while checking
+  if (authLoading || adminLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -73,8 +96,8 @@ export function AdminLayout() {
     );
   }
 
-  // Se já redirecionou ou não tem acesso, não renderizar nada
-  if (hasRedirected || !isColaborador || !user || !session) {
+  // If redirected or no access, don't render
+  if (hasRedirected || !isColaborador || !user) {
     return null;
   }
 
