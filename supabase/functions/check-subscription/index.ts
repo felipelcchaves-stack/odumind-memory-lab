@@ -53,8 +53,17 @@ serve(async (req) => {
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      logStep("ERROR: No authorization header");
-      throw new Error("No authorization header provided");
+      // Treat missing auth as "free" instead of a server error so the app never breaks
+      logStep("No authorization header - returning free status");
+      return new Response(JSON.stringify({
+        subscribed: false,
+        status: "free",
+        plan_name: "Gratuito",
+        session_expired: true,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
     }
 
     const token = authHeader.replace("Bearer ", "");
@@ -88,16 +97,15 @@ serve(async (req) => {
     const { data: userData, error: userError } = await supabaseUser.auth.getUser();
     if (userError) {
       logStep("Session expired or invalid", { error: userError.message });
-      // Return 401 instead of throwing - session expired is not a server error
-      return new Response(JSON.stringify({ 
+      // Return 200 with free status so the client won't treat it as a hard error
+      return new Response(JSON.stringify({
         subscribed: false,
-        status: 'free',
-        plan_name: 'Gratuito',
-        error: 'Session expired',
-        code: 401 
+        status: "free",
+        plan_name: "Gratuito",
+        session_expired: true,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 401,
+        status: 200,
       });
     }
     const user = userData.user;
