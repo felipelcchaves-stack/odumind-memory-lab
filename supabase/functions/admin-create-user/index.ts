@@ -25,14 +25,16 @@ serve(async (req) => {
 
   try {
     // Get the authorization header
-    const authHeader = req.headers.get('Authorization');
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
     if (!authHeader) {
       console.error('[ADMIN-CREATE-USER] Missing authorization header');
       throw new Error('Missing authorization header');
     }
 
-    // Extract the token from Bearer header
-    const token = authHeader.replace('Bearer ', '');
+    // Extract the token from "Bearer <token>" (case-insensitive)
+    const [scheme, rawToken] = authHeader.trim().split(/\s+/);
+    const token = scheme?.toLowerCase() === 'bearer' ? rawToken : rawToken ?? '';
+
     if (!token) {
       console.error('[ADMIN-CREATE-USER] Token vazio');
       throw new Error('Invalid authorization token');
