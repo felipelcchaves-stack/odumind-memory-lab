@@ -5,10 +5,13 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Loader2, Save, FlaskConical, Trophy, RotateCcw, 
-  TrendingUp, Clock, MousePointer, ArrowUpDown, Users
+  TrendingUp, Clock, MousePointer, ArrowUpDown, Users, Pencil
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,6 +43,7 @@ export function ABTestManager() {
   const { updateSetting, getSettingsByCategory } = useAppSettings();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingVariant, setSavingVariant] = useState<string | null>(null);
   const [variants, setVariants] = useState<ABVariant[]>([]);
   const [metrics, setMetrics] = useState<ABMetrics[]>([]);
   const [abEnabled, setAbEnabled] = useState(false);
@@ -47,6 +51,7 @@ export function ABTestManager() {
   const [trafficDistribution, setTrafficDistribution] = useState<{ A: number; B: number; C: number }>({
     A: 34, B: 33, C: 33
   });
+  const [editedVariants, setEditedVariants] = useState<Record<string, Partial<ABVariant>>>({});
 
   const landingSettings = getSettingsByCategory('landing');
 
@@ -81,6 +86,18 @@ export function ABTestManager() {
 
       if (variantsError) throw variantsError;
       setVariants((variantsData || []) as ABVariant[]);
+
+      // Initialize edited variants
+      const edited: Record<string, Partial<ABVariant>> = {};
+      variantsData?.forEach(v => {
+        edited[v.variant] = {
+          headline: v.headline || '',
+          subheadline: v.subheadline || '',
+          cta_text: v.cta_text || '',
+          description: v.description || ''
+        };
+      });
+      setEditedVariants(edited);
 
       // Set traffic distribution from variants
       if (variantsData) {
@@ -172,6 +189,42 @@ export function ABTestManager() {
     }
   };
 
+  const handleSaveVariantContent = async (variantKey: 'A' | 'B' | 'C') => {
+    setSavingVariant(variantKey);
+    try {
+      const variant = variants.find(v => v.variant === variantKey);
+      if (!variant) throw new Error('Variante não encontrada');
+
+      const edited = editedVariants[variantKey];
+      
+      const { error } = await supabase
+        .from('landing_ab_tests')
+        .update({
+          headline: edited.headline,
+          subheadline: edited.subheadline,
+          cta_text: edited.cta_text,
+          description: edited.description
+        })
+        .eq('id', variant.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setVariants(prev => prev.map(v => 
+        v.variant === variantKey 
+          ? { ...v, ...edited }
+          : v
+      ));
+
+      toast.success(`Variante ${variantKey} salva com sucesso!`);
+    } catch (error) {
+      console.error('Error saving variant:', error);
+      toast.error('Erro ao salvar variante');
+    } finally {
+      setSavingVariant(null);
+    }
+  };
+
   const handleSetWinner = async (variant: string) => {
     try {
       await updateSetting('ab_current_winner', variant);
@@ -226,6 +279,25 @@ export function ABTestManager() {
     return v?.description || '';
   };
 
+  const updateEditedVariant = (variantKey: string, field: string, value: string) => {
+    setEditedVariants(prev => ({
+      ...prev,
+      [variantKey]: {
+        ...prev[variantKey],
+        [field]: value
+      }
+    }));
+  };
+
+  const getVariantLabel = (variant: string): string => {
+    switch (variant) {
+      case 'A': return 'Transformação';
+      case 'B': return 'Ciência + Tradição';
+      case 'C': return 'Desafio';
+      default: return variant;
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -260,182 +332,292 @@ export function ABTestManager() {
         />
       </div>
 
-      {/* Stats overview */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <div className="flex items-center gap-2 text-muted-foreground text-sm">
-            <Users className="w-4 h-4" />
-            Sessões Totais
-          </div>
-          <div className="text-2xl font-bold mt-1">{totalSessions}</div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-2 text-muted-foreground text-sm">
-            <TrendingUp className="w-4 h-4" />
-            Conversões Totais
-          </div>
-          <div className="text-2xl font-bold mt-1">
-            {metrics.reduce((sum, m) => sum + m.conversions, 0)}
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-2 text-muted-foreground text-sm">
-            <Trophy className="w-4 h-4" />
-            Melhor Variante
-          </div>
-          <div className="text-2xl font-bold mt-1 text-primary">
-            {bestVariant || '-'}
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-2 text-muted-foreground text-sm">
-            <ArrowUpDown className="w-4 h-4" />
-            Status
-          </div>
-          <div className="text-lg font-medium mt-1">
-            {abEnabled ? 'Coletando dados' : 'Aguardando'}
-          </div>
-        </Card>
-      </div>
+      <Tabs defaultValue="metrics" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="metrics">📊 Métricas</TabsTrigger>
+          <TabsTrigger value="content">✏️ Conteúdo</TabsTrigger>
+          <TabsTrigger value="traffic">⚙️ Configuração</TabsTrigger>
+        </TabsList>
 
-      {/* Metrics table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5" />
-            Métricas por Variante
-          </CardTitle>
-          <CardDescription>
-            Comparativo de performance entre as 3 variantes do Hero
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-3 font-medium">Variante</th>
-                  <th className="text-center p-3 font-medium">Sessões</th>
-                  <th className="text-center p-3 font-medium">Conversões</th>
-                  <th className="text-center p-3 font-medium">Taxa</th>
-                  <th className="text-center p-3 font-medium">Tempo Médio</th>
-                  <th className="text-center p-3 font-medium">Scroll</th>
-                  <th className="text-center p-3 font-medium">Cliques CTA</th>
-                  <th className="text-center p-3 font-medium">Ação</th>
-                </tr>
-              </thead>
-              <tbody>
-                {metrics.map(m => (
-                  <tr key={m.variant} className="border-b hover:bg-muted/50">
-                    <td className="p-3">
+        {/* Metrics Tab */}
+        <TabsContent value="metrics" className="space-y-6">
+          {/* Stats overview */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="p-4">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <Users className="w-4 h-4" />
+                Sessões Totais
+              </div>
+              <div className="text-2xl font-bold mt-1">{totalSessions}</div>
+            </Card>
+            <Card className="p-4">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <TrendingUp className="w-4 h-4" />
+                Conversões Totais
+              </div>
+              <div className="text-2xl font-bold mt-1">
+                {metrics.reduce((sum, m) => sum + m.conversions, 0)}
+              </div>
+            </Card>
+            <Card className="p-4">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <Trophy className="w-4 h-4" />
+                Melhor Variante
+              </div>
+              <div className="text-2xl font-bold mt-1 text-primary">
+                {bestVariant || '-'}
+              </div>
+            </Card>
+            <Card className="p-4">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <ArrowUpDown className="w-4 h-4" />
+                Status
+              </div>
+              <div className="text-lg font-medium mt-1">
+                {abEnabled ? 'Coletando dados' : 'Aguardando'}
+              </div>
+            </Card>
+          </div>
+
+          {/* Metrics table */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5" />
+                Métricas por Variante
+              </CardTitle>
+              <CardDescription>
+                Comparativo de performance entre as 3 variantes do Hero
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-3 font-medium">Variante</th>
+                      <th className="text-center p-3 font-medium">Sessões</th>
+                      <th className="text-center p-3 font-medium">Conversões</th>
+                      <th className="text-center p-3 font-medium">Taxa</th>
+                      <th className="text-center p-3 font-medium">Tempo Médio</th>
+                      <th className="text-center p-3 font-medium">Scroll</th>
+                      <th className="text-center p-3 font-medium">Cliques CTA</th>
+                      <th className="text-center p-3 font-medium">Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {metrics.map(m => (
+                      <tr key={m.variant} className="border-b hover:bg-muted/50">
+                        <td className="p-3">
+                          <div className="flex items-center gap-2">
+                            <Badge variant={m.variant === bestVariant ? "default" : "outline"}>
+                              {m.variant}
+                            </Badge>
+                            {m.variant === bestVariant && <Trophy className="w-4 h-4 text-yellow-500" />}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {getVariantDescription(m.variant)}
+                          </p>
+                        </td>
+                        <td className="text-center p-3">{m.sessions}</td>
+                        <td className="text-center p-3">{m.conversions}</td>
+                        <td className="text-center p-3 font-medium">
+                          <span className={m.variant === bestVariant ? 'text-green-600' : ''}>
+                            {m.conversionRate.toFixed(2)}%
+                          </span>
+                        </td>
+                        <td className="text-center p-3">{formatTime(m.avgTimeOnPage)}</td>
+                        <td className="text-center p-3">{m.avgScrollDepth.toFixed(0)}%</td>
+                        <td className="text-center p-3">{m.ctaClicks}</td>
+                        <td className="text-center p-3">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleSetWinner(m.variant)}
+                            disabled={!!currentWinner || m.sessions < 10}
+                          >
+                            Definir Vencedor
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Content Editor Tab */}
+        <TabsContent value="content" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Pencil className="w-5 h-5" />
+                Editor de Conteúdo das Variantes
+              </CardTitle>
+              <CardDescription>
+                Edite os textos de cada variante do Hero. As alterações serão refletidas imediatamente na landing page.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              {(['A', 'B', 'C'] as const).map((variantKey) => {
+                const edited = editedVariants[variantKey] || {};
+                return (
+                  <div key={variantKey} className="space-y-4 p-4 border rounded-lg">
+                    <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Badge variant={m.variant === bestVariant ? "default" : "outline"}>
-                          {m.variant}
+                        <Badge variant="outline" className="text-lg px-3 py-1">
+                          {variantKey}
                         </Badge>
-                        {m.variant === bestVariant && <Trophy className="w-4 h-4 text-yellow-500" />}
+                        <span className="font-medium">{getVariantLabel(variantKey)}</span>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {getVariantDescription(m.variant)}
-                      </p>
-                    </td>
-                    <td className="text-center p-3">{m.sessions}</td>
-                    <td className="text-center p-3">{m.conversions}</td>
-                    <td className="text-center p-3 font-medium">
-                      <span className={m.variant === bestVariant ? 'text-green-600' : ''}>
-                        {m.conversionRate.toFixed(2)}%
-                      </span>
-                    </td>
-                    <td className="text-center p-3">{formatTime(m.avgTimeOnPage)}</td>
-                    <td className="text-center p-3">{m.avgScrollDepth.toFixed(0)}%</td>
-                    <td className="text-center p-3">{m.ctaClicks}</td>
-                    <td className="text-center p-3">
                       <Button
                         size="sm"
-                        variant="outline"
-                        onClick={() => handleSetWinner(m.variant)}
-                        disabled={!!currentWinner || m.sessions < 10}
+                        onClick={() => handleSaveVariantContent(variantKey)}
+                        disabled={savingVariant === variantKey}
                       >
-                        Definir Vencedor
+                        {savingVariant === variantKey ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Salvando...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4 mr-2" />
+                            Salvar Variante {variantKey}
+                          </>
+                        )}
                       </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+                    </div>
 
-      {/* Traffic distribution */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Distribuição de Tráfego</CardTitle>
-          <CardDescription>
-            Ajuste a porcentagem de visitantes para cada variante
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {['A', 'B', 'C'].map((v) => (
-            <div key={v} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Variante {v}</Label>
-                <span className="text-sm font-medium">{trafficDistribution[v as 'A' | 'B' | 'C']}%</span>
+                    <Separator />
+
+                    <div className="grid gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor={`headline-${variantKey}`}>Headline (Título Principal)</Label>
+                        <Input
+                          id={`headline-${variantKey}`}
+                          value={edited.headline || ''}
+                          onChange={(e) => updateEditedVariant(variantKey, 'headline', e.target.value)}
+                          placeholder="Ex: O Método que Torna Possível Aprender Ifá em 14 Dias"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor={`subheadline-${variantKey}`}>Subheadline (Subtítulo)</Label>
+                        <Textarea
+                          id={`subheadline-${variantKey}`}
+                          value={edited.subheadline || ''}
+                          onChange={(e) => updateEditedVariant(variantKey, 'subheadline', e.target.value)}
+                          placeholder="Ex: Um sistema inteligente de memorização que respeita seu ritmo..."
+                          rows={2}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor={`cta-${variantKey}`}>Texto do CTA (Botão)</Label>
+                          <Input
+                            id={`cta-${variantKey}`}
+                            value={edited.cta_text || ''}
+                            onChange={(e) => updateEditedVariant(variantKey, 'cta_text', e.target.value)}
+                            placeholder="Ex: Começar Agora"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor={`desc-${variantKey}`}>Descrição Interna</Label>
+                          <Input
+                            id={`desc-${variantKey}`}
+                            value={edited.description || ''}
+                            onChange={(e) => updateEditedVariant(variantKey, 'description', e.target.value)}
+                            placeholder="Ex: Foco em transformação"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Traffic & Config Tab */}
+        <TabsContent value="traffic" className="space-y-6">
+          {/* Traffic distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Distribuição de Tráfego</CardTitle>
+              <CardDescription>
+                Ajuste a porcentagem de visitantes para cada variante
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {(['A', 'B', 'C'] as const).map((v) => (
+                <div key={v} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Variante {v} - {getVariantLabel(v)}</Label>
+                    <span className="text-sm font-medium">{trafficDistribution[v]}%</span>
+                  </div>
+                  <Slider
+                    value={[trafficDistribution[v]]}
+                    onValueChange={([value]) => {
+                      setTrafficDistribution(prev => ({ ...prev, [v]: value }));
+                    }}
+                    max={100}
+                    step={1}
+                    disabled={!abEnabled}
+                  />
+                </div>
+              ))}
+
+              <div className="text-sm text-muted-foreground text-center">
+                Total: {trafficDistribution.A + trafficDistribution.B + trafficDistribution.C}%
+                {trafficDistribution.A + trafficDistribution.B + trafficDistribution.C !== 100 && (
+                  <span className="text-destructive ml-2">(deve ser 100%)</span>
+                )}
               </div>
-              <Slider
-                value={[trafficDistribution[v as 'A' | 'B' | 'C']]}
-                onValueChange={([value]) => {
-                  setTrafficDistribution(prev => ({ ...prev, [v]: value }));
-                }}
-                max={100}
-                step={1}
-                disabled={!abEnabled}
-              />
-            </div>
-          ))}
 
-          <div className="text-sm text-muted-foreground text-center">
-            Total: {trafficDistribution.A + trafficDistribution.B + trafficDistribution.C}%
-            {trafficDistribution.A + trafficDistribution.B + trafficDistribution.C !== 100 && (
-              <span className="text-destructive ml-2">(deve ser 100%)</span>
-            )}
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleSaveTrafficDistribution}
+                  disabled={saving || !abEnabled || trafficDistribution.A + trafficDistribution.B + trafficDistribution.C !== 100}
+                  className="flex-1"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Salvar Distribuição
+                    </>
+                  )}
+                </Button>
+                <Button variant="destructive" onClick={handleResetTest}>
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Resetar Teste
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Info */}
+          <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+            <h4 className="font-medium text-sm">💡 Como funciona:</h4>
+            <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+              <li>Visitantes são atribuídos aleatoriamente a uma variante (via cookie de 30 dias)</li>
+              <li>Métricas são coletadas automaticamente: visualizações, tempo, scroll, cliques e conversões</li>
+              <li>Recomenda-se pelo menos 100 sessões por variante para significância estatística</li>
+              <li>Ao definir um vencedor, o teste é pausado e 100% do tráfego vai para a variante escolhida</li>
+            </ul>
           </div>
-
-          <div className="flex gap-3">
-            <Button
-              onClick={handleSaveTrafficDistribution}
-              disabled={saving || !abEnabled || trafficDistribution.A + trafficDistribution.B + trafficDistribution.C !== 100}
-              className="flex-1"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  Salvar Distribuição
-                </>
-              )}
-            </Button>
-            <Button variant="destructive" onClick={handleResetTest}>
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Resetar Teste
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Info */}
-      <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-        <h4 className="font-medium text-sm">💡 Como funciona:</h4>
-        <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-          <li>Visitantes são atribuídos aleatoriamente a uma variante (via cookie de 30 dias)</li>
-          <li>Métricas são coletadas automaticamente: visualizações, tempo, scroll, cliques e conversões</li>
-          <li>Recomenda-se pelo menos 100 sessões por variante para significância estatística</li>
-          <li>Ao definir um vencedor, o teste é pausado e 100% do tráfego vai para a variante escolhida</li>
-        </ul>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
