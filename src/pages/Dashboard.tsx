@@ -104,6 +104,18 @@ export default function Dashboard() {
 
   // Guard: Block access if free plan is disabled and user has no active subscription
   useEffect(() => {
+    // Não redirecionar se atualização de senha está em progresso
+    const passwordUpdateInProgress = localStorage.getItem('password_update_in_progress');
+    if (passwordUpdateInProgress) {
+      const timestamp = parseInt(passwordUpdateInProgress);
+      // Expirar flag após 30 segundos
+      if (Date.now() - timestamp < 30000) {
+        localStorage.removeItem('password_update_in_progress');
+        return; // Não fazer redirect
+      }
+      localStorage.removeItem('password_update_in_progress');
+    }
+
     if (
       !authLoading && 
       !subLoading && 
