@@ -16,6 +16,8 @@ interface CreateUserRequest {
 }
 
 serve(async (req) => {
+  console.log('[ADMIN-CREATE-USER] Recebida requisição');
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -25,6 +27,7 @@ serve(async (req) => {
     // Get the authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('[ADMIN-CREATE-USER] Missing authorization header');
       throw new Error('Missing authorization header');
     }
 
@@ -43,8 +46,11 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     
     if (userError || !user) {
+      console.error('[ADMIN-CREATE-USER] Erro ao verificar usuário:', userError);
       throw new Error('Unauthorized');
     }
+
+    console.log('[ADMIN-CREATE-USER] Usuário autenticado:', user.email);
 
     // Check if user has admin role
     const { data: roles, error: rolesError } = await supabaseClient
@@ -55,14 +61,24 @@ serve(async (req) => {
       .single();
 
     if (rolesError || !roles) {
+      console.error('[ADMIN-CREATE-USER] Usuário não é admin:', rolesError);
       throw new Error('User is not an admin');
     }
 
+    console.log('[ADMIN-CREATE-USER] Admin verificado');
+
     // Get request body
     const body: CreateUserRequest = await req.json();
+    console.log('[ADMIN-CREATE-USER] Email a criar:', body.email);
     
     if (!body.email || !body.password) {
       throw new Error('Email and password are required');
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(body.email)) {
+      throw new Error('Formato de email inválido');
     }
 
     // Validate password length
@@ -82,6 +98,26 @@ serve(async (req) => {
       }
     );
 
+    // Check if email already exists
+    console.log('[ADMIN-CREATE-USER] Verificando se email já existe...');
+    const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers({
+      perPage: 1000,
+    });
+
+    if (listError) {
+      console.error('[ADMIN-CREATE-USER] Erro ao listar usuários:', listError);
+    } else {
+      const emailExists = existingUsers?.users?.some(
+        (u) => u.email?.toLowerCase() === body.email.toLowerCase()
+      );
+      if (emailExists) {
+        console.error('[ADMIN-CREATE-USER] Email já cadastrado:', body.email);
+        throw new Error('Este email já está cadastrado no sistema');
+      }
+    }
+
+    console.log('[ADMIN-CREATE-USER] Criando usuário...');
+
     // Create the user
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email: body.email,
@@ -90,8 +126,20 @@ serve(async (req) => {
     });
 
     if (createError || !newUser.user) {
-      throw new Error(createError?.message || 'Failed to create user');
+      console.error('[ADMIN-CREATE-USER] Erro ao criar usuário:', createError);
+      
+      // Traduzir mensagens de erro comuns
+      let errorMessage = createError?.message || 'Failed to create user';
+      if (errorMessage.includes('already been registered')) {
+        errorMessage = 'Este email já está cadastrado no sistema';
+      } else if (errorMessage.includes('invalid email')) {
+        errorMessage = 'Formato de email inválido';
+      }
+      
+      throw new Error(errorMessage);
     }
+
+    console.log('[ADMIN-CREATE-USER] Usuário criado:', newUser.user.id);
 
     // Update the profile with additional data
     const { error: profileError } = await supabaseAdmin
@@ -104,7 +152,9 @@ serve(async (req) => {
       .eq('user_id', newUser.user.id);
 
     if (profileError) {
-      console.error('Error updating profile:', profileError);
+      console.error('[ADMIN-CREATE-USER] Erro ao atualizar profile:', profileError);
+    } else {
+      console.log('[ADMIN-CREATE-USER] Profile atualizado');
     }
 
     // Set user role
@@ -116,8 +166,12 @@ serve(async (req) => {
       });
 
     if (userRoleError) {
-      console.error('Error setting role:', userRoleError);
+      console.error('[ADMIN-CREATE-USER] Erro ao definir role:', userRoleError);
+    } else {
+      console.log('[ADMIN-CREATE-USER] Role definida:', body.role || 'aluno');
     }
+
+    console.log('[ADMIN-CREATE-USER] ✅ Usuário criado com sucesso');
 
     return new Response(
       JSON.stringify({
@@ -133,7 +187,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Error:', error);
+    console.error('[ADMIN-CREATE-USER] ❌ Erro:', error);
     const errorMessage = error instanceof Error ? error.message : 'An error occurred';
     return new Response(
       JSON.stringify({
