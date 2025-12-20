@@ -221,7 +221,7 @@ export default function MemoryPalace() {
               )}
 
               <div className="space-y-3">
-                <Button onClick={() => navigate('/study')} className="w-full">
+                <Button onClick={() => navigate('/caminho-ifa')} className="w-full">
                   Continuar Estudando
                 </Button>
                 <Button variant="outline" onClick={() => navigate('/tecnicas')} className="w-full">

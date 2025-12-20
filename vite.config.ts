@@ -82,7 +82,7 @@ export default defineConfig(({ mode }) => ({
             name: 'Estudar',
             short_name: 'Estudar',
             description: 'Iniciar uma sessão de estudo',
-            url: '/study',
+            url: '/caminho-ifa',
             icons: [{ src: '/icon-192.png', sizes: '192x192' }]
           },
           {
