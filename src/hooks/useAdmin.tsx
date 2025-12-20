@@ -1,12 +1,24 @@
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 export function useAdmin() {
-  const { user } = useAuth();
+  const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isColaborador, setIsColaborador] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Use direct auth state to avoid hot reload issues with context
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+    });
+    
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     checkRoles();
