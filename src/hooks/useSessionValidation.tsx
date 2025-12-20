@@ -137,6 +137,20 @@ export function useSessionValidation() {
         // Get session_id from localStorage (created by enforce-single-session)
         const storedSessionId = localStorage.getItem('session_id');
         
+        // Check if password was just changed (within last 60 seconds)
+        const passwordJustChanged = localStorage.getItem('password_just_changed');
+        if (passwordJustChanged) {
+          const changeTime = parseInt(passwordJustChanged);
+          const timeSinceChange = Date.now() - changeTime;
+          if (timeSinceChange < 60000) {
+            console.log('[SESSION-VALIDATION] Password just changed, skipping validation for', Math.round((60000 - timeSinceChange) / 1000), 'more seconds');
+            isValidatingRef.current = false;
+            return;
+          }
+          // Clean up old flag
+          localStorage.removeItem('password_just_changed');
+        }
+        
         if (!storedSessionId) {
           console.log('[SESSION-VALIDATION] No session_id in localStorage, forcing logout');
           isValidatingRef.current = false;

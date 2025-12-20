@@ -197,6 +197,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password: newPassword
       });
       
+      if (!error) {
+        // Senha atualizada com sucesso - marcar flag para bypass temporário da validação
+        localStorage.setItem('password_just_changed', Date.now().toString());
+        console.log('[AUTH] Senha atualizada com sucesso, flag de bypass definida');
+      }
+      
       localStorage.removeItem('password_update_in_progress');
       return { error };
     } catch (err: any) {

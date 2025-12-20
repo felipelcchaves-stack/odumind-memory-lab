@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -9,28 +9,60 @@ import { toast } from "sonner";
 
 export function AdminLayout() {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, session, loading: authLoading } = useAuth();
   const { isAdmin, isColaborador, loading: adminLoading } = useAdmin();
+  const [isReady, setIsReady] = useState(false);
+  const [hasRedirected, setHasRedirected] = useState(false);
 
+  // Marcar como pronto apenas quando TODOS os estados estiverem definidos
   useEffect(() => {
-    // Aguardar ambos os loadings antes de verificar
-    if (authLoading || adminLoading) {
-      return;
+    if (!authLoading && !adminLoading) {
+      // Pequeno delay para garantir propagação de estado
+      const timer = setTimeout(() => {
+        setIsReady(true);
+      }, 50);
+      return () => clearTimeout(timer);
+    } else {
+      setIsReady(false);
     }
+  }, [authLoading, adminLoading]);
 
-    if (!user) {
+  // Verificar acesso apenas quando estiver pronto
+  useEffect(() => {
+    if (!isReady || hasRedirected) return;
+
+    console.log('[AdminLayout] Checking access:', { 
+      user: user?.email, 
+      session: !!session,
+      isColaborador, 
+      isAdmin,
+      isReady 
+    });
+
+    // Se não há usuário ou sessão, redirecionar para login
+    if (!user || !session) {
+      console.log('[AdminLayout] No user or session, redirecting to /');
+      setHasRedirected(true);
       navigate("/");
       return;
     }
 
+    // Se não é colaborador, acesso negado
     if (!isColaborador) {
+      console.log('[AdminLayout] Not colaborador, redirecting to /dashboard');
       toast.error("Acesso negado. Apenas administradores e colaboradores podem acessar esta área.");
+      setHasRedirected(true);
       navigate("/dashboard");
     }
-  }, [user, isColaborador, authLoading, adminLoading, navigate]);
+  }, [isReady, user, session, isColaborador, hasRedirected, navigate, isAdmin]);
 
-  // Mostrar loading enquanto qualquer um estiver carregando
-  if (authLoading || adminLoading) {
+  // Reset hasRedirected quando o usuário mudar
+  useEffect(() => {
+    setHasRedirected(false);
+  }, [user?.id]);
+
+  // Mostrar loading enquanto não estiver pronto
+  if (!isReady) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -41,7 +73,8 @@ export function AdminLayout() {
     );
   }
 
-  if (!isColaborador) {
+  // Se já redirecionou ou não tem acesso, não renderizar nada
+  if (hasRedirected || !isColaborador || !user || !session) {
     return null;
   }
 
