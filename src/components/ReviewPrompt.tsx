@@ -40,10 +40,8 @@ export const ReviewPrompt = () => {
     submitReview 
   } = useUserReview();
   
-  // Only open if user hasn't dismissed recently AND hasn't already reviewed
-  const [isOpen, setIsOpen] = useState(() => {
-    return canShowReviewPrompt() && !hasReviewed;
-  });
+  // IMPORTANTE: Começar FECHADO e só abrir após verificar tudo
+  const [isOpen, setIsOpen] = useState(false);
   const [rating, setRating] = useState(userReview?.rating || 0);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [comment, setComment] = useState(userReview?.comment || '');
@@ -51,28 +49,42 @@ export const ReviewPrompt = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [nameError, setNameError] = useState(false);
 
-  // Update isOpen when hasReviewed changes (after loading)
+  // Decidir se deve abrir APÓS os dados carregarem
   useEffect(() => {
-    if (!loading && hasReviewed) {
+    const canShow = canShowReviewPrompt();
+    
+    console.log('[ReviewPrompt] Verificando se deve abrir:', {
+      loading,
+      hasReviewed,
+      canReview,
+      canShowFromLocalStorage: canShow,
+      isOpen
+    });
+
+    // Só abre se: não está carregando, pode avaliar, não avaliou ainda e não dispensou recentemente
+    if (!loading && canReview && !hasReviewed && canShow) {
+      console.log('[ReviewPrompt] ✅ Abrindo modal de avaliação');
+      setIsOpen(true);
+    } else if (!loading && hasReviewed) {
+      console.log('[ReviewPrompt] ❌ Usuário já avaliou, mantendo fechado');
       setIsOpen(false);
     }
-  }, [loading, hasReviewed]);
+  }, [loading, hasReviewed, canReview]);
 
   // Handle dialog close - save dismissal timestamp
   const handleOpenChange = (open: boolean) => {
+    console.log('[ReviewPrompt] handleOpenChange:', open);
     if (!open) {
       // User closed the modal - save timestamp
-      localStorage.setItem(REVIEW_DISMISSED_KEY, new Date().toISOString());
+      const now = new Date().toISOString();
+      localStorage.setItem(REVIEW_DISMISSED_KEY, now);
+      console.log('[ReviewPrompt] 📝 Salvando dismissal timestamp:', now);
     }
     setIsOpen(open);
   };
 
-  if (loading || !canReview || !isOpen) {
-    return null;
-  }
-
-  // Don't show if already reviewed (unless they want to edit)
-  if (hasReviewed && !userReview) {
+  // Não renderizar nada enquanto carrega ou se não pode/não deve mostrar
+  if (loading || !canReview) {
     return null;
   }
 
