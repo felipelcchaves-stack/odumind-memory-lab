@@ -329,7 +329,27 @@ export default function OduStudy() {
             variant="hero" 
             size="lg" 
             className="flex-1"
-            onClick={() => navigate("/study")}
+            onClick={async () => {
+              try {
+                // Busca a fase que contém este Odu
+                const { data: phase } = await supabase
+                  .from('learning_phases')
+                  .select('slug, odus_incluidos')
+                  .contains('odus_incluidos', [odu.numero])
+                  .maybeSingle();
+                
+                if (phase?.slug) {
+                  navigate(`/study?fase=${phase.slug}`);
+                } else {
+                  // Se não encontrar fase específica, vai para a primeira fase disponível
+                  toast.info("Redirecionando para a sessão de estudo...");
+                  navigate('/caminho-ifa');
+                }
+              } catch (error) {
+                console.error("Erro ao buscar fase:", error);
+                toast.error("Erro ao iniciar sessão. Tente novamente.");
+              }
+            }}
           >
             Iniciar Sessão de Memorização
           </Button>
