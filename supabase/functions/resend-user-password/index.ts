@@ -26,7 +26,7 @@ serve(async (req: Request): Promise<Response> => {
   }
 
   try {
-    logStep("Starting password resend process");
+    logStep("Starting password reset process");
 
     // Get the authorization header from the request
     const authHeader = req.headers.get("Authorization");
@@ -38,7 +38,7 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // Create Supabase client with user's token to verify admin role
+    // Create Supabase client with user's token to verify admin/colaborador role
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -57,20 +57,22 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // Verify admin role
-    const { data: adminCheck } = await supabaseUser.rpc('has_admin_role', { _user_id: currentUser.id });
-    if (!adminCheck) {
-      logStep("ERROR: User is not admin", { userId: currentUser.id });
+    // Verify admin OR colaborador role
+    const { data: isAdmin } = await supabaseUser.rpc('has_admin_role', { _user_id: currentUser.id });
+    const { data: isColab } = await supabaseUser.rpc('has_colaborador_role', { _user_id: currentUser.id });
+    
+    if (!isAdmin && !isColab) {
+      logStep("ERROR: User is not admin or colaborador", { userId: currentUser.id });
       return new Response(
-        JSON.stringify({ error: "Apenas administradores podem reenviar senhas" }),
+        JSON.stringify({ error: "Apenas administradores ou colaboradores podem redefinir senhas" }),
         { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    logStep("Admin verified", { adminId: currentUser.id });
+    logStep("User authorized", { adminId: currentUser.id, isAdmin, isColab });
 
     // Parse request body
-    const { user_id } = await req.json();
+    const { user_id, custom_password, send_email = true } = await req.json();
     if (!user_id) {
       logStep("ERROR: Missing user_id");
       return new Response(
@@ -79,7 +81,7 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    logStep("Processing password reset for user", { targetUserId: user_id });
+    logStep("Processing password reset for user", { targetUserId: user_id, hasCustomPassword: !!custom_password, sendEmail: send_email });
 
     // Create admin client to update user password
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
@@ -112,13 +114,22 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // Generate new temporary password
-    const tempPassword = generateTempPassword();
-    logStep("Generated temporary password");
+    // Use custom password or generate new temporary password
+    const newPassword = custom_password || generateTempPassword();
+    logStep("Password determined", { isCustom: !!custom_password });
+
+    // Validate password length
+    if (newPassword.length < 6) {
+      logStep("ERROR: Password too short");
+      return new Response(
+        JSON.stringify({ error: "A senha deve ter no mínimo 6 caracteres" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
 
     // Update user password using admin API
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(user_id, {
-      password: tempPassword,
+      password: newPassword,
     });
 
     if (updateError) {
@@ -131,52 +142,61 @@ serve(async (req: Request): Promise<Response> => {
 
     logStep("Password updated successfully");
 
-    // Get subscription info for plan name
-    const { data: subscription } = await supabaseAdmin
-      .from('subscriptions')
-      .select('plan_name')
-      .eq('user_id', user_id)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .single();
+    // Only send email if requested
+    if (send_email) {
+      // Get subscription info for plan name
+      const { data: subscription } = await supabaseAdmin
+        .from('subscriptions')
+        .select('plan_name')
+        .eq('user_id', user_id)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .single();
 
-    const planName = subscription?.plan_name || 'Gratuito';
+      const planName = subscription?.plan_name || 'Gratuito';
 
-    // Call send-welcome-email function
-    logStep("Calling send-welcome-email function");
-    
-    const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-welcome-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseAnonKey}`,
-      },
-      body: JSON.stringify({
-        email: userEmail,
-        name: userName,
-        password: tempPassword,
-        planName: planName,
-      }),
-    });
-
-    if (!emailResponse.ok) {
-      const errorText = await emailResponse.text();
-      logStep("WARNING: Email send failed but password was updated", { error: errorText });
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          warning: "Senha atualizada, mas houve erro ao enviar email. A nova senha é: " + tempPassword 
+      // Call send-welcome-email function
+      logStep("Calling send-welcome-email function");
+      
+      const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-welcome-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+        },
+        body: JSON.stringify({
+          email: userEmail,
+          name: userName,
+          password: newPassword,
+          planName: planName,
         }),
-        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      });
+
+      if (!emailResponse.ok) {
+        const errorText = await emailResponse.text();
+        logStep("WARNING: Email send failed but password was updated", { error: errorText });
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            password: newPassword,
+            warning: "Senha atualizada, mas houve erro ao enviar email." 
+          }),
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      logStep("Email sent successfully", { email: userEmail });
+    } else {
+      logStep("Email sending skipped as requested");
     }
 
-    logStep("Password reset completed successfully", { email: userEmail });
+    logStep("Password reset completed successfully", { email: userEmail, emailSent: send_email });
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Nova senha enviada para ${userEmail}` 
+        password: newPassword,
+        message: send_email ? `Nova senha enviada para ${userEmail}` : 'Senha redefinida com sucesso'
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
