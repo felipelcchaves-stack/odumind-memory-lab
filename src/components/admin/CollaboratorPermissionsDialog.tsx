@@ -20,38 +20,69 @@ interface CollaboratorPermissionsDialogProps {
   userName: string;
 }
 
-const PERMISSION_LABELS: Record<string, { label: string; description: string }> = {
+const PERMISSION_LABELS: Record<string, { label: string; description: string; category: 'basic' | 'operational' | 'admin' }> = {
+  // Permissões básicas de conteúdo
   odu: {
     label: "Gerenciar Odu",
     description: "Criar, editar e excluir Odu",
+    category: 'basic',
   },
   rituais: {
     label: "Gerenciar Rituais",
     description: "Criar, editar e excluir rituais, rezas e invocações",
+    category: 'basic',
   },
   changelog: {
     label: "Gerenciar Novidades",
     description: "Criar e editar changelog",
+    category: 'basic',
   },
   tools: {
     label: "Ferramentas",
     description: "Acessar ferramentas administrativas",
+    category: 'basic',
   },
+  caminhos: {
+    label: "Gerenciar Caminhos",
+    description: "Criar e editar trilhas de aprendizado",
+    category: 'basic',
+  },
+  // Permissões operacionais (para desonerar o admin)
   users: {
     label: "Gerenciar Usuários",
-    description: "Visualizar e gerenciar usuários (apenas admins)",
+    description: "Visualizar usuários, editar perfis e reenviar senhas (não pode promover a admin)",
+    category: 'operational',
   },
   analytics: {
     label: "Analytics",
-    description: "Visualizar analytics e métricas (apenas admins)",
+    description: "Visualizar métricas gerais da plataforma",
+    category: 'operational',
   },
+  analytics_avancadas: {
+    label: "Analytics Avançadas",
+    description: "Visualizar insights detalhados e análises de marketing",
+    category: 'operational',
+  },
+  anuncios: {
+    label: "Gerenciar Anúncios",
+    description: "Criar e gerenciar anúncios e comunicados",
+    category: 'operational',
+  },
+  avaliacoes: {
+    label: "Gerenciar Avaliações",
+    description: "Moderar avaliações e depoimentos de usuários",
+    category: 'operational',
+  },
+  // Permissões exclusivas de admin
   settings: {
     label: "Configurações",
-    description: "Gerenciar configurações do sistema (apenas admins)",
+    description: "Gerenciar configurações do sistema",
+    category: 'admin',
   },
   restore: {
     label: "Restaurar Assinaturas",
-    description: "Restaurar planos de usuários (apenas admins)",
+    description: "Restaurar planos de usuários",
+    category: 'admin',
   },
 };
 
@@ -163,16 +194,18 @@ export function CollaboratorPermissionsDialog({
           </div>
         ) : (
           <>
-            <ScrollArea className="h-[400px] pr-4">
+            <ScrollArea className="h-[450px] pr-4">
               <div className="space-y-6">
-                {/* Basic Permissions */}
+                {/* Basic Permissions - Content */}
                 <div>
                   <h3 className="font-semibold mb-3 text-sm text-muted-foreground">
-                    Permissões Básicas
+                    📝 Permissões de Conteúdo
                   </h3>
-                  <div className="space-y-4">
-                    {["odu", "rituais", "changelog", "tools"].map((key) => (
-                      <div key={key} className="flex items-start space-x-3 rounded-lg border p-4">
+                  <div className="space-y-3">
+                    {Object.entries(PERMISSION_LABELS)
+                      .filter(([_, v]) => v.category === 'basic')
+                      .map(([key, value]) => (
+                      <div key={key} className="flex items-start space-x-3 rounded-lg border p-4 hover:bg-accent/50 transition-colors">
                         <Checkbox
                           id={key}
                           checked={permissions[key] || false}
@@ -183,10 +216,44 @@ export function CollaboratorPermissionsDialog({
                             htmlFor={key}
                             className="text-sm font-medium leading-none cursor-pointer"
                           >
-                            {PERMISSION_LABELS[key].label}
+                            {value.label}
                           </Label>
                           <p className="text-sm text-muted-foreground">
-                            {PERMISSION_LABELS[key].description}
+                            {value.description}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Operational Permissions - To offload admin */}
+                <div>
+                  <h3 className="font-semibold mb-3 text-sm text-muted-foreground">
+                    📊 Permissões Operacionais
+                  </h3>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Permita que colaboradores ajudem nas operações do dia-a-dia
+                  </p>
+                  <div className="space-y-3">
+                    {Object.entries(PERMISSION_LABELS)
+                      .filter(([_, v]) => v.category === 'operational')
+                      .map(([key, value]) => (
+                      <div key={key} className="flex items-start space-x-3 rounded-lg border p-4 hover:bg-accent/50 transition-colors">
+                        <Checkbox
+                          id={key}
+                          checked={permissions[key] || false}
+                          onCheckedChange={() => togglePermission(key)}
+                        />
+                        <div className="flex-1 space-y-1">
+                          <Label
+                            htmlFor={key}
+                            className="text-sm font-medium leading-none cursor-pointer"
+                          >
+                            {value.label}
+                          </Label>
+                          <p className="text-sm text-muted-foreground">
+                            {value.description}
                           </p>
                         </div>
                       </div>
@@ -197,10 +264,12 @@ export function CollaboratorPermissionsDialog({
                 {/* Admin-only Permissions */}
                 <div>
                   <h3 className="font-semibold mb-3 text-sm text-muted-foreground">
-                    Permissões Administrativas (Apenas Admins)
+                    🔒 Permissões Administrativas (Apenas Admins)
                   </h3>
-                  <div className="space-y-4 opacity-50">
-                    {["users", "analytics", "settings", "restore"].map((key) => (
+                  <div className="space-y-3 opacity-50">
+                    {Object.entries(PERMISSION_LABELS)
+                      .filter(([_, v]) => v.category === 'admin')
+                      .map(([key, value]) => (
                       <div key={key} className="flex items-start space-x-3 rounded-lg border p-4">
                         <Checkbox
                           id={key}
@@ -212,17 +281,17 @@ export function CollaboratorPermissionsDialog({
                             htmlFor={key}
                             className="text-sm font-medium leading-none"
                           >
-                            {PERMISSION_LABELS[key].label}
+                            {value.label}
                           </Label>
                           <p className="text-sm text-muted-foreground">
-                            {PERMISSION_LABELS[key].description}
+                            {value.description}
                           </p>
                         </div>
                       </div>
                     ))}
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
-                    Estas permissões estão disponíveis apenas para administradores
+                    Estas permissões são exclusivas para administradores
                   </p>
                 </div>
               </div>

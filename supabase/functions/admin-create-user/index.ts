@@ -76,25 +76,27 @@ serve(async (req) => {
       }
     );
 
-    // Check if user has admin role using admin client (bypasses RLS)
+    // Check if user has admin or colaborador role using admin client (bypasses RLS)
     const { data: roles, error: rolesError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .maybeSingle();
+      .in('role', ['admin', 'colaborador']);
 
     if (rolesError) {
       console.error('[ADMIN-CREATE-USER] Erro ao buscar roles:', rolesError);
       throw new Error('Erro ao verificar permissões');
     }
 
-    if (!roles) {
-      console.error('[ADMIN-CREATE-USER] Usuário não é admin:', user.email);
-      throw new Error('Acesso negado - Apenas administradores podem criar usuários');
+    if (!roles || roles.length === 0) {
+      console.error('[ADMIN-CREATE-USER] Usuário não é admin nem colaborador:', user.email);
+      throw new Error('Acesso negado - Apenas administradores e colaboradores podem criar usuários');
     }
 
-    console.log('[ADMIN-CREATE-USER] Admin verificado');
+    const isAdmin = roles.some(r => r.role === 'admin');
+    const isColaborador = roles.some(r => r.role === 'colaborador');
+
+    console.log('[ADMIN-CREATE-USER] Permissões verificadas - Admin:', isAdmin, 'Colaborador:', isColaborador);
 
     // Get request body
     const body: CreateUserRequest = await req.json();
@@ -171,18 +173,28 @@ serve(async (req) => {
       console.log('[ADMIN-CREATE-USER] Profile atualizado');
     }
 
+    // Determine role - colaboradores cannot create admin users
+    let targetRole = body.role || 'aluno';
+    
+    // Security check: only admins can create admin users
+    if (targetRole === 'admin' && !isAdmin) {
+      console.log('[ADMIN-CREATE-USER] Colaborador tentou criar admin - negado');
+      targetRole = 'aluno'; // Fallback to aluno if colaborador tries to create admin
+      console.log('[ADMIN-CREATE-USER] Role alterada para aluno por segurança');
+    }
+
     // Set user role
     const { error: userRoleError } = await supabaseAdmin
       .from('user_roles')
       .insert({
         user_id: newUser.user.id,
-        role: body.role || 'aluno',
+        role: targetRole,
       });
 
     if (userRoleError) {
       console.error('[ADMIN-CREATE-USER] Erro ao definir role:', userRoleError);
     } else {
-      console.log('[ADMIN-CREATE-USER] Role definida:', body.role || 'aluno');
+      console.log('[ADMIN-CREATE-USER] Role definida:', targetRole);
     }
 
     console.log('[ADMIN-CREATE-USER] ✅ Usuário criado com sucesso');
