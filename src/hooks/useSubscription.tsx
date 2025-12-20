@@ -99,6 +99,41 @@ export const useSubscription = () => {
         },
       });
 
+      // Handle 401 specifically - try to refresh session and retry once
+      if (error && (error.message?.includes('401') || error.message?.includes('Session expired'))) {
+        console.warn('Session expired during check-subscription, attempting refresh...');
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        
+        if (!refreshError && refreshData.session?.access_token) {
+          console.log('Session refreshed, retrying check-subscription...');
+          const { data: retryData, error: retryError } = await supabase.functions.invoke('check-subscription', {
+            headers: {
+              Authorization: `Bearer ${refreshData.session.access_token}`,
+            },
+          });
+          
+          if (!retryError && retryData) {
+            // Success on retry - update state with fresh data
+            const { data: updatedData } = await supabase
+              .from('subscriptions')
+              .select('*')
+              .eq('user_id', user.id)
+              .maybeSingle();
+
+            if (updatedData) {
+              setSubscription(updatedData as SubscriptionData);
+            }
+            setLoading(false);
+            return;
+          }
+        }
+        
+        // Refresh failed - use local data
+        console.warn('Session refresh failed, using local data');
+        setLoading(false);
+        return;
+      }
+
       if (error) {
         console.error('Error checking subscription with Stripe:', error);
         // Only show toast if user is actually logged in (not on landing page)
