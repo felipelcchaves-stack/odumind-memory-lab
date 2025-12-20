@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePlanVisibilityAdmin } from '@/hooks/usePlanVisibility';
 import { PLANS } from '@/config/plans';
-import { Loader2, Save, Eye, EyeOff, ExternalLink, CheckCircle, AlertCircle, Code, CreditCard, Megaphone, Gift, CalendarClock, Play, Layout, FlaskConical } from 'lucide-react';
+import { Loader2, Save, Eye, EyeOff, ExternalLink, CheckCircle, AlertCircle, Code, CreditCard, Megaphone, Gift, CalendarClock, Play, Layout, FlaskConical, Tag, Timer, X, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { CustomScriptsManager } from './CustomScriptsManager';
 import { ABTestManager } from './ABTestManager';
@@ -27,6 +27,8 @@ export function SettingsManager() {
   const trackingSettings = getSettingsByCategory('tracking');
   const marketingSettings = getSettingsByCategory('marketing');
   const landingSettings = getSettingsByCategory('landing');
+  const urgencySettings = getSettingsByCategory('urgency');
+  const bannerSettings = getSettingsByCategory('promo_banner');
 
   // Estados para o exit popup
   const [exitPopupEnabled, setExitPopupEnabled] = useState(true);
@@ -46,6 +48,29 @@ export function SettingsManager() {
 
   // Estados para seção de técnicas na landing
   const [showTechniqueScreenshots, setShowTechniqueScreenshots] = useState(false);
+
+  // Estados para Banner de Promoções
+  const [bannerEnabled, setBannerEnabled] = useState(false);
+  const [bannerText, setBannerText] = useState('🔥 Black Friday: 50% OFF em todos os planos!');
+  const [bannerLink, setBannerLink] = useState('/auth');
+  const [bannerLinkText, setBannerLinkText] = useState('Aproveitar');
+  const [bannerBgColor, setBannerBgColor] = useState('primary');
+  const [bannerTextColor, setBannerTextColor] = useState('primary-foreground');
+  const [bannerStartDate, setBannerStartDate] = useState('');
+  const [bannerEndDate, setBannerEndDate] = useState('');
+  const [bannerDismissible, setBannerDismissible] = useState(true);
+  const [savingBanner, setSavingBanner] = useState(false);
+
+  // Estados para Controle de Escassez
+  const [urgencyEnabled, setUrgencyEnabled] = useState(false);
+  const [urgencyTitle, setUrgencyTitle] = useState('Últimas {spots} Vagas do Mês');
+  const [urgencySubtitle, setUrgencySubtitle] = useState('Desconto especial de lançamento termina em:');
+  const [urgencySpotsRemaining, setUrgencySpotsRemaining] = useState('50');
+  const [urgencyEndDate, setUrgencyEndDate] = useState('');
+  const [urgencyShowTimer, setUrgencyShowTimer] = useState(true);
+  const [urgencyShowSpots, setUrgencyShowSpots] = useState(true);
+  const [urgencyShowSocialProof, setUrgencyShowSocialProof] = useState(true);
+  const [savingUrgency, setSavingUrgency] = useState(false);
 
   // Carregar valores do marketing ao iniciar
   useEffect(() => {
@@ -94,6 +119,77 @@ export function SettingsManager() {
       });
     }
   }, [landingSettings]);
+
+  // Carregar valores do banner
+  useEffect(() => {
+    if (bannerSettings.length > 0) {
+      bannerSettings.forEach(setting => {
+        switch (setting.key) {
+          case 'promo_banner_enabled':
+            setBannerEnabled(setting.value === 'true');
+            break;
+          case 'promo_banner_text':
+            setBannerText(setting.value || '🔥 Black Friday: 50% OFF em todos os planos!');
+            break;
+          case 'promo_banner_link':
+            setBannerLink(setting.value || '/auth');
+            break;
+          case 'promo_banner_link_text':
+            setBannerLinkText(setting.value || 'Aproveitar');
+            break;
+          case 'promo_banner_bg_color':
+            setBannerBgColor(setting.value || 'primary');
+            break;
+          case 'promo_banner_text_color':
+            setBannerTextColor(setting.value || 'primary-foreground');
+            break;
+          case 'promo_banner_start_date':
+            setBannerStartDate(setting.value || '');
+            break;
+          case 'promo_banner_end_date':
+            setBannerEndDate(setting.value || '');
+            break;
+          case 'promo_banner_dismissible':
+            setBannerDismissible(setting.value !== 'false');
+            break;
+        }
+      });
+    }
+  }, [bannerSettings]);
+
+  // Carregar valores de urgência
+  useEffect(() => {
+    if (urgencySettings.length > 0) {
+      urgencySettings.forEach(setting => {
+        switch (setting.key) {
+          case 'urgency_enabled':
+            setUrgencyEnabled(setting.value === 'true');
+            break;
+          case 'urgency_title':
+            setUrgencyTitle(setting.value || 'Últimas {spots} Vagas do Mês');
+            break;
+          case 'urgency_subtitle':
+            setUrgencySubtitle(setting.value || 'Desconto especial de lançamento termina em:');
+            break;
+          case 'urgency_spots_remaining':
+            setUrgencySpotsRemaining(setting.value || '50');
+            break;
+          case 'urgency_end_date':
+            setUrgencyEndDate(setting.value || '');
+            break;
+          case 'urgency_show_timer':
+            setUrgencyShowTimer(setting.value !== 'false');
+            break;
+          case 'urgency_show_spots':
+            setUrgencyShowSpots(setting.value !== 'false');
+            break;
+          case 'urgency_show_social_proof':
+            setUrgencyShowSocialProof(setting.value !== 'false');
+            break;
+        }
+      });
+    }
+  }, [urgencySettings]);
 
   const handleChange = (key: string, value: string) => {
     setEditingValues(prev => ({ ...prev, [key]: value }));
@@ -227,6 +323,49 @@ export function SettingsManager() {
     return text.replace(/{discount}/g, exitPopupDiscount);
   };
 
+  const handleSaveBannerSettings = async () => {
+    setSavingBanner(true);
+    try {
+      await Promise.all([
+        updateSetting('promo_banner_enabled', String(bannerEnabled)),
+        updateSetting('promo_banner_text', bannerText),
+        updateSetting('promo_banner_link', bannerLink),
+        updateSetting('promo_banner_link_text', bannerLinkText),
+        updateSetting('promo_banner_bg_color', bannerBgColor),
+        updateSetting('promo_banner_text_color', bannerTextColor),
+        updateSetting('promo_banner_start_date', bannerStartDate),
+        updateSetting('promo_banner_end_date', bannerEndDate),
+        updateSetting('promo_banner_dismissible', String(bannerDismissible)),
+      ]);
+      toast.success('Configurações do banner salvas!');
+    } catch (error) {
+      toast.error('Erro ao salvar configurações');
+    } finally {
+      setSavingBanner(false);
+    }
+  };
+
+  const handleSaveUrgencySettings = async () => {
+    setSavingUrgency(true);
+    try {
+      await Promise.all([
+        updateSetting('urgency_enabled', String(urgencyEnabled)),
+        updateSetting('urgency_title', urgencyTitle),
+        updateSetting('urgency_subtitle', urgencySubtitle),
+        updateSetting('urgency_spots_remaining', urgencySpotsRemaining),
+        updateSetting('urgency_end_date', urgencyEndDate),
+        updateSetting('urgency_show_timer', String(urgencyShowTimer)),
+        updateSetting('urgency_show_spots', String(urgencyShowSpots)),
+        updateSetting('urgency_show_social_proof', String(urgencyShowSocialProof)),
+      ]);
+      toast.success('Configurações de escassez salvas!');
+    } catch (error) {
+      toast.error('Erro ao salvar configurações');
+    } finally {
+      setSavingUrgency(false);
+    }
+  };
+
   if (loading || visibilityLoading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -238,7 +377,7 @@ export function SettingsManager() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="plans" className="w-full">
-        <TabsList className="grid w-full grid-cols-6 mb-6">
+        <TabsList className="grid w-full grid-cols-7 mb-6">
           <TabsTrigger value="plans" className="gap-2">
             <CreditCard className="w-4 h-4" />
             Planos
@@ -246,6 +385,10 @@ export function SettingsManager() {
           <TabsTrigger value="landing" className="gap-2">
             <Layout className="w-4 h-4" />
             Landing
+          </TabsTrigger>
+          <TabsTrigger value="promos" className="gap-2">
+            <Tag className="w-4 h-4" />
+            Promoções
           </TabsTrigger>
           <TabsTrigger value="pixels">Pixels</TabsTrigger>
           <TabsTrigger value="scripts" className="gap-2">
@@ -361,6 +504,374 @@ export function SettingsManager() {
                       }
                     }}
                   />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* PROMOÇÕES TAB */}
+        <TabsContent value="promos">
+          <div className="space-y-6">
+            {/* Banner de Promoções */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Tag className="w-5 h-5 text-primary" />
+                  Banner de Promoções
+                </CardTitle>
+                <CardDescription>
+                  Configure um banner fixo no topo da página para promoções especiais (Black Friday, Lançamentos, etc.)
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Switch para habilitar/desabilitar */}
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-base font-medium">Banner Habilitado</Label>
+                      <Badge variant={bannerEnabled ? "default" : "secondary"}>
+                        {bannerEnabled ? 'Ativo' : 'Inativo'}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Quando ativado, o banner aparece no topo de todas as páginas públicas
+                    </p>
+                  </div>
+                  <Switch
+                    checked={bannerEnabled}
+                    onCheckedChange={setBannerEnabled}
+                  />
+                </div>
+
+                {/* Texto do Banner */}
+                <div className="space-y-2">
+                  <Label htmlFor="bannerText">Texto do Banner</Label>
+                  <Input
+                    id="bannerText"
+                    value={bannerText}
+                    onChange={(e) => setBannerText(e.target.value)}
+                    placeholder="🔥 Black Friday: 50% OFF em todos os planos!"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Use emojis para chamar atenção! Ex: 🔥 ⚡ 🎁 ✨
+                  </p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  {/* Link */}
+                  <div className="space-y-2">
+                    <Label htmlFor="bannerLink">Link (URL)</Label>
+                    <Input
+                      id="bannerLink"
+                      value={bannerLink}
+                      onChange={(e) => setBannerLink(e.target.value)}
+                      placeholder="/auth"
+                    />
+                  </div>
+
+                  {/* Texto do Link */}
+                  <div className="space-y-2">
+                    <Label htmlFor="bannerLinkText">Texto do Link</Label>
+                    <Input
+                      id="bannerLinkText"
+                      value={bannerLinkText}
+                      onChange={(e) => setBannerLinkText(e.target.value)}
+                      placeholder="Aproveitar"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  {/* Cor de Fundo */}
+                  <div className="space-y-2">
+                    <Label>Cor de Fundo</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {['primary', 'secondary', 'destructive', 'accent'].map((color) => (
+                        <Button
+                          key={color}
+                          type="button"
+                          variant={bannerBgColor === color ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setBannerBgColor(color)}
+                          className="capitalize"
+                        >
+                          {color}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Fechável */}
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="space-y-1">
+                      <Label className="text-base font-medium">Fechável</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Usuário pode fechar o banner
+                      </p>
+                    </div>
+                    <Switch
+                      checked={bannerDismissible}
+                      onCheckedChange={setBannerDismissible}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  {/* Data Início */}
+                  <div className="space-y-2">
+                    <Label htmlFor="bannerStartDate">Data de Início (opcional)</Label>
+                    <Input
+                      id="bannerStartDate"
+                      type="datetime-local"
+                      value={bannerStartDate}
+                      onChange={(e) => setBannerStartDate(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Deixe vazio para começar imediatamente
+                    </p>
+                  </div>
+
+                  {/* Data Fim */}
+                  <div className="space-y-2">
+                    <Label htmlFor="bannerEndDate">Data de Fim (opcional)</Label>
+                    <Input
+                      id="bannerEndDate"
+                      type="datetime-local"
+                      value={bannerEndDate}
+                      onChange={(e) => setBannerEndDate(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Deixe vazio para nunca expirar
+                    </p>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Preview */}
+                <div className="space-y-3">
+                  <Label className="text-base font-medium">Preview</Label>
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className={`relative w-full py-2.5 px-4 text-center bg-${bannerBgColor} text-${bannerBgColor === 'primary' ? 'primary-foreground' : bannerBgColor + '-foreground'}`}>
+                      <div className="flex items-center justify-center gap-4">
+                        <span className="text-sm md:text-base font-medium">
+                          {bannerText}
+                        </span>
+                        {bannerLink && bannerLinkText && (
+                          <span className="font-semibold underline underline-offset-2 flex items-center gap-1">
+                            {bannerLinkText}
+                            <ArrowRight className="w-3 h-3" />
+                          </span>
+                        )}
+                      </div>
+                      {bannerDismissible && (
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2">
+                          <X className="w-4 h-4" />
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Botão de salvar */}
+                <Button 
+                  onClick={handleSaveBannerSettings} 
+                  disabled={savingBanner}
+                  className="w-full"
+                  size="lg"
+                >
+                  {savingBanner ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Salvar Configurações do Banner
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Controle de Escassez */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Timer className="w-5 h-5 text-primary" />
+                  Controle de Escassez / Urgência
+                </CardTitle>
+                <CardDescription>
+                  Configure a seção de urgência com contador de tempo e vagas limitadas para aumentar conversões
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Switch para habilitar/desabilitar */}
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-base font-medium">Seção de Urgência Habilitada</Label>
+                      <Badge variant={urgencyEnabled ? "default" : "secondary"}>
+                        {urgencyEnabled ? 'Ativa' : 'Inativa'}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Exibe contador de tempo e vagas limitadas na landing page
+                    </p>
+                  </div>
+                  <Switch
+                    checked={urgencyEnabled}
+                    onCheckedChange={setUrgencyEnabled}
+                  />
+                </div>
+
+                {/* Título */}
+                <div className="space-y-2">
+                  <Label htmlFor="urgencyTitle">Título</Label>
+                  <Input
+                    id="urgencyTitle"
+                    value={urgencyTitle}
+                    onChange={(e) => setUrgencyTitle(e.target.value)}
+                    placeholder="Últimas {spots} Vagas do Mês"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Use <code className="bg-muted px-1 py-0.5 rounded">{'{spots}'}</code> para inserir o número de vagas
+                  </p>
+                </div>
+
+                {/* Subtítulo */}
+                <div className="space-y-2">
+                  <Label htmlFor="urgencySubtitle">Subtítulo</Label>
+                  <Input
+                    id="urgencySubtitle"
+                    value={urgencySubtitle}
+                    onChange={(e) => setUrgencySubtitle(e.target.value)}
+                    placeholder="Desconto especial de lançamento termina em:"
+                  />
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  {/* Vagas Restantes */}
+                  <div className="space-y-2">
+                    <Label htmlFor="urgencySpots">Vagas Restantes</Label>
+                    <Input
+                      id="urgencySpots"
+                      type="number"
+                      min="1"
+                      max="1000"
+                      value={urgencySpotsRemaining}
+                      onChange={(e) => setUrgencySpotsRemaining(e.target.value)}
+                      placeholder="50"
+                    />
+                  </div>
+
+                  {/* Data/Hora de Fim */}
+                  <div className="space-y-2">
+                    <Label htmlFor="urgencyEndDate">Data/Hora de Fim do Timer</Label>
+                    <Input
+                      id="urgencyEndDate"
+                      type="datetime-local"
+                      value={urgencyEndDate}
+                      onChange={(e) => setUrgencyEndDate(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Deixe vazio para usar final do dia atual
+                    </p>
+                  </div>
+                </div>
+
+                {/* Switches de visibilidade */}
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <Label className="text-sm font-medium">Mostrar Timer</Label>
+                    <Switch
+                      checked={urgencyShowTimer}
+                      onCheckedChange={setUrgencyShowTimer}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <Label className="text-sm font-medium">Mostrar Vagas</Label>
+                    <Switch
+                      checked={urgencyShowSpots}
+                      onCheckedChange={setUrgencyShowSpots}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <Label className="text-sm font-medium">Prova Social</Label>
+                    <Switch
+                      checked={urgencyShowSocialProof}
+                      onCheckedChange={setUrgencyShowSocialProof}
+                    />
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Preview */}
+                <div className="space-y-3">
+                  <Label className="text-base font-medium">Preview</Label>
+                  <div className="border rounded-lg p-6 bg-muted/30 text-center space-y-4">
+                    <Badge variant="destructive" className="text-sm px-4 py-2">
+                      🔥 Oferta por Tempo Limitado
+                    </Badge>
+                    {urgencyShowSpots && (
+                      <h3 className="text-2xl font-bold">
+                        {urgencyTitle.replace(/{spots}/g, urgencySpotsRemaining)}
+                      </h3>
+                    )}
+                    {urgencyShowTimer && (
+                      <>
+                        <p className="text-muted-foreground">{urgencySubtitle}</p>
+                        <div className="flex justify-center gap-4">
+                          {['23', '59', '59'].map((val, i) => (
+                            <div key={i} className="text-center p-3 rounded-lg bg-muted border">
+                              <div className="text-2xl font-bold text-primary">{val}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {['Horas', 'Minutos', 'Segundos'][i]}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    {urgencyShowSocialProof && (
+                      <p className="text-sm text-muted-foreground">
+                        2.543 estudantes ativos • +127 novos esta semana
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Botão de salvar */}
+                <Button 
+                  onClick={handleSaveUrgencySettings} 
+                  disabled={savingUrgency}
+                  className="w-full"
+                  size="lg"
+                >
+                  {savingUrgency ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Salvar Configurações de Escassez
+                    </>
+                  )}
+                </Button>
+
+                <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                  <h4 className="font-medium text-sm">💡 Dicas de uso:</h4>
+                  <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                    <li>Use escassez com moderação para não perder credibilidade</li>
+                    <li>Combine com promoções reais para máximo impacto</li>
+                    <li>Atualize o contador de vagas periodicamente</li>
+                    <li>A prova social aumenta a confiança dos visitantes</li>
+                  </ul>
                 </div>
               </CardContent>
             </Card>
