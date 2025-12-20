@@ -10,6 +10,8 @@ import { TopReferrers } from "@/components/TopReferrers";
 import { ExitIntentPopup } from "@/components/ExitIntentPopup";
 import { TestimonialsSection } from "@/components/TestimonialsSection";
 import { TechniqueShowcase } from "@/components/TechniqueShowcase";
+import { PromoBanner } from "@/components/PromoBanner";
+import { UrgencySection } from "@/components/UrgencySection";
 import { useScrollTracking } from "@/hooks/useScrollTracking";
 import { useTimeTracking } from "@/hooks/useTimeTracking";
 import { useSectionTracking } from "@/hooks/useSectionTracking";
@@ -46,6 +48,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen">
+      <PromoBanner />
       <Header />
       <ExitIntentPopup />
       <main>
@@ -62,6 +65,7 @@ const Index = () => {
         <div id="testimonials">
           <TestimonialsSection />
         </div>
+        <UrgencySection />
         <div id="pricing">
           <Pricing />
         </div>
