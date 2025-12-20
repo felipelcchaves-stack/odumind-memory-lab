@@ -96,6 +96,19 @@ export function useSessionValidation() {
         localStorage.removeItem('login_in_progress');
       }
       
+      // Skip validation if password update is in progress (within last 30 seconds)
+      const passwordUpdateInProgress = localStorage.getItem('password_update_in_progress');
+      if (passwordUpdateInProgress) {
+        const updateTime = parseInt(passwordUpdateInProgress);
+        const timeSinceUpdate = Date.now() - updateTime;
+        if (timeSinceUpdate < 30000) {
+          console.log('[SESSION-VALIDATION] Password update in progress, skipping validation');
+          return;
+        }
+        // Clean up old flag
+        localStorage.removeItem('password_update_in_progress');
+      }
+      
       if (isValidatingRef.current) return;
       isValidatingRef.current = true;
 

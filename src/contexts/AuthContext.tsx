@@ -170,10 +170,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const updatePassword = async (newPassword: string) => {
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword
-    });
-    return { error };
+    // Marcar que atualização de senha está em progresso
+    localStorage.setItem('password_update_in_progress', Date.now().toString());
+    
+    try {
+      // Verificar sessão atual
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !sessionData.session) {
+        console.log('[AUTH] Sessão não encontrada, tentando refresh...');
+        
+        // Tentar refresh da sessão
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        
+        if (refreshError || !refreshData.session) {
+          console.error('[AUTH] Falha ao renovar sessão:', refreshError);
+          localStorage.removeItem('password_update_in_progress');
+          return { error: { message: 'Sessão expirada. Por favor, faça login novamente.' } };
+        }
+        
+        console.log('[AUTH] Sessão renovada com sucesso');
+      }
+      
+      // Agora atualizar a senha
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      
+      localStorage.removeItem('password_update_in_progress');
+      return { error };
+    } catch (err: any) {
+      console.error('[AUTH] Erro ao atualizar senha:', err);
+      localStorage.removeItem('password_update_in_progress');
+      return { error: err };
+    }
   };
 
   return (
