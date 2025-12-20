@@ -755,7 +755,7 @@ export default function Dashboard() {
                         <Button 
                           variant={new Date(stats.nextReview.proxima_revisao) > new Date() ? "outline" : "default"}
                           disabled={new Date(stats.nextReview.proxima_revisao) > new Date()}
-                          onClick={() => new Date(stats.nextReview.proxima_revisao) <= new Date() && navigate("/study")}
+                          onClick={() => new Date(stats.nextReview.proxima_revisao) <= new Date() && navigate("/caminho-ifa")}
                         >
                           {new Date(stats.nextReview.proxima_revisao) > new Date() 
                             ? "Aguarde a próxima revisão" 

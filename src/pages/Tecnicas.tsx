@@ -8,6 +8,7 @@ import DashboardHeader from '@/components/DashboardHeader';
 import { ProtectedContent } from '@/components/ProtectedContent';
 import { useTechniqueUnlock, TECHNIQUE_REQUIREMENTS } from '@/hooks/useTechniqueUnlock';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 export default function Tecnicas() {
   const navigate = useNavigate();
@@ -36,7 +37,7 @@ export default function Tecnicas() {
         'Adapta-se ao seu ritmo'
       ],
       comousar: 'Estude regularmente e o sistema cuida do resto. Responda honestamente aos flashcards e o algoritmo ajusta os intervalos ideais.',
-      action: () => navigate('/study')
+      action: () => navigate('/caminho-ifa')
     },
     {
       id: 'flashcards',
@@ -54,7 +55,7 @@ export default function Tecnicas() {
         'Feedback imediato'
       ],
       comousar: 'Na sessão de estudos, tente sempre lembrar a resposta antes de clicar para revelar. Seja honesto ao avaliar seu desempenho.',
-      action: () => navigate('/study')
+      action: () => navigate('/caminho-ifa')
     },
     {
       id: 'elaborative-encoding',
@@ -72,7 +73,10 @@ export default function Tecnicas() {
         'Facilita aplicação prática'
       ],
       comousar: 'Ao estudar cada Odu, clique em "Elaborar" e responda às perguntas reflexivas. Quanto mais pessoal e detalhada sua resposta, melhor.',
-      action: () => navigate('/odu')
+      action: () => {
+        toast.info('Selecione um Odu na biblioteca para usar a Codificação Elaborativa', { duration: 4000 });
+        navigate('/odu');
+      }
     },
     {
       id: 'mnemonics',
@@ -355,7 +359,7 @@ export default function Tecnicas() {
 
           {/* CTA final */}
           <div className="mt-8 text-center">
-            <Button size="lg" onClick={() => navigate('/study')} className="gap-2">
+            <Button size="lg" onClick={() => navigate('/caminho-ifa')} className="gap-2">
               Começar a estudar agora
               <ArrowRight className="h-5 w-5" />
             </Button>
