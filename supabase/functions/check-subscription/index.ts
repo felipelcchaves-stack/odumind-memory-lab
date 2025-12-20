@@ -94,7 +94,7 @@ serve(async (req) => {
     });
 
     logStep("Validating token");
-    const { data: userData, error: userError } = await supabaseUser.auth.getUser();
+    const { data: userData, error: userError } = await supabaseUser.auth.getUser(token);
     if (userError) {
       logStep("Session expired or invalid", { error: userError.message });
       // Return 200 with free status so the client won't treat it as a hard error
