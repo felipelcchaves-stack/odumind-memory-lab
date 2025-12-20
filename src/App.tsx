@@ -63,10 +63,29 @@ function SessionValidator() {
   return null;
 }
 
-function AppContent() {
+// Separate component for changelog/announcements to isolate from hot reload issues
+function ModalProviders() {
   const { showModal, latestChangelog, markAsViewed } = useChangelog();
   const { announcement, markAsRead } = useAnnouncements();
   
+  return (
+    <>
+      <ChangelogModal
+        open={showModal}
+        onClose={markAsViewed}
+        changelog={latestChangelog}
+        onMarkAsViewed={markAsViewed}
+      />
+      <AnnouncementModal
+        open={!!announcement}
+        onClose={markAsRead}
+        announcement={announcement}
+      />
+    </>
+  );
+}
+
+function AppContent() {
   return (
     <>
       <Toaster />
@@ -74,17 +93,7 @@ function AppContent() {
       <BrowserRouter>
         <ProfileCompletionChecker />
         <ReferralWelcomeModal />
-        <ChangelogModal
-          open={showModal}
-          onClose={markAsViewed}
-          changelog={latestChangelog}
-          onMarkAsViewed={markAsViewed}
-        />
-        <AnnouncementModal
-          open={!!announcement}
-          onClose={markAsRead}
-          announcement={announcement}
-        />
+        <ModalProviders />
         <SessionValidator />
         <Routes>
           <Route path="/" element={<Index />} />
