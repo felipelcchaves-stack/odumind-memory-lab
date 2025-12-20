@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { useAdmin } from '@/hooks/useAdmin';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +9,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, Award, BookOpen, Flame, Star, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
-import DashboardHeader from '@/components/DashboardHeader';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import MemorizationStatusBadge from '@/components/MemorizationStatusBadge';
@@ -69,8 +66,6 @@ interface ActivityLog {
 export default function UserDetail() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { isAdmin, loading: adminLoading } = useAdmin();
   
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [memorization, setMemorization] = useState<MemorizationProgress[]>([]);
@@ -80,21 +75,10 @@ export default function UserDetail() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!adminLoading && !user) {
-      navigate('/');
-      return;
-    }
-
-    if (!adminLoading && !isAdmin) {
-      toast.error('Acesso negado');
-      navigate('/dashboard');
-      return;
-    }
-
-    if (userId && isAdmin) {
+    if (userId) {
       loadUserData();
     }
-  }, [userId, user, isAdmin, adminLoading, navigate]);
+  }, [userId]);
 
   async function loadUserData() {
     try {
@@ -198,9 +182,9 @@ export default function UserDetail() {
     return eventMap[tipo] || tipo;
   };
 
-  if (adminLoading || loading) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Carregando dados do usuário...</p>
@@ -211,11 +195,8 @@ export default function UserDetail() {
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-background">
-        <DashboardHeader />
-        <div className="container px-4 py-8">
-          <p className="text-center text-muted-foreground">Usuário não encontrado</p>
-        </div>
+      <div className="py-8">
+        <p className="text-center text-muted-foreground">Usuário não encontrado</p>
       </div>
     );
   }
@@ -232,18 +213,15 @@ export default function UserDetail() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardHeader />
-
-      <main className="container px-4 py-8">
-        <Button 
-          variant="ghost" 
-          className="mb-6"
-          onClick={() => navigate('/admin')}
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Voltar para Admin
-        </Button>
+    <div className="space-y-6">
+      <Button 
+        variant="ghost" 
+        className="mb-2"
+        onClick={() => navigate('/admin/users')}
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Voltar para Usuários
+      </Button>
 
         {/* Profile Header */}
         <Card className="mb-8">
@@ -495,7 +473,6 @@ export default function UserDetail() {
             </Card>
           </TabsContent>
         </Tabs>
-      </main>
     </div>
   );
 }

@@ -23,7 +23,6 @@ import Tecnicas from "./pages/Tecnicas";
 import Admin from "./pages/Admin";
 import Colaborador from "./pages/Colaborador";
 import Analytics from "./pages/Analytics";
-import UserDetail from "./pages/UserDetail";
 import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
 import Subscription from "./pages/Subscription";
@@ -49,6 +48,7 @@ import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 import AdminToolsPage from "./pages/admin/AdminToolsPage";
 import AdminChangelogPage from "./pages/admin/AdminChangelogPage";
 import AdminRestorePage from "./pages/admin/AdminRestorePage";
+import UserDetail from "./pages/UserDetail";
 import AdminGuruPage from "./pages/admin/AdminGuruPage";
 import AdminFeaturesPage from "./pages/admin/AdminFeaturesPage";
 import AdminAnnouncementsPage from "./pages/admin/AdminAnnouncementsPage";
@@ -110,7 +110,6 @@ function AppContent() {
           <Route path="/memory-palace" element={<MemoryPalace />} />
           <Route path="/tecnicas" element={<Tecnicas />} />
           <Route path="/colaborador" element={<Colaborador />} />
-          <Route path="/admin/user/:userId" element={<UserDetail />} />
           <Route path="/settings" element={<Settings />} />
           
           {/* Admin routes with sidebar */}
@@ -120,10 +119,11 @@ function AppContent() {
             <Route path="odu" element={<AdminOduPage />} />
             <Route path="caminhos" element={<AdminCaminhosPage />} />
             <Route path="rituais" element={<AdminRituaisPage />} />
-              <Route path="users" element={<AdminUsersPage />} />
-              <Route path="analytics" element={<AdminAnalyticsPage />} />
-              <Route path="advanced-analytics" element={<AdminAdvancedAnalytics />} />
-              <Route path="settings" element={<AdminSettingsPage />} />
+            <Route path="users" element={<AdminUsersPage />} />
+            <Route path="user/:userId" element={<UserDetail />} />
+            <Route path="analytics" element={<AdminAnalyticsPage />} />
+            <Route path="advanced-analytics" element={<AdminAdvancedAnalytics />} />
+            <Route path="settings" element={<AdminSettingsPage />} />
             <Route path="tools" element={<AdminToolsPage />} />
             <Route path="changelog" element={<AdminChangelogPage />} />
             <Route path="guru" element={<AdminGuruPage />} />
