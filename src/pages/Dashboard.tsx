@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdmin } from '@/hooks/useAdmin';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -102,24 +103,33 @@ export default function Dashboard() {
     }
   }, [user, authLoading, navigate]);
 
+  // Hook para verificar role de admin/colaborador
+  const { isAdmin, isColaborador, loading: adminLoading } = useAdmin();
+
   // Guard: Block access if free plan is disabled and user has no active subscription
   useEffect(() => {
     // Não redirecionar se atualização de senha está em progresso
     const passwordUpdateInProgress = localStorage.getItem('password_update_in_progress');
     if (passwordUpdateInProgress) {
       const timestamp = parseInt(passwordUpdateInProgress);
-      // Expirar flag após 30 segundos
+      // Se ainda está dentro dos 30 segundos, apenas retornar sem remover o flag
       if (Date.now() - timestamp < 30000) {
-        localStorage.removeItem('password_update_in_progress');
-        return; // Não fazer redirect
+        return; // Não fazer redirect, manter o flag
       }
+      // Só remover se expirou
       localStorage.removeItem('password_update_in_progress');
+    }
+
+    // Bypass para admin e colaborador - nunca redirecionar para subscription
+    if (isAdmin || isColaborador) {
+      return;
     }
 
     if (
       !authLoading && 
       !subLoading && 
       !freePlanLoading && 
+      !adminLoading &&
       user && 
       !isFreePlanEnabled
     ) {
@@ -131,7 +141,7 @@ export default function Dashboard() {
         navigate('/subscription?required=true');
       }
     }
-  }, [user, authLoading, subLoading, freePlanLoading, subscription, isFreePlanEnabled, navigate]);
+  }, [user, authLoading, subLoading, freePlanLoading, adminLoading, subscription, isFreePlanEnabled, isAdmin, isColaborador, navigate]);
 
   useEffect(() => {
     if (user) {
