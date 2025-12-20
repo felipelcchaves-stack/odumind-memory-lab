@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shield, ShieldOff, Eye, Search, X, Edit, UserPlus, Settings, Download, Upload, CheckCircle2, Circle, RefreshCw, Mail, Trash2 } from 'lucide-react';
+import { Shield, Eye, Search, X, Edit, UserPlus, Settings, Download, Upload, RefreshCw, Mail, Trash2, MoreHorizontal, MoreVertical } from 'lucide-react';
 import { toast } from 'sonner';
 import UserEditDialog from './UserEditDialog';
 import UserRoleDialog from './UserRoleDialog';
@@ -22,6 +22,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 
 interface UserProfile {
   user_id: string;
@@ -430,48 +443,66 @@ export default function UserManagement() {
   };
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Gerenciamento de Usuários</CardTitle>
-              <CardDescription>
-                Gerencie privilégios e acesso dos usuários da plataforma
-              </CardDescription>
+    <TooltipProvider>
+      <>
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <CardTitle>Gerenciamento de Usuários</CardTitle>
+                <CardDescription>
+                  Gerencie privilégios e acesso dos usuários da plataforma
+                </CardDescription>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={handleRefresh} 
+                      disabled={loading}
+                    >
+                      <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Atualizar Dados</TooltipContent>
+                </Tooltip>
+                
+                <Button onClick={handleCreate}>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Criar Usuário</span>
+                  <span className="sm:hidden">Criar</span>
+                </Button>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-popover">
+                    <DropdownMenuItem onClick={exportToCSV} disabled={filteredUsers.length === 0}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Exportar CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <label className="cursor-pointer flex items-center">
+                        <Upload className="h-4 w-4 mr-2" />
+                        Importar CSV
+                        <input
+                          type="file"
+                          accept=".csv"
+                          className="hidden"
+                          onChange={importFromCSV}
+                        />
+                      </label>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                onClick={handleRefresh} 
-                disabled={loading}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                {loading ? 'Atualizando...' : 'Atualizar Dados'}
-              </Button>
-              <Button variant="outline" onClick={exportToCSV} disabled={filteredUsers.length === 0}>
-                <Download className="h-4 w-4 mr-2" />
-                Exportar CSV
-              </Button>
-              <Button variant="outline" asChild>
-                <label className="cursor-pointer">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Importar CSV
-                  <input
-                    type="file"
-                    accept=".csv"
-                    className="hidden"
-                    onChange={importFromCSV}
-                  />
-                </label>
-              </Button>
-              <Button onClick={handleCreate}>
-                <UserPlus className="h-4 w-4 mr-2" />
-                Criar Usuário
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
+          </CardHeader>
       <CardContent>
         <div className="space-y-4 mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
@@ -534,17 +565,18 @@ export default function UserManagement() {
             </div>
           )}
         </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Usuário</TableHead>
-              <TableHead>Plano</TableHead>
-              <TableHead>XP</TableHead>
-              <TableHead>Streak</TableHead>
-              <TableHead>Função</TableHead>
-              <TableHead>Cadastro</TableHead>
-              <TableHead>Ações</TableHead>
-            </TableRow>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="min-w-[180px]">Usuário</TableHead>
+                <TableHead className="w-[90px]">Plano</TableHead>
+                <TableHead className="w-[60px]">XP</TableHead>
+                <TableHead className="w-[80px]">Streak</TableHead>
+                <TableHead className="w-[110px]">Função</TableHead>
+                <TableHead className="w-[90px]">Cadastro</TableHead>
+                <TableHead className="w-[80px] text-right">Ações</TableHead>
+              </TableRow>
           </TableHeader>
           <TableBody>
             {filteredUsers.length === 0 ? (
@@ -601,74 +633,77 @@ export default function UserManagement() {
                   <TableCell className="text-xs text-muted-foreground">
                     {new Date(user.created_at).toLocaleDateString('pt-BR')}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(user.user_id)}
-                      >
-                        <Edit className="h-4 w-4 mr-1" />
-                        Editar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/admin/user/${user.user_id}`)}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        Ver Perfil
-                      </Button>
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => handleChangeRole(
-                          user.user_id, 
-                          user.nome || user.email || 'Usuário',
-                          userRole
-                        )}
-                      >
-                        <Shield className="h-4 w-4 mr-1" />
-                        Alterar Perfil
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleResendPassword(user.user_id, user.email, user.nome)}
-                        disabled={resendingPasswordFor === user.user_id || !user.email}
-                      >
-                        <Mail className="h-4 w-4 mr-1" />
-                        {resendingPasswordFor === user.user_id ? 'Enviando...' : 'Reenviar Senha'}
-                      </Button>
-                      {userRole === 'colaborador' && (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => {
-                            setPermissionsUserId(user.user_id);
-                            setPermissionsUserName(user.nome || user.email || 'Usuário');
-                            setPermissionsDialogOpen(true);
-                          }}
-                        >
-                          <Settings className="h-4 w-4 mr-1" />
-                          Permissões
-                        </Button>
-                      )}
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeleteUser(
-                          user.user_id,
-                          user.nome || user.email || 'Usuário',
-                          user.email,
-                          userRole
-                        )}
-                        disabled={userRole === 'admin' || isDeleting}
-                        title={userRole === 'admin' ? 'Não é possível excluir administradores' : 'Excluir usuário'}
-                      >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Excluir
-                      </Button>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(user.user_id)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Editar</TooltipContent>
+                      </Tooltip>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-popover">
+                          <DropdownMenuItem onClick={() => navigate(`/admin/user/${user.user_id}`)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Ver Perfil
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleChangeRole(
+                              user.user_id, 
+                              user.nome || user.email || 'Usuário',
+                              userRole
+                            )}
+                          >
+                            <Shield className="h-4 w-4 mr-2" />
+                            Alterar Função
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleResendPassword(user.user_id, user.email, user.nome)}
+                            disabled={resendingPasswordFor === user.user_id || !user.email}
+                          >
+                            <Mail className="h-4 w-4 mr-2" />
+                            {resendingPasswordFor === user.user_id ? 'Enviando...' : 'Reenviar Senha'}
+                          </DropdownMenuItem>
+                          {userRole === 'colaborador' && (
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setPermissionsUserId(user.user_id);
+                                setPermissionsUserName(user.nome || user.email || 'Usuário');
+                                setPermissionsDialogOpen(true);
+                              }}
+                            >
+                              <Settings className="h-4 w-4 mr-2" />
+                              Permissões
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => handleDeleteUser(
+                              user.user_id,
+                              user.nome || user.email || 'Usuário',
+                              user.email,
+                              userRole
+                            )}
+                            disabled={userRole === 'admin' || isDeleting}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -676,6 +711,7 @@ export default function UserManagement() {
             }))}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
     
@@ -741,7 +777,8 @@ export default function UserManagement() {
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
-    </AlertDialog>
-    </>
+      </AlertDialog>
+      </>
+    </TooltipProvider>
   );
 }
