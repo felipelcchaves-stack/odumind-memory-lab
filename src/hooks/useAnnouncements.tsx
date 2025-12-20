@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAdmin } from '@/hooks/useAdmin';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,11 +13,24 @@ interface Announcement {
 }
 
 export function useAnnouncements() {
-  const { user } = useAuth();
   const { subscription } = useSubscription();
   const { isAdmin } = useAdmin();
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+
+  // Use direct auth state to avoid hot reload issues
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+    
+    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+    });
+    
+    return () => authSubscription.unsubscribe();
+  }, []);
 
   const fetchUnreadAnnouncement = useCallback(async () => {
     if (!user) {
