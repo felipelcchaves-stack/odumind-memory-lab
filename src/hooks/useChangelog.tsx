@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEffect, useState, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/hooks/useAdmin';
 
@@ -24,8 +23,21 @@ export const useChangelog = () => {
   const [latestChangelog, setLatestChangelog] = useState<ChangelogVersion | null>(null);
   const [hasUnreadChangelog, setHasUnreadChangelog] = useState(false);
   const [hasChecked, setHasChecked] = useState(false);
-  const { user, session } = useAuth();
+  const [user, setUser] = useState<any>(null);
   const { isAdmin, isColaborador, loading: adminLoading } = useAdmin();
+  
+  // Use direct auth state to avoid hot reload issues
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+    });
+    
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     // Só verificar changelog para admins e colaboradores
