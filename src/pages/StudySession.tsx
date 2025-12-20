@@ -113,9 +113,11 @@ export default function StudySession() {
   const [currentPhaseInfo, setCurrentPhaseInfo] = useState<PhaseInfo | null>(null);
   const [phaseLoading, setPhaseLoading] = useState(true);
   
-  // Single Odu mode state
+  // Single Odu mode state - LOOP CONTÍNUO
   const [singleOduExerciseIndex, setSingleOduExerciseIndex] = useState(0);
-  const singleOduExercises: StudyMode[] = ["flashcard", "quiz", "cloze", "dragdrop", "sentence-order"];
+  const [loopCount, setLoopCount] = useState(0); // Contador de ciclos completados
+  const [viableExercises, setViableExercises] = useState<StudyMode[]>([]); // Exercícios viáveis para este Odu
+  const [currentFlashcardFocus, setCurrentFlashcardFocus] = useState<'verso' | 'significado' | 'texto'>('verso'); // Variação de conteúdo
   
   // Core session state
   const [availableOdus, setAvailableOdus] = useState<Odu[]>([]);
@@ -436,9 +438,24 @@ export default function StudySession() {
         setIsShowingPresentation(true);
       }
       
+      // Determinar exercícios viáveis baseado no conteúdo
+      const versoContent = odu.verso_resumido?.trim() || '';
+      const significadoContent = odu.significado?.trim() || '';
+      const hasTextContent = versoContent.length >= 20 || significadoContent.length >= 20;
+      
+      const exercises: StudyMode[] = ['flashcard'];
+      if (hasTextContent) {
+        exercises.push('cloze', 'dragdrop', 'sentence-order');
+      }
+      
+      console.log('🎯 Exercícios viáveis para loop:', exercises);
+      setViableExercises(exercises);
+      
       // Iniciar com flashcard
       setMode('flashcard');
       setSingleOduExerciseIndex(0);
+      setLoopCount(0);
+      setCurrentFlashcardFocus('verso');
       
     } catch (error) {
       console.error('Erro ao carregar Odu individual:', error);
@@ -449,40 +466,45 @@ export default function StudySession() {
     }
   }
 
-  // Avança para o próximo exercício no modo Odu individual
+  // Avança para o próximo exercício no modo Odu individual - LOOP CONTÍNUO
   function advanceToNextExercise() {
+    if (viableExercises.length === 0) {
+      console.log('⚠️ Nenhum exercício viável definido');
+      return;
+    }
+    
     const nextIndex = singleOduExerciseIndex + 1;
     
-    // Se completou todos os exercícios, finaliza sessão
-    if (nextIndex >= singleOduExercises.length) {
-      console.log('🎉 Todos os exercícios concluídos para o Odu!');
-      setSessionComplete(true);
+    // Se completou todos os exercícios viáveis, REINICIAR o ciclo (LOOP)
+    if (nextIndex >= viableExercises.length) {
+      const newLoopCount = loopCount + 1;
+      console.log(`🔄 Ciclo ${newLoopCount + 1} iniciando! Reiniciando exercícios...`);
+      
+      // Incrementar contador de ciclos
+      setLoopCount(newLoopCount);
+      
+      // Voltar ao primeiro exercício
+      setSingleOduExerciseIndex(0);
+      setMode(viableExercises[0]);
+      setCardStartTime(Date.now());
+      
+      // Variar foco do flashcard a cada ciclo
+      const focusOptions: Array<'verso' | 'significado' | 'texto'> = ['verso', 'significado', 'texto'];
+      const newFocus = focusOptions[newLoopCount % focusOptions.length];
+      setCurrentFlashcardFocus(newFocus);
+      
+      toast.success(`🔄 Ciclo ${newLoopCount + 1} iniciado! Continue praticando.`, { 
+        duration: 2500,
+        description: `Foco: ${newFocus === 'verso' ? 'Verso' : newFocus === 'significado' ? 'Significado' : 'Texto Principal'}`
+      });
+      
       return;
     }
     
-    // Verificar se o próximo exercício é viável
-    const nextMode = singleOduExercises[nextIndex];
-    const versoContent = currentOdu?.verso_resumido?.trim() || '';
-    const hasClozeContent = versoContent.length >= 20;
+    // Avançar para próximo exercício no ciclo atual
+    const nextMode = viableExercises[nextIndex];
+    console.log(`➡️ Exercício ${nextIndex + 1}/${viableExercises.length}: ${nextMode}`);
     
-    // Se o próximo modo requer cloze mas não tem conteúdo, pular para o próximo
-    if ((nextMode === 'cloze' || nextMode === 'dragdrop' || nextMode === 'sentence-order') && !hasClozeContent) {
-      console.log(`⏭️ Pulando ${nextMode} (sem verso_resumido suficiente)`);
-      setSingleOduExerciseIndex(nextIndex);
-      // Tentar o próximo
-      setTimeout(() => advanceToNextExercise(), 100);
-      return;
-    }
-    
-    // Quiz não é viável no modo single Odu (precisa de 4+ opções)
-    if (nextMode === 'quiz') {
-      console.log('⏭️ Pulando quiz (modo individual não suporta)');
-      setSingleOduExerciseIndex(nextIndex);
-      setTimeout(() => advanceToNextExercise(), 100);
-      return;
-    }
-    
-    console.log(`➡️ Avançando para exercício: ${nextMode} (${nextIndex + 1}/${singleOduExercises.length})`);
     setSingleOduExerciseIndex(nextIndex);
     setMode(nextMode);
     setCardStartTime(Date.now());
@@ -1487,6 +1509,14 @@ export default function StudySession() {
             )}
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Single Odu Mode - Loops Badge */}
+            {isSingleOduMode && loopCount > 0 && (
+              <div className="p-4 bg-primary/10 rounded-lg text-center">
+                <div className="text-3xl font-bold text-primary">🔄 {loopCount}</div>
+                <div className="text-sm text-muted-foreground">Ciclos Completados</div>
+              </div>
+            )}
+            
             {/* Detailed Stats Grid */}
             <div className="grid grid-cols-2 gap-3">
               <div className="p-4 bg-muted rounded-lg text-center">
@@ -1495,7 +1525,7 @@ export default function StudySession() {
                 </div>
                 <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
                   <Target className="h-3 w-3" />
-                  Cards Estudados
+                  {isSingleOduMode ? 'Exercícios' : 'Cards Estudados'}
                 </div>
               </div>
               <div className="p-4 bg-muted rounded-lg text-center">
@@ -1684,13 +1714,63 @@ export default function StudySession() {
 
         {/* Header with Session Stats */}
         <div className="mb-8">
-          <Button variant="ghost" onClick={() => navigate("/caminho-ifa")} className="mb-4">
+          <Button variant="ghost" onClick={() => navigate(isSingleOduMode ? `/odu/${currentOdu?.id}` : "/caminho-ifa")} className="mb-4">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar ao Caminho de Ifá
+            {isSingleOduMode ? 'Voltar ao Odu' : 'Voltar ao Caminho de Ifá'}
           </Button>
 
+          {/* Single Odu Mode - Loop Progress Indicator */}
+          {isSingleOduMode && currentOdu && (
+            <div className="mb-4 p-4 border rounded-lg bg-primary/5 border-primary/20">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                  <span className="text-xl font-bold">{currentOdu.numero}</span>
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-lg">{currentOdu.nome}</p>
+                  <p className="text-sm text-muted-foreground">Modo Prática Intensiva</p>
+                </div>
+              </div>
+              
+              {/* Loop Progress */}
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <Badge variant="outline" className="bg-background">
+                  🔄 Ciclo {loopCount + 1}
+                </Badge>
+                <Badge variant="outline" className="bg-background">
+                  📝 Exercício {singleOduExerciseIndex + 1}/{viableExercises.length}
+                </Badge>
+                <Badge variant="secondary">
+                  ✅ {sessionStats.cardsStudied} completados
+                </Badge>
+              </div>
+              
+              {/* Viable Exercises Visual */}
+              <div className="mt-3 flex gap-1">
+                {viableExercises.map((exercise, idx) => (
+                  <div 
+                    key={exercise}
+                    className={`flex-1 h-2 rounded-full transition-all ${
+                      idx < singleOduExerciseIndex 
+                        ? 'bg-green-500' 
+                        : idx === singleOduExerciseIndex 
+                          ? 'bg-primary animate-pulse' 
+                          : 'bg-muted'
+                    }`}
+                  />
+                ))}
+              </div>
+              <div className="mt-1 flex justify-between text-xs text-muted-foreground">
+                <span>Flashcard</span>
+                {viableExercises.length > 1 && <span>Cloze</span>}
+                {viableExercises.length > 2 && <span>Drag & Drop</span>}
+                {viableExercises.length > 3 && <span>Ordenar</span>}
+              </div>
+            </div>
+          )}
+
           {/* Phase Context Badge */}
-          {currentPhaseInfo && (
+          {currentPhaseInfo && !isSingleOduMode && (
             <div className={`mb-4 p-4 border rounded-lg ${isReviewOnlyMode ? 'bg-amber-500/10 border-amber-500/30' : 'bg-primary/5 border-primary/20'}`}>
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isReviewOnlyMode ? 'bg-amber-500/20' : 'bg-primary/10'}`}>
@@ -1711,8 +1791,8 @@ export default function StudySession() {
             </div>
           )}
 
-          {/* Progress Indicator */}
-          {availableOdus.length > 0 && (
+          {/* Progress Indicator - Only for Phase mode */}
+          {!isSingleOduMode && availableOdus.length > 0 && (
             <div className="mb-6 p-4 bg-card rounded-lg border">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium">Você está no Odu {sessionStats.cardsStudied + 1}</span>
@@ -1724,17 +1804,24 @@ export default function StudySession() {
 
           <div className="space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-4">
-              <h1 className="text-3xl font-bold">Sessão de Estudo</h1>
+              <h1 className="text-3xl font-bold">
+                {isSingleOduMode ? 'Prática Intensiva' : 'Sessão de Estudo'}
+              </h1>
             </div>
             
             {/* Session Stats */}
             <div className="flex flex-wrap gap-3">
               <Badge variant="secondary" className="text-base px-4 py-2">
-                📚 {sessionStats.cardsStudied} Odu estudados
+                📚 {sessionStats.cardsStudied} exercícios
               </Badge>
               <Badge variant="secondary" className="text-base px-4 py-2">
-                ⭐ {sessionStats.totalXP} pontos ganhos
+                ⭐ {sessionStats.totalXP} XP
               </Badge>
+              {isSingleOduMode && loopCount > 0 && (
+                <Badge variant="default" className="text-base px-4 py-2">
+                  🔄 {loopCount} ciclos
+                </Badge>
+              )}
             </div>
             
             {sessionStats.cardsStudied === 1 && !hasShownFirstOduCelebration && (() => {
@@ -1744,12 +1831,14 @@ export default function StudySession() {
                 spread: 70,
                 origin: { y: 0.6 }
               });
-              toast.success('🎉 Parabéns! Você completou seu primeiro Odu!', { duration: 5000 });
+              toast.success('🎉 Parabéns! Você completou seu primeiro exercício!', { duration: 5000 });
               return null;
             })()}
             
             <p className="text-sm text-muted-foreground text-center">
-              💡 Dica: Continue até se sentir confiante com o conteúdo
+              {isSingleOduMode 
+                ? '💡 Os exercícios repetem em loop. Clique em "Finalizar" quando se sentir confiante.' 
+                : '💡 Dica: Continue até se sentir confiante com o conteúdo'}
             </p>
           </div>
         </div>
@@ -1973,21 +2062,41 @@ export default function StudySession() {
         )}
       </div>
       
-      {/* Session Controls - Floating UI */}
-      <SessionControls
-        onEndSession={handleEndSession}
-        onPauseSession={handlePauseSession}
-        isPaused={isPaused}
-        sessionStats={{
-          cardsStudied: sessionStats.cardsStudied,
-          totalCards: sessionMetrics.totalCards,
-          correctAnswers: sessionMetrics.correctAnswers,
-          wrongAnswers: sessionMetrics.wrongAnswers,
-          startTime: sessionStats.startTime
-        }}
-        sessionRounds={sessionRounds}
-        isSessionActive={isSessionActive}
-      />
+      {/* Single Odu Mode - Floating Finish Button */}
+      {isSingleOduMode && !sessionComplete && (
+        <div className="fixed bottom-20 md:bottom-6 right-4 z-50">
+          <Button 
+            variant="default"
+            size="lg"
+            onClick={handleEndSession}
+            className="shadow-xl bg-green-600 hover:bg-green-700 text-white gap-2"
+          >
+            <CheckCircle className="w-5 h-5" />
+            Finalizar Sessão
+            <Badge variant="secondary" className="ml-1 bg-green-800 text-white border-0">
+              {loopCount > 0 ? `${loopCount} ciclos` : `${sessionStats.cardsStudied}`}
+            </Badge>
+          </Button>
+        </div>
+      )}
+      
+      {/* Session Controls - Floating UI (only for Phase mode) */}
+      {!isSingleOduMode && (
+        <SessionControls
+          onEndSession={handleEndSession}
+          onPauseSession={handlePauseSession}
+          isPaused={isPaused}
+          sessionStats={{
+            cardsStudied: sessionStats.cardsStudied,
+            totalCards: sessionMetrics.totalCards,
+            correctAnswers: sessionMetrics.correctAnswers,
+            wrongAnswers: sessionMetrics.wrongAnswers,
+            startTime: sessionStats.startTime
+          }}
+          sessionRounds={sessionRounds}
+          isSessionActive={isSessionActive}
+        />
+      )}
       </div>
     </ProtectedContent>
   );
