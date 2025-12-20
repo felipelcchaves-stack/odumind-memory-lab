@@ -1,29 +1,62 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEffect, useState, useContext, createContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export function useAdmin() {
-  // IMPORTANTE: Usar o user do AuthContext como fonte única de verdade
-  const { user, loading: authLoading } = useAuth();
+  const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isColaborador, setIsColaborador] = useState(false);
-  const [rolesChecked, setRolesChecked] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
+
+  // Use direct auth state to be safe when used outside AuthProvider
+  useEffect(() => {
+    let mounted = true;
+    
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (mounted) {
+          setUser(session?.user ?? null);
+          setInitialized(true);
+        }
+      } catch (error) {
+        console.error('[useAdmin] Error getting session:', error);
+        if (mounted) {
+          setUser(null);
+          setInitialized(true);
+        }
+      }
+    };
+    
+    initAuth();
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (mounted) {
+        setUser(session?.user ?? null);
+        setInitialized(true);
+      }
+    });
+    
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
-    // Só verificar roles quando o auth terminar de carregar
-    if (authLoading) {
-      setRolesChecked(false);
+    // Wait for initialization before checking roles
+    if (!initialized) {
       return;
     }
 
     checkRoles();
-  }, [user, authLoading]);
+  }, [user, initialized]);
 
   async function checkRoles() {
     if (!user) {
       setIsAdmin(false);
       setIsColaborador(false);
-      setRolesChecked(true);
+      setLoading(false);
       return;
     }
 
@@ -56,12 +89,9 @@ export function useAdmin() {
       setIsAdmin(false);
       setIsColaborador(false);
     } finally {
-      setRolesChecked(true);
+      setLoading(false);
     }
   }
-
-  // loading é true se auth ainda está carregando OU se roles ainda não foram verificadas
-  const loading = authLoading || !rolesChecked;
 
   return { isAdmin, isColaborador, loading };
 }
