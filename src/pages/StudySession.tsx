@@ -104,12 +104,18 @@ export default function StudySession() {
   const { hasActiveSubscription, loading: subscriptionLoading } = useSubscription();
   const { isAdmin, isColaborador, loading: adminLoading } = useAdmin();
   
-  // Phase context - now required
+  // Phase context or single Odu mode
   const faseSlug = searchParams.get('fase');
+  const singleOduId = searchParams.get('odu'); // Novo: modo de Odu individual
+  const isSingleOduMode = !!singleOduId;
   const sessionMode = searchParams.get('mode'); // 'review' = só revisões pendentes
   const isReviewOnlyMode = sessionMode === 'review';
   const [currentPhaseInfo, setCurrentPhaseInfo] = useState<PhaseInfo | null>(null);
   const [phaseLoading, setPhaseLoading] = useState(true);
+  
+  // Single Odu mode state
+  const [singleOduExerciseIndex, setSingleOduExerciseIndex] = useState(0);
+  const singleOduExercises: StudyMode[] = ["flashcard", "quiz", "cloze", "dragdrop", "sentence-order"];
   
   // Core session state
   const [availableOdus, setAvailableOdus] = useState<Odu[]>([]);
@@ -224,9 +230,15 @@ export default function StudySession() {
     fetchPhaseProgress();
   }, [sessionComplete, user, currentPhaseInfo]);
 
-  // Load phase info from slug
+  // Load phase info from slug OR single Odu mode
   useEffect(() => {
     async function loadPhaseInfo() {
+      // Modo Odu Individual: não precisa de fase
+      if (isSingleOduMode) {
+        setPhaseLoading(false);
+        return;
+      }
+
       if (!faseSlug) {
         setPhaseLoading(false);
         return;
@@ -255,15 +267,15 @@ export default function StudySession() {
     }
 
     loadPhaseInfo();
-  }, [faseSlug, navigate]);
+  }, [faseSlug, isSingleOduMode, navigate]);
 
-  // Redirect if no phase parameter
+  // Redirect if no phase parameter AND not in single Odu mode
   useEffect(() => {
-    if (!phaseLoading && !faseSlug && user) {
+    if (!phaseLoading && !faseSlug && !isSingleOduMode && user) {
       toast.info('Selecione uma fase no Caminho de Ifá para estudar');
       navigate('/caminho-ifa');
     }
-  }, [phaseLoading, faseSlug, user, navigate]);
+  }, [phaseLoading, faseSlug, isSingleOduMode, user, navigate]);
 
   useEffect(() => {
     if (!user) {
@@ -277,6 +289,13 @@ export default function StudySession() {
       return;
     }
 
+    // Single Odu mode: load just that Odu
+    if (isSingleOduMode && singleOduId) {
+      console.log('🎯 Modo Odu Individual:', singleOduId);
+      initializeSingleOduSession(singleOduId);
+      return;
+    }
+
     // Only initialize if we have a valid phase
     if (!currentPhaseInfo) {
       return;
@@ -284,7 +303,7 @@ export default function StudySession() {
 
     console.log('✅ Roles carregadas:', { isAdmin, isColaborador, fase: currentPhaseInfo.nome });
     initializeSession();
-  }, [user, adminLoading, phaseLoading, currentPhaseInfo]);
+  }, [user, adminLoading, phaseLoading, currentPhaseInfo, isSingleOduMode, singleOduId]);
 
   // Auto-save session on unmount or page close
   useEffect(() => {
@@ -349,6 +368,124 @@ export default function StudySession() {
       console.error("Error initializing session:", error);
       toast.error("Erro ao inicializar sessão");
     }
+  }
+
+  // Inicializa sessão para estudar um único Odu específico
+  async function initializeSingleOduSession(oduId: string) {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      
+      // Buscar o Odu específico
+      const { data: odu, error } = await supabase
+        .from('odu')
+        .select('*')
+        .eq('id', oduId)
+        .single();
+      
+      if (error || !odu) {
+        toast.error('Odu não encontrado');
+        navigate('/odu-library');
+        return;
+      }
+      
+      console.log('🎯 Carregando Odu individual:', odu.nome);
+      
+      // Iniciar sessão
+      const newSessionId = await startStudySession(user.id, 'single-odu');
+      setSessionId(newSessionId);
+      
+      // Carregar perfil de aprendizado
+      const profile = await calculateLearningProfile(user.id);
+      setUserProfile(profile);
+      
+      // Carregar progresso de desbloqueio
+      const progress = await calculateUnlockProgress(user.id);
+      setUnlockProgress(progress);
+      
+      // Configurar Odu único
+      setAvailableOdus([odu]);
+      setCurrentOdu(odu);
+      setTotalOdusInDb(1);
+      setCardStartTime(Date.now());
+      
+      // Verificar se já estudou este Odu antes
+      const { data: memData } = await supabase
+        .from('memorizacao')
+        .select('revisoes, forca_memoria, status')
+        .eq('user_id', user.id)
+        .eq('odu_id', odu.id)
+        .maybeSingle();
+      
+      if (memData) {
+        setCurrentMemorizationData({
+          revisoes: memData.revisoes,
+          forca_memoria: memData.forca_memoria,
+          status: memData.status
+        });
+        // Se já estudou, começa direto com flashcard
+        setIsShowingPresentation(false);
+      } else {
+        setCurrentMemorizationData({
+          revisoes: 0,
+          forca_memoria: 0,
+          status: 'nao_estudado'
+        });
+        // Odu novo: mostrar apresentação primeiro
+        setIsShowingPresentation(true);
+      }
+      
+      // Iniciar com flashcard
+      setMode('flashcard');
+      setSingleOduExerciseIndex(0);
+      
+    } catch (error) {
+      console.error('Erro ao carregar Odu individual:', error);
+      toast.error('Erro ao iniciar sessão');
+      navigate('/odu-library');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Avança para o próximo exercício no modo Odu individual
+  function advanceToNextExercise() {
+    const nextIndex = singleOduExerciseIndex + 1;
+    
+    // Se completou todos os exercícios, finaliza sessão
+    if (nextIndex >= singleOduExercises.length) {
+      console.log('🎉 Todos os exercícios concluídos para o Odu!');
+      setSessionComplete(true);
+      return;
+    }
+    
+    // Verificar se o próximo exercício é viável
+    const nextMode = singleOduExercises[nextIndex];
+    const versoContent = currentOdu?.verso_resumido?.trim() || '';
+    const hasClozeContent = versoContent.length >= 20;
+    
+    // Se o próximo modo requer cloze mas não tem conteúdo, pular para o próximo
+    if ((nextMode === 'cloze' || nextMode === 'dragdrop' || nextMode === 'sentence-order') && !hasClozeContent) {
+      console.log(`⏭️ Pulando ${nextMode} (sem verso_resumido suficiente)`);
+      setSingleOduExerciseIndex(nextIndex);
+      // Tentar o próximo
+      setTimeout(() => advanceToNextExercise(), 100);
+      return;
+    }
+    
+    // Quiz não é viável no modo single Odu (precisa de 4+ opções)
+    if (nextMode === 'quiz') {
+      console.log('⏭️ Pulando quiz (modo individual não suporta)');
+      setSingleOduExerciseIndex(nextIndex);
+      setTimeout(() => advanceToNextExercise(), 100);
+      return;
+    }
+    
+    console.log(`➡️ Avançando para exercício: ${nextMode} (${nextIndex + 1}/${singleOduExercises.length})`);
+    setSingleOduExerciseIndex(nextIndex);
+    setMode(nextMode);
+    setCardStartTime(Date.now());
   }
 
   async function fetchNextReviewDate() {
@@ -877,8 +1014,14 @@ export default function StudySession() {
       setTimeout(() => {
         setShowXPNotification(false);
         setIsProcessingAnswer(false);
-        // Passar remainingOdus diretamente para evitar usar estado desatualizado
-        selectRandomOdu(remainingOdus);
+        
+        // Modo Odu Individual: avançar para próximo exercício
+        if (isSingleOduMode) {
+          advanceToNextExercise();
+        } else {
+          // Modo normal: passar remainingOdus diretamente para evitar usar estado desatualizado
+          selectRandomOdu(remainingOdus);
+        }
       }, 1200);
 
     } catch (error) {
@@ -1332,7 +1475,12 @@ export default function StudySession() {
               </div>
             </div>
             <CardTitle className="text-center text-3xl">Sessão Completa!</CardTitle>
-            {currentPhaseInfo && (
+            {isSingleOduMode && currentOdu && (
+              <p className="text-center text-muted-foreground mt-2">
+                Odu estudado: <strong>{currentOdu.nome}</strong>
+              </p>
+            )}
+            {!isSingleOduMode && currentPhaseInfo && (
               <p className="text-center text-muted-foreground mt-2">
                 Fase: {currentPhaseInfo.nome}
               </p>
@@ -1443,21 +1591,41 @@ export default function StudySession() {
                 <Home className="h-4 w-4 mr-2" />
                 Voltar ao Dashboard
               </Button>
+              {isSingleOduMode && currentOdu && (
+                <Button 
+                  onClick={() => navigate(`/odu/${currentOdu.id}`)} 
+                  className="w-full" 
+                  variant="outline" 
+                  size="lg"
+                >
+                  Ver Detalhes do Odu
+                </Button>
+              )}
+              {!isSingleOduMode && (
+                <Button 
+                  onClick={() => navigate("/caminho-ifa")} 
+                  className="w-full" 
+                  variant="outline" 
+                  size="lg"
+                >
+                  Continuar no Caminho de Ifá
+                </Button>
+              )}
               <Button 
-                onClick={() => navigate("/caminho-ifa")} 
-                className="w-full" 
-                variant="outline" 
-                size="lg"
-              >
-                Continuar no Caminho de Ifá
-              </Button>
-              <Button 
-                onClick={() => currentPhaseInfo ? navigate(`/study?fase=${currentPhaseInfo.slug}`) : window.location.reload()} 
+                onClick={() => {
+                  if (isSingleOduMode && currentOdu) {
+                    navigate(`/study?odu=${currentOdu.id}`);
+                  } else if (currentPhaseInfo) {
+                    navigate(`/study?fase=${currentPhaseInfo.slug}`);
+                  } else {
+                    window.location.reload();
+                  }
+                }} 
                 className="w-full" 
                 variant="ghost"
               >
                 <RotateCcw className="h-4 w-4 mr-2" />
-                Nova Sessão nesta Fase
+                {isSingleOduMode ? 'Estudar este Odu Novamente' : 'Nova Sessão nesta Fase'}
               </Button>
             </div>
           </CardContent>
