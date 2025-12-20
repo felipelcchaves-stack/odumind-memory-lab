@@ -21,7 +21,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Subscription() {
   const { user, loading: authLoading } = useAuth();
-  const { isAdmin, isColaborador } = useAdmin();
+  const { isAdmin, isColaborador, loading: adminLoading } = useAdmin();
   const { 
     subscription, 
     loading: subLoading, 
@@ -96,47 +96,7 @@ export default function Subscription() {
     }
   }, [user, authLoading, navigate]);
 
-  // Show special message for admins/collaborators
-  if (isAdmin || isColaborador) {
-    return (
-      <div className="min-h-screen bg-background">
-        <DashboardHeader />
-        <div className="container mx-auto px-4 py-8">
-          <Card className="max-w-2xl mx-auto border-primary/50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-6 w-6 text-primary" />
-                Acesso Administrativo
-              </CardTitle>
-              <CardDescription>
-                Sua conta tem privilégios especiais
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">
-                Você tem acesso completo como <span className="font-semibold text-foreground">{isAdmin ? 'Administrador' : 'Colaborador'}</span>. 
-                Todas as funcionalidades estão disponíveis sem necessidade de assinatura.
-              </p>
-              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                <div className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-primary" />
-                  <span className="text-sm">Acesso ilimitado a todos os 256 Odu</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-primary" />
-                  <span className="text-sm">Recursos avançados de memorização</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-primary" />
-                  <span className="text-sm">Ferramentas de gerenciamento de conteúdo</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
+  // Admin check moved after loading check below
 
   const handleDowngrade = async (plan: SubscriptionPlan) => {
     const currentPlanName = subscription?.plan_name || '';
@@ -382,7 +342,7 @@ export default function Subscription() {
            (plan.plan_level === 'egbe' && (currentPlanName === 'Egbe' || currentPlanName === 'Família' || currentPlanName === 'Egbe (Família)'));
   };
 
-  if (authLoading || subLoading || plansLoading) {
+  if (authLoading || subLoading || plansLoading || adminLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20">
         <DashboardHeader />
@@ -394,6 +354,48 @@ export default function Subscription() {
               <Skeleton key={i} className="h-[400px] w-full rounded-lg" />
             ))}
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show special message for admins/collaborators (AFTER loading completes)
+  if (isAdmin || isColaborador) {
+    return (
+      <div className="min-h-screen bg-background">
+        <DashboardHeader />
+        <div className="container mx-auto px-4 py-8">
+          <Card className="max-w-2xl mx-auto border-primary/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-6 w-6 text-primary" />
+                Acesso Administrativo
+              </CardTitle>
+              <CardDescription>
+                Sua conta tem privilégios especiais
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground mb-4">
+                Você tem acesso completo como <span className="font-semibold text-foreground">{isAdmin ? 'Administrador' : 'Colaborador'}</span>. 
+                Todas as funcionalidades estão disponíveis sem necessidade de assinatura.
+              </p>
+              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-primary" />
+                  <span className="text-sm">Acesso ilimitado a todos os 256 Odu</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-primary" />
+                  <span className="text-sm">Recursos avançados de memorização</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-primary" />
+                  <span className="text-sm">Ferramentas de gerenciamento de conteúdo</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
