@@ -2,7 +2,19 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
-export type PermissionType = 'odu' | 'rituais' | 'changelog' | 'tools' | 'users' | 'analytics' | 'settings' | 'restore';
+export type PermissionType = 
+  | 'odu' 
+  | 'rituais' 
+  | 'changelog' 
+  | 'tools' 
+  | 'users' 
+  | 'analytics' 
+  | 'analytics_avancadas'
+  | 'caminhos'
+  | 'anuncios'
+  | 'avaliacoes'
+  | 'settings' 
+  | 'restore';
 
 interface Permissions {
   odu: boolean;
@@ -11,6 +23,10 @@ interface Permissions {
   tools: boolean;
   users: boolean;
   analytics: boolean;
+  analytics_avancadas: boolean;
+  caminhos: boolean;
+  anuncios: boolean;
+  avaliacoes: boolean;
   settings: boolean;
   restore: boolean;
 }
@@ -24,6 +40,10 @@ export function usePermissions() {
     tools: false,
     users: false,
     analytics: false,
+    analytics_avancadas: false,
+    caminhos: false,
+    anuncios: false,
+    avaliacoes: false,
     settings: false,
     restore: false,
   });
@@ -56,6 +76,10 @@ export function usePermissions() {
           tools: true,
           users: true,
           analytics: true,
+          analytics_avancadas: true,
+          caminhos: true,
+          anuncios: true,
+          avaliacoes: true,
           settings: true,
           restore: true,
         });
@@ -77,6 +101,10 @@ export function usePermissions() {
           tools: false,
           users: false,
           analytics: false,
+          analytics_avancadas: false,
+          caminhos: false,
+          anuncios: false,
+          avaliacoes: false,
           settings: false,
           restore: false,
         };

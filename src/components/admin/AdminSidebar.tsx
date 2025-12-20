@@ -43,7 +43,7 @@ export function AdminSidebar({ isAdmin }: AdminSidebarProps) {
       label: "Conteúdo",
       items: [
         { title: "Odu", url: "/admin/odu", icon: FileText, permission: "odu" as const },
-        { title: "Caminhos", url: "/admin/caminhos", icon: Route, adminOnly: true },
+        { title: "Caminhos", url: "/admin/caminhos", icon: Route, permission: "caminhos" as const },
         { title: "Rituais", url: "/admin/rituais", icon: Scroll, permission: "rituais" as const },
         { title: "Novidades", url: "/admin/changelog", icon: Megaphone, permission: "changelog" as const },
       ],
@@ -51,9 +51,9 @@ export function AdminSidebar({ isAdmin }: AdminSidebarProps) {
     {
       label: "Gestão",
       items: [
-        { title: "Usuários", url: "/admin/users", icon: Users, adminOnly: true },
-        { title: "Analytics", url: "/admin/analytics", icon: BarChart3, adminOnly: true },
-        { title: "Analytics Avançadas", url: "/admin/advanced-analytics", icon: TrendingUp, adminOnly: true },
+        { title: "Usuários", url: "/admin/users", icon: Users, permission: "users" as const },
+        { title: "Analytics", url: "/admin/analytics", icon: BarChart3, permission: "analytics" as const },
+        { title: "Analytics Avançadas", url: "/admin/advanced-analytics", icon: TrendingUp, permission: "analytics_avancadas" as const },
       ],
     },
     {
@@ -61,9 +61,9 @@ export function AdminSidebar({ isAdmin }: AdminSidebarProps) {
       items: [
         { title: "Planos", url: "/admin/planos", icon: CreditCard, adminOnly: true },
         { title: "Funcionalidades", url: "/admin/features", icon: ToggleRight, adminOnly: true },
-        { title: "Anúncios", url: "/admin/announcements", icon: Bell, adminOnly: true },
+        { title: "Anúncios", url: "/admin/announcements", icon: Bell, permission: "anuncios" as const },
         { title: "Cupons", url: "/admin/coupons", icon: Ticket, adminOnly: true },
-        { title: "Avaliações", url: "/admin/reviews", icon: Star, adminOnly: true },
+        { title: "Avaliações", url: "/admin/reviews", icon: Star, permission: "avaliacoes" as const },
         { title: "Configurações", url: "/admin/settings", icon: Settings, adminOnly: true },
         { title: "Ferramentas", url: "/admin/tools", icon: Wrench, permission: "tools" as const },
         { title: "Restaurar", url: "/admin/restore", icon: History, adminOnly: true },
