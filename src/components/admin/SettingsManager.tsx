@@ -11,9 +11,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePlanVisibilityAdmin } from '@/hooks/usePlanVisibility';
 import { PLANS } from '@/config/plans';
-import { Loader2, Save, Eye, EyeOff, ExternalLink, CheckCircle, AlertCircle, Code, CreditCard, Megaphone, Gift, CalendarClock, Play, Layout } from 'lucide-react';
+import { Loader2, Save, Eye, EyeOff, ExternalLink, CheckCircle, AlertCircle, Code, CreditCard, Megaphone, Gift, CalendarClock, Play, Layout, FlaskConical } from 'lucide-react';
 import { toast } from 'sonner';
 import { CustomScriptsManager } from './CustomScriptsManager';
+import { ABTestManager } from './ABTestManager';
 import { supabase } from '@/integrations/supabase/client';
 
 export function SettingsManager() {
@@ -310,54 +311,60 @@ export function SettingsManager() {
         </TabsContent>
 
         <TabsContent value="landing">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Layout className="w-5 h-5 text-primary" />
-                Configurações da Landing Page
-              </CardTitle>
-              <CardDescription>
-                Controle quais seções aparecem na landing page. Útil para testes A/B e otimizações.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Switch para seção de técnicas */}
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="space-y-1">
-                  <Label className="text-base font-medium">Seção de Técnicas de Memorização</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Exibe um carrossel com screenshots dos exercícios (Flashcards, Quiz, Cloze, etc.)
-                  </p>
-                  <p className="text-xs text-muted-foreground/70">
-                    A seção aparece entre Features e Depoimentos
-                  </p>
-                </div>
-                <Switch
-                  checked={showTechniqueScreenshots}
-                  onCheckedChange={async (checked) => {
-                    setShowTechniqueScreenshots(checked);
-                    try {
-                      await updateSetting('show_technique_screenshots', String(checked));
-                      toast.success(checked ? 'Seção de técnicas habilitada' : 'Seção de técnicas desabilitada');
-                    } catch (error) {
-                      toast.error('Erro ao salvar configuração');
-                      setShowTechniqueScreenshots(!checked);
-                    }
-                  }}
-                />
-              </div>
+          <div className="space-y-6">
+            {/* A/B Test Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FlaskConical className="w-5 h-5 text-primary" />
+                  Testes A/B do Hero
+                </CardTitle>
+                <CardDescription>
+                  Configure e monitore testes A/B para diferentes variantes do Hero da landing page
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ABTestManager />
+              </CardContent>
+            </Card>
 
-              <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-                <h4 className="font-medium text-sm">💡 Sobre a seção de Técnicas:</h4>
-                <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-                  <li>Mostra previews visuais de 5 tipos de exercícios</li>
-                  <li>Usa textos reais do Odu Ejiogbe para demonstração</li>
-                  <li>Carrossel responsivo com navegação por swipe em mobile</li>
-                  <li>Ideal para aumentar conversão mostrando o produto em ação</li>
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
+            {/* Technique Screenshots Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Layout className="w-5 h-5 text-primary" />
+                  Outras Configurações da Landing
+                </CardTitle>
+                <CardDescription>
+                  Controle quais seções aparecem na landing page
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Switch para seção de técnicas */}
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="space-y-1">
+                    <Label className="text-base font-medium">Seção de Técnicas de Memorização</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Exibe um carrossel com screenshots dos exercícios (Flashcards, Quiz, Cloze, etc.)
+                    </p>
+                  </div>
+                  <Switch
+                    checked={showTechniqueScreenshots}
+                    onCheckedChange={async (checked) => {
+                      setShowTechniqueScreenshots(checked);
+                      try {
+                        await updateSetting('show_technique_screenshots', String(checked));
+                        toast.success(checked ? 'Seção de técnicas habilitada' : 'Seção de técnicas desabilitada');
+                      } catch (error) {
+                        toast.error('Erro ao salvar configuração');
+                        setShowTechniqueScreenshots(!checked);
+                      }
+                    }}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="pixels">

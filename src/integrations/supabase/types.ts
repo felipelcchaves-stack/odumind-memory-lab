@@ -598,6 +598,108 @@ export type Database = {
         }
         Relationships: []
       }
+      landing_ab_sessions: {
+        Row: {
+          conversion_type: string | null
+          converted: boolean
+          converted_at: string | null
+          created_at: string
+          cta_clicks: number | null
+          device_type: string | null
+          id: string
+          page_views: number
+          scroll_depth: number | null
+          session_id: string
+          test_name: string
+          time_on_page: number | null
+          updated_at: string
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          variant: string
+        }
+        Insert: {
+          conversion_type?: string | null
+          converted?: boolean
+          converted_at?: string | null
+          created_at?: string
+          cta_clicks?: number | null
+          device_type?: string | null
+          id?: string
+          page_views?: number
+          scroll_depth?: number | null
+          session_id: string
+          test_name: string
+          time_on_page?: number | null
+          updated_at?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          variant: string
+        }
+        Update: {
+          conversion_type?: string | null
+          converted?: boolean
+          converted_at?: string | null
+          created_at?: string
+          cta_clicks?: number | null
+          device_type?: string | null
+          id?: string
+          page_views?: number
+          scroll_depth?: number | null
+          session_id?: string
+          test_name?: string
+          time_on_page?: number | null
+          updated_at?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          variant?: string
+        }
+        Relationships: []
+      }
+      landing_ab_tests: {
+        Row: {
+          created_at: string
+          cta_text: string | null
+          description: string | null
+          headline: string | null
+          id: string
+          is_active: boolean
+          subheadline: string | null
+          test_name: string
+          traffic_percentage: number
+          updated_at: string
+          variant: string
+        }
+        Insert: {
+          created_at?: string
+          cta_text?: string | null
+          description?: string | null
+          headline?: string | null
+          id?: string
+          is_active?: boolean
+          subheadline?: string | null
+          test_name: string
+          traffic_percentage?: number
+          updated_at?: string
+          variant: string
+        }
+        Update: {
+          created_at?: string
+          cta_text?: string | null
+          description?: string | null
+          headline?: string | null
+          id?: string
+          is_active?: boolean
+          subheadline?: string | null
+          test_name?: string
+          traffic_percentage?: number
+          updated_at?: string
+          variant?: string
+        }
+        Relationships: []
+      }
       learning_paths: {
         Row: {
           ativo: boolean | null
