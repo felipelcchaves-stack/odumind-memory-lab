@@ -434,7 +434,12 @@ export default function UserManagement() {
           <CardHeader>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <CardTitle>Gerenciamento de Usuários</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  Gerenciamento de Usuários
+                  <span className="text-muted-foreground font-normal text-base">
+                    ({users.filter(u => u.xp > 0 || u.streak > 0).length} ativos)
+                  </span>
+                </CardTitle>
                 <CardDescription>
                   Gerencie privilégios e acesso dos usuários da plataforma
                 </CardDescription>
