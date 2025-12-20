@@ -9,22 +9,28 @@ import { toast } from "sonner";
 
 export function AdminLayout() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { isAdmin, isColaborador, loading: adminLoading } = useAdmin();
 
   useEffect(() => {
-    if (!adminLoading && !user) {
+    // Aguardar ambos os loadings antes de verificar
+    if (authLoading || adminLoading) {
+      return;
+    }
+
+    if (!user) {
       navigate("/");
       return;
     }
 
-    if (!adminLoading && !isColaborador) {
+    if (!isColaborador) {
       toast.error("Acesso negado. Apenas administradores e colaboradores podem acessar esta área.");
       navigate("/dashboard");
     }
-  }, [user, isColaborador, adminLoading, navigate]);
+  }, [user, isColaborador, authLoading, adminLoading, navigate]);
 
-  if (adminLoading) {
+  // Mostrar loading enquanto qualquer um estiver carregando
+  if (authLoading || adminLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
