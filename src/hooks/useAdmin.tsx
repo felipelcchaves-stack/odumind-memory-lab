@@ -1,34 +1,29 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 export function useAdmin() {
-  const [user, setUser] = useState<any>(null);
+  // IMPORTANTE: Usar o user do AuthContext como fonte única de verdade
+  const { user, loading: authLoading } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isColaborador, setIsColaborador] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  // Use direct auth state to avoid hot reload issues with context
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-    });
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
-    });
-    
-    return () => subscription.unsubscribe();
-  }, []);
+  const [rolesChecked, setRolesChecked] = useState(false);
 
   useEffect(() => {
+    // Só verificar roles quando o auth terminar de carregar
+    if (authLoading) {
+      setRolesChecked(false);
+      return;
+    }
+
     checkRoles();
-  }, [user]);
+  }, [user, authLoading]);
 
   async function checkRoles() {
     if (!user) {
       setIsAdmin(false);
       setIsColaborador(false);
-      setLoading(false);
+      setRolesChecked(true);
       return;
     }
 
@@ -61,9 +56,12 @@ export function useAdmin() {
       setIsAdmin(false);
       setIsColaborador(false);
     } finally {
-      setLoading(false);
+      setRolesChecked(true);
     }
   }
+
+  // loading é true se auth ainda está carregando OU se roles ainda não foram verificadas
+  const loading = authLoading || !rolesChecked;
 
   return { isAdmin, isColaborador, loading };
 }
