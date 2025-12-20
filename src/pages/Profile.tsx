@@ -34,7 +34,7 @@ const profileSchema = z.object({
 });
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, updatePassword } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -145,11 +145,21 @@ export default function Profile() {
 
       // Update password if provided
       if (validation.data.password && validation.data.password !== "") {
-        const { error: passwordError } = await supabase.auth.updateUser({
-          password: validation.data.password
-        });
+        const { error: passwordError } = await updatePassword(validation.data.password);
 
-        if (passwordError) throw passwordError;
+        if (passwordError) {
+          // Tratamento específico para erro de sessão
+          if (passwordError.message?.includes('session') || 
+              passwordError.message?.includes('Session') ||
+              passwordError.message?.includes('Auth') ||
+              passwordError.message?.includes('expirada') ||
+              passwordError.message?.includes('login')) {
+            toast.error('Sessão expirada. Por favor, faça login novamente.');
+            navigate('/auth');
+            return;
+          }
+          throw passwordError;
+        }
 
         setNewPassword('');
         setConfirmPassword('');
@@ -159,6 +169,16 @@ export default function Profile() {
       }
     } catch (error: any) {
       console.error('Error updating profile:', error);
+      
+      // Verificar se é erro de sessão
+      if (error.message?.includes('session') || 
+          error.message?.includes('Session') ||
+          error.message?.includes('Auth session missing')) {
+        toast.error('Sessão expirada. Por favor, faça login novamente.');
+        navigate('/auth');
+        return;
+      }
+      
       toast.error('Erro ao atualizar perfil: ' + error.message);
     } finally {
       setLoading(false);
