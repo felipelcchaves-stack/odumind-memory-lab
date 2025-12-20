@@ -87,13 +87,32 @@ serve(async (req) => {
     logStep("Validating token");
     const { data: userData, error: userError } = await supabaseUser.auth.getUser();
     if (userError) {
-      logStep("ERROR: Authentication failed", { error: userError.message });
-      throw new Error(`Authentication error: ${userError.message}`);
+      logStep("Session expired or invalid", { error: userError.message });
+      // Return 401 instead of throwing - session expired is not a server error
+      return new Response(JSON.stringify({ 
+        subscribed: false,
+        status: 'free',
+        plan_name: 'Gratuito',
+        error: 'Session expired',
+        code: 401 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+      });
     }
     const user = userData.user;
     if (!user?.email) {
-      logStep("ERROR: No user or email");
-      throw new Error("User not authenticated or email not available");
+      logStep("No user or email found");
+      return new Response(JSON.stringify({ 
+        subscribed: false,
+        status: 'free',
+        plan_name: 'Gratuito',
+        error: 'User not authenticated',
+        code: 401 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+      });
     }
     
     logStep("User authenticated", { userId: user.id, email: user.email });
