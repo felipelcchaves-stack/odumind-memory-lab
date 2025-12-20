@@ -282,12 +282,15 @@ export default function Auth() {
     } else {
       toast({
         title: 'Senha atualizada!',
-        description: 'Sua senha foi redefinida com sucesso'
+        description: 'Sua senha foi redefinida com sucesso. Faça login com sua nova senha.'
       });
       setIsResettingPassword(false);
       setNewPassword('');
       setConfirmPassword('');
-      navigate('/dashboard');
+      // Fazer logout para forçar novo login com nova senha
+      await supabase.auth.signOut();
+      // Permanecer na página de auth para fazer login
+      setShowReset(false);
     }
     setLoading(false);
   };
