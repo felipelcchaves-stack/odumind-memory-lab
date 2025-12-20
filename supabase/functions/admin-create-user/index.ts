@@ -31,38 +31,65 @@ serve(async (req) => {
       throw new Error('Missing authorization header');
     }
 
-    // Create Supabase client with the user's token
+    // Extract the token from Bearer header
+    const token = authHeader.replace('Bearer ', '');
+    if (!token) {
+      console.error('[ADMIN-CREATE-USER] Token vazio');
+      throw new Error('Invalid authorization token');
+    }
+
+    console.log('[ADMIN-CREATE-USER] Token extraído, verificando usuário...');
+
+    // Create Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
-        global: {
-          headers: { Authorization: authHeader },
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
         },
       }
     );
 
-    // Verify the user is an admin
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    // Verify the user using the token directly
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
     
     if (userError || !user) {
       console.error('[ADMIN-CREATE-USER] Erro ao verificar usuário:', userError);
-      throw new Error('Unauthorized');
+      throw new Error('Unauthorized - Token inválido ou expirado');
     }
 
-    console.log('[ADMIN-CREATE-USER] Usuário autenticado:', user.email);
+    console.log('[ADMIN-CREATE-USER] Usuário autenticado:', user.email, user.id);
 
-    // Check if user has admin role
-    const { data: roles, error: rolesError } = await supabaseClient
+    // Create admin client with service role key for checking roles
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    );
+
+    // Check if user has admin role using admin client (bypasses RLS)
+    const { data: roles, error: rolesError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .eq('role', 'admin')
-      .single();
+      .maybeSingle();
 
-    if (rolesError || !roles) {
-      console.error('[ADMIN-CREATE-USER] Usuário não é admin:', rolesError);
-      throw new Error('User is not an admin');
+    if (rolesError) {
+      console.error('[ADMIN-CREATE-USER] Erro ao buscar roles:', rolesError);
+      throw new Error('Erro ao verificar permissões');
+    }
+
+    if (!roles) {
+      console.error('[ADMIN-CREATE-USER] Usuário não é admin:', user.email);
+      throw new Error('Acesso negado - Apenas administradores podem criar usuários');
     }
 
     console.log('[ADMIN-CREATE-USER] Admin verificado');
@@ -81,22 +108,7 @@ serve(async (req) => {
       throw new Error('Formato de email inválido');
     }
 
-    // Validate password length
-    if (body.password.length < 6) {
-      throw new Error('Password must be at least 6 characters');
-    }
-
-    // Create admin client with service role key
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
+    // supabaseAdmin já foi criado acima
 
     // Check if email already exists
     console.log('[ADMIN-CREATE-USER] Verificando se email já existe...');
