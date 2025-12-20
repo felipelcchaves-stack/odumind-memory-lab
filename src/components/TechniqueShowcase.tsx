@@ -280,11 +280,14 @@ export function TechniqueShowcase() {
             onClick={handleCtaClick}
             className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all group"
           >
-            Começar Agora - Grátis
+            {isFreePlanEnabled ? "Começar Agora - Grátis" : "Conhecer Planos"}
             <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
           </Button>
           <p className="text-sm text-muted-foreground mt-3">
-            Sem cartão de crédito • Acesso imediato
+            {isFreePlanEnabled 
+              ? "Sem cartão de crédito • Acesso imediato"
+              : "Escolha o plano ideal para você"
+            }
           </p>
         </div>
       </div>
