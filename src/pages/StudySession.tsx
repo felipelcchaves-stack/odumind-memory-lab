@@ -40,6 +40,7 @@ import {
   endStudySession,
   type UnlockProgress
 } from "@/lib/learningAnalytics";
+import { useExerciseMonitoring } from "@/hooks/useExerciseMonitoring";
 
 interface Odu {
   id: string;
@@ -114,6 +115,7 @@ export default function StudySession() {
   const [availableOdus, setAvailableOdus] = useState<Odu[]>([]);
   const [currentOdu, setCurrentOdu] = useState<Odu | null>(null);
   const [studiedInSession, setStudiedInSession] = useState<Set<string>>(new Set());
+  const { logModeFallback } = useExerciseMonitoring();
   const [isSessionActive, setIsSessionActive] = useState(true);
   const [sessionStats, setSessionStats] = useState<SessionStats>({
     cardsStudied: 0,
@@ -618,6 +620,13 @@ export default function StudySession() {
     
     if (fallbackReason) {
       console.log(`⚠️ [ModeSelection] Fallback para flashcard: ${fallbackReason}`);
+      // Log para monitoramento em produção
+      logModeFallback(
+        random < 0.55 ? 'quiz' : random < 0.73 ? 'cloze' : random < 0.88 ? 'dragdrop' : 'sentence-order',
+        'flashcard',
+        { id: selectedOdu.id, numero: selectedOdu.numero, nome: selectedOdu.nome },
+        faseSlug || undefined
+      );
     }
     
     console.log(`🎲 Modo selecionado: ${selectedMode} (hasCloze: ${hasClozeContent}, canQuiz: ${canDoQuiz})`);
@@ -1758,6 +1767,7 @@ export default function StudySession() {
           <ClozeExercise
             numero={currentOdu.numero}
             nome={currentOdu.nome}
+            oduId={currentOdu.id}
             versoResumido={currentOdu.verso_resumido}
             significado={currentOdu.significado}
             onAnswer={handleClozeAnswer}

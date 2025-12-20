@@ -1,4 +1,4 @@
-import { useState, useEffect, memo, useMemo } from "react";
+import { useState, useEffect, memo, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CheckCircle2, XCircle, Sparkles, HelpCircle, RotateCcw, Eye, SkipForward } from "lucide-react";
 import { cn } from "@/lib/utils";
-
+import { useExerciseMonitoring } from "@/hooks/useExerciseMonitoring";
 interface ClozeExerciseProps {
   numero: number;
   nome: string;
+  oduId?: string;
   versoResumido: string;
   significado?: string | null;
   onAnswer: (isCorrect: boolean, score: number) => void;
@@ -90,11 +91,13 @@ function createClozeText(text: string, keywords: string[]): { displayText: strin
 const ClozeExercise = memo(function ClozeExercise({
   numero,
   nome,
+  oduId,
   versoResumido,
   significado,
   onAnswer,
   hideNumber = false
 }: ClozeExerciseProps) {
+  const { logClozeSkip } = useExerciseMonitoring();
   const [gaps, setGaps] = useState<Gap[]>([]);
   const [displayText, setDisplayText] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -104,9 +107,12 @@ const ClozeExercise = memo(function ClozeExercise({
   
   // Inicializa o exercício
   useEffect(() => {
+    const oduInfo = { id: oduId, numero, nome };
+    
     if (!versoResumido || versoResumido.trim().length === 0) {
       // Verso vazio - notificar e pular (usuário precisa ver feedback)
       console.log('⚠️ [ClozeExercise] verso_resumido vazio, usando fallback');
+      logClozeSkip('cloze_empty_verso', oduInfo, { versoLength: 0 });
       setDisplayText('');
       setGaps([]);
       setIsSubmitted(true);
@@ -124,6 +130,10 @@ const ClozeExercise = memo(function ClozeExercise({
     // Se não conseguiu criar lacunas, mostrar fallback com feedback visual
     if (newGaps.length === 0) {
       console.log('⚠️ [ClozeExercise] Não conseguiu criar lacunas, usando fallback');
+      logClozeSkip('cloze_no_keywords', oduInfo, { 
+        versoLength: versoResumido.length,
+        keywordsFound: keywords.length 
+      });
       setDisplayText(versoResumido);
       setGaps([]);
       setIsSubmitted(true);
