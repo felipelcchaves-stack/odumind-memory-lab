@@ -577,13 +577,25 @@ export default function StudySession() {
     }
     
     // Select study mode: flashcard, quiz, cloze, dragdrop, or sentence-order
-    // Cloze/dragdrop/sentence-order only works if verso_resumido exists
-    const hasClozeContent = selectedOdu.verso_resumido && selectedOdu.verso_resumido.length > 20;
+    // Cloze/dragdrop/sentence-order only works if verso_resumido exists with sufficient content
+    const versoContent = selectedOdu.verso_resumido?.trim() || '';
+    const hasClozeContent = versoContent.length >= 20;
     const canDoQuiz = pool.length >= 4 && !lowOduMode;
+    
+    // Log de diagnóstico para rastrear seleção de modo
+    console.log('📊 [ModeSelection] Verificando condições:', {
+      odu: `${selectedOdu.numero}-${selectedOdu.nome}`,
+      versoLength: versoContent.length,
+      hasClozeContent,
+      canDoQuiz,
+      poolSize: pool.length,
+      lowOduMode
+    });
     
     // Weighted random selection: 30% flashcard, 25% quiz, 18% cloze, 15% dragdrop, 12% sentence-order
     const random = Math.random();
     let selectedMode: StudyMode;
+    let fallbackReason = '';
     
     if (random < 0.30) {
       selectedMode = "flashcard";
@@ -597,6 +609,15 @@ export default function StudySession() {
       selectedMode = "sentence-order";
     } else {
       selectedMode = "flashcard";
+      if (!hasClozeContent) {
+        fallbackReason = `verso_resumido insuficiente (${versoContent.length} chars)`;
+      } else if (!canDoQuiz) {
+        fallbackReason = `pool insuficiente para quiz (${pool.length} odus)`;
+      }
+    }
+    
+    if (fallbackReason) {
+      console.log(`⚠️ [ModeSelection] Fallback para flashcard: ${fallbackReason}`);
     }
     
     console.log(`🎲 Modo selecionado: ${selectedMode} (hasCloze: ${hasClozeContent}, canQuiz: ${canDoQuiz})`);
@@ -843,13 +864,13 @@ export default function StudySession() {
       
       setAvailableOdus(remainingOdus);
       
-      // ✅ CORREÇÃO: Usar callback com tempo reduzido e passar pool diretamente
+      // ✅ CORREÇÃO: Usar callback com tempo aumentado para melhor feedback visual
       setTimeout(() => {
         setShowXPNotification(false);
         setIsProcessingAnswer(false);
         // Passar remainingOdus diretamente para evitar usar estado desatualizado
         selectRandomOdu(remainingOdus);
-      }, 800);
+      }, 1200);
 
     } catch (error) {
       console.error("Error handling flashcard rate:", error);

@@ -105,33 +105,41 @@ const ClozeExercise = memo(function ClozeExercise({
   // Inicializa o exercício
   useEffect(() => {
     if (!versoResumido || versoResumido.trim().length === 0) {
-      // Verso vazio - auto-completar
+      // Verso vazio - notificar e pular (usuário precisa ver feedback)
+      console.log('⚠️ [ClozeExercise] verso_resumido vazio, usando fallback');
       setDisplayText('');
       setGaps([]);
       setIsSubmitted(true);
       setShowResult(true);
-      setTimeout(() => onAnswer(true, 50), 1000);
+      // Aumentado para 2s para dar tempo de ler o feedback
+      setTimeout(() => onAnswer(true, 50), 2000);
       return;
     }
     
     const keywords = extractKeywords(versoResumido);
+    console.log('🔍 [ClozeExercise] Keywords extraídas:', keywords, 'do texto:', versoResumido.slice(0, 50));
+    
     const { displayText: text, gaps: newGaps } = createClozeText(versoResumido, keywords);
     
-    // Se não conseguiu criar lacunas, auto-completar com pontuação parcial
+    // Se não conseguiu criar lacunas, mostrar fallback com feedback visual
     if (newGaps.length === 0) {
+      console.log('⚠️ [ClozeExercise] Não conseguiu criar lacunas, usando fallback');
       setDisplayText(versoResumido);
       setGaps([]);
       setIsSubmitted(true);
       setShowResult(true);
-      setTimeout(() => onAnswer(true, 50), 1500);
+      // Aumentado para 2.5s para dar tempo de ler o feedback
+      setTimeout(() => onAnswer(true, 50), 2500);
       return;
     }
     
+    console.log('✅ [ClozeExercise] Exercício criado com', newGaps.length, 'lacunas');
     setDisplayText(text);
     setGaps(newGaps);
     setIsSubmitted(false);
     setShowResult(false);
     setAttempts(0);
+    setWasRevealed(false);
   }, [versoResumido, onAnswer]);
   
   // Atualiza input de uma lacuna

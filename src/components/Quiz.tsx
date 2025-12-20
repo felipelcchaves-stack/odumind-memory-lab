@@ -49,19 +49,28 @@ function TruncatableText({
   return (
     <span className={`break-words whitespace-normal overflow-wrap-anywhere block max-w-full ${className}`}>
       {displayText}
-      <button
+      <span
+        role="button"
+        tabIndex={0}
         onClick={(e) => {
           e.stopPropagation();
           setIsExpanded(!isExpanded);
         }}
-        className="inline-flex items-center ml-1 text-primary hover:underline text-sm font-medium min-h-[44px] md:min-h-0 touch-manipulation"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsExpanded(!isExpanded);
+          }
+        }}
+        className="inline-flex items-center ml-1 text-primary hover:underline text-sm font-medium min-h-[44px] md:min-h-0 touch-manipulation cursor-pointer"
       >
         {isExpanded ? (
           <>Ver menos <ChevronUp className="h-3 w-3 ml-0.5" /></>
         ) : (
           <>Ver mais <ChevronDown className="h-3 w-3 ml-0.5" /></>
         )}
-      </button>
+      </span>
     </span>
   );
 }
