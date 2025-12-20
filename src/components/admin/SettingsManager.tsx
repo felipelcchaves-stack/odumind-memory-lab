@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePlanVisibilityAdmin } from '@/hooks/usePlanVisibility';
 import { PLANS } from '@/config/plans';
-import { Loader2, Save, Eye, EyeOff, ExternalLink, CheckCircle, AlertCircle, Code, CreditCard, Megaphone, Gift, CalendarClock, Play } from 'lucide-react';
+import { Loader2, Save, Eye, EyeOff, ExternalLink, CheckCircle, AlertCircle, Code, CreditCard, Megaphone, Gift, CalendarClock, Play, Layout } from 'lucide-react';
 import { toast } from 'sonner';
 import { CustomScriptsManager } from './CustomScriptsManager';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,6 +25,7 @@ export function SettingsManager() {
 
   const trackingSettings = getSettingsByCategory('tracking');
   const marketingSettings = getSettingsByCategory('marketing');
+  const landingSettings = getSettingsByCategory('landing');
 
   // Estados para o exit popup
   const [exitPopupEnabled, setExitPopupEnabled] = useState(true);
@@ -41,6 +42,9 @@ export function SettingsManager() {
   const [autoRenewalDiscount, setAutoRenewalDiscount] = useState('15');
   const [savingAutoRenewal, setSavingAutoRenewal] = useState(false);
   const [testingAutoRenewal, setTestingAutoRenewal] = useState(false);
+
+  // Estados para seção de técnicas na landing
+  const [showTechniqueScreenshots, setShowTechniqueScreenshots] = useState(false);
 
   // Carregar valores do marketing ao iniciar
   useEffect(() => {
@@ -78,6 +82,17 @@ export function SettingsManager() {
       });
     }
   }, [marketingSettings]);
+
+  // Carregar valores de landing
+  useEffect(() => {
+    if (landingSettings.length > 0) {
+      landingSettings.forEach(setting => {
+        if (setting.key === 'show_technique_screenshots') {
+          setShowTechniqueScreenshots(setting.value === 'true');
+        }
+      });
+    }
+  }, [landingSettings]);
 
   const handleChange = (key: string, value: string) => {
     setEditingValues(prev => ({ ...prev, [key]: value }));
@@ -222,10 +237,14 @@ export function SettingsManager() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="plans" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 mb-6">
+        <TabsList className="grid w-full grid-cols-6 mb-6">
           <TabsTrigger value="plans" className="gap-2">
             <CreditCard className="w-4 h-4" />
             Planos
+          </TabsTrigger>
+          <TabsTrigger value="landing" className="gap-2">
+            <Layout className="w-4 h-4" />
+            Landing
           </TabsTrigger>
           <TabsTrigger value="pixels">Pixels</TabsTrigger>
           <TabsTrigger value="scripts" className="gap-2">
@@ -284,6 +303,57 @@ export function SettingsManager() {
                   <li>O plano Gratuito pode ser ocultado para forçar conversão</li>
                   <li>O plano Egbe (Família) pode ser ativado posteriormente</li>
                   <li>As mudanças são instantâneas, sem necessidade de deploy</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="landing">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Layout className="w-5 h-5 text-primary" />
+                Configurações da Landing Page
+              </CardTitle>
+              <CardDescription>
+                Controle quais seções aparecem na landing page. Útil para testes A/B e otimizações.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Switch para seção de técnicas */}
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="space-y-1">
+                  <Label className="text-base font-medium">Seção de Técnicas de Memorização</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Exibe um carrossel com screenshots dos exercícios (Flashcards, Quiz, Cloze, etc.)
+                  </p>
+                  <p className="text-xs text-muted-foreground/70">
+                    A seção aparece entre Features e Depoimentos
+                  </p>
+                </div>
+                <Switch
+                  checked={showTechniqueScreenshots}
+                  onCheckedChange={async (checked) => {
+                    setShowTechniqueScreenshots(checked);
+                    try {
+                      await updateSetting('show_technique_screenshots', String(checked));
+                      toast.success(checked ? 'Seção de técnicas habilitada' : 'Seção de técnicas desabilitada');
+                    } catch (error) {
+                      toast.error('Erro ao salvar configuração');
+                      setShowTechniqueScreenshots(!checked);
+                    }
+                  }}
+                />
+              </div>
+
+              <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                <h4 className="font-medium text-sm">💡 Sobre a seção de Técnicas:</h4>
+                <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                  <li>Mostra previews visuais de 5 tipos de exercícios</li>
+                  <li>Usa textos reais do Odu Ejiogbe para demonstração</li>
+                  <li>Carrossel responsivo com navegação por swipe em mobile</li>
+                  <li>Ideal para aumentar conversão mostrando o produto em ação</li>
                 </ul>
               </div>
             </CardContent>

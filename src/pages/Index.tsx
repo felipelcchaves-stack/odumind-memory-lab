@@ -9,16 +9,19 @@ import Footer from "@/components/Footer";
 import { TopReferrers } from "@/components/TopReferrers";
 import { ExitIntentPopup } from "@/components/ExitIntentPopup";
 import { TestimonialsSection } from "@/components/TestimonialsSection";
+import { TechniqueShowcase } from "@/components/TechniqueShowcase";
 import { useScrollTracking } from "@/hooks/useScrollTracking";
 import { useTimeTracking } from "@/hooks/useTimeTracking";
 import { useSectionTracking } from "@/hooks/useSectionTracking";
 import { useUtmTracking } from "@/hooks/useUtmTracking";
 import { useCustomScripts } from "@/hooks/useCustomScripts";
+import { useTechniqueScreenshotsSettings } from "@/hooks/useTechniqueScreenshotsSettings";
 
 // Define sections to track visibility
 const TRACKED_SECTIONS = [
   { id: 'hero', name: 'Hero' },
   { id: 'features', name: 'Features' },
+  { id: 'techniques', name: 'Techniques' },
   { id: 'testimonials', name: 'Testimonials' },
   { id: 'pricing', name: 'Pricing' },
 ];
@@ -26,6 +29,7 @@ const TRACKED_SECTIONS = [
 const Index = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { showTechniques } = useTechniqueScreenshotsSettings();
 
   // Initialize tracking hooks
   useScrollTracking();
@@ -50,6 +54,11 @@ const Index = () => {
         <div id="features">
           <Features />
         </div>
+        {showTechniques && (
+          <div id="techniques">
+            <TechniqueShowcase />
+          </div>
+        )}
         <div id="testimonials">
           <TestimonialsSection />
         </div>
