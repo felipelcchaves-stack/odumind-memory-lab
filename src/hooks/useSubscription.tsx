@@ -132,7 +132,16 @@ export const useSubscription = () => {
 
       if (error1) {
         console.error('Error checking subscription with backend:', error1);
-        if (user && !error1.message?.includes('Auth session missing')) {
+        // Silenciar todos os erros relacionados a autenticação/sessão
+        const isAuthRelated = 
+          error1.message?.includes('Auth session missing') ||
+          error1.message?.includes('401') ||
+          error1.message?.includes('session expired') ||
+          error1.message?.includes('session_expired') ||
+          error1.message?.includes('Session expired');
+        
+        // Só mostrar toast para erros NÃO relacionados a auth
+        if (user && !isAuthRelated) {
           toast.error('Erro ao verificar assinatura. Seus dados locais foram mantidos.');
         }
         if (!localData) {
