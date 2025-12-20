@@ -145,9 +145,15 @@ export default function Profile() {
 
       // Update password if provided
       if (validation.data.password && validation.data.password !== "") {
+        // Setar flag para evitar redirect durante atualização de senha
+        localStorage.setItem('password_update_in_progress', Date.now().toString());
+
         const { error: passwordError } = await updatePassword(validation.data.password);
 
         if (passwordError) {
+          // Remover flag em caso de erro
+          localStorage.removeItem('password_update_in_progress');
+          
           // Tratamento específico para erro de sessão
           if (passwordError.message?.includes('session') || 
               passwordError.message?.includes('Session') ||
@@ -164,6 +170,11 @@ export default function Profile() {
         setNewPassword('');
         setConfirmPassword('');
         toast.success('Perfil e senha atualizados com sucesso!');
+        
+        // Remover flag após delay para garantir que o Dashboard não redirecione
+        setTimeout(() => {
+          localStorage.removeItem('password_update_in_progress');
+        }, 5000);
       } else {
         toast.success('Perfil atualizado com sucesso!');
       }
