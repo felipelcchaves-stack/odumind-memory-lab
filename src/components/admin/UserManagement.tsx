@@ -70,6 +70,9 @@ export default function UserManagement() {
   const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
   const [permissionsUserId, setPermissionsUserId] = useState<string>('');
   const [permissionsUserName, setPermissionsUserName] = useState<string>('');
+
+  // Backwards-compat: evita crash caso algum bundle antigo ainda referencie essa flag
+  const [resendingPasswordFor] = useState<string | null>(null);
   
   // Reset password dialog states
   const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
