@@ -60,6 +60,7 @@ export function SettingsManager() {
   const [bannerEndDate, setBannerEndDate] = useState('');
   const [bannerDismissible, setBannerDismissible] = useState(true);
   const [savingBanner, setSavingBanner] = useState(false);
+  const [savingBannerEnabled, setSavingBannerEnabled] = useState(false);
 
   // Estados para Controle de Escassez
   const [urgencyEnabled, setUrgencyEnabled] = useState(false);
@@ -71,6 +72,7 @@ export function SettingsManager() {
   const [urgencyShowSpots, setUrgencyShowSpots] = useState(true);
   const [urgencyShowSocialProof, setUrgencyShowSocialProof] = useState(true);
   const [savingUrgency, setSavingUrgency] = useState(false);
+  const [savingUrgencyEnabled, setSavingUrgencyEnabled] = useState(false);
 
   // Carregar valores do marketing ao iniciar
   useEffect(() => {
@@ -345,6 +347,22 @@ export function SettingsManager() {
     }
   };
 
+  // Auto-save para switch de Banner habilitado
+  const handleToggleBannerEnabled = async (enabled: boolean) => {
+    const previousValue = bannerEnabled;
+    setBannerEnabled(enabled);
+    setSavingBannerEnabled(true);
+    try {
+      await updateSetting('promo_banner_enabled', String(enabled));
+      toast.success(`Banner ${enabled ? 'ativado' : 'desativado'}!`);
+    } catch (error) {
+      setBannerEnabled(previousValue);
+      toast.error('Erro ao salvar');
+    } finally {
+      setSavingBannerEnabled(false);
+    }
+  };
+
   const handleSaveUrgencySettings = async () => {
     setSavingUrgency(true);
     try {
@@ -363,6 +381,22 @@ export function SettingsManager() {
       toast.error('Erro ao salvar configurações');
     } finally {
       setSavingUrgency(false);
+    }
+  };
+
+  // Auto-save para switch de Urgência habilitada
+  const handleToggleUrgencyEnabled = async (enabled: boolean) => {
+    const previousValue = urgencyEnabled;
+    setUrgencyEnabled(enabled);
+    setSavingUrgencyEnabled(true);
+    try {
+      await updateSetting('urgency_enabled', String(enabled));
+      toast.success(`Seção de urgência ${enabled ? 'ativada' : 'desativada'}!`);
+    } catch (error) {
+      setUrgencyEnabled(previousValue);
+      toast.error('Erro ao salvar');
+    } finally {
+      setSavingUrgencyEnabled(false);
     }
   };
 
@@ -540,8 +574,10 @@ export function SettingsManager() {
                   </div>
                   <Switch
                     checked={bannerEnabled}
-                    onCheckedChange={setBannerEnabled}
+                    onCheckedChange={handleToggleBannerEnabled}
+                    disabled={savingBannerEnabled}
                   />
+                  {savingBannerEnabled && <Loader2 className="w-4 h-4 animate-spin ml-2" />}
                 </div>
 
                 {/* Texto do Banner */}
@@ -721,10 +757,14 @@ export function SettingsManager() {
                       Exibe contador de tempo e vagas limitadas na landing page
                     </p>
                   </div>
-                  <Switch
-                    checked={urgencyEnabled}
-                    onCheckedChange={setUrgencyEnabled}
-                  />
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={urgencyEnabled}
+                      onCheckedChange={handleToggleUrgencyEnabled}
+                      disabled={savingUrgencyEnabled}
+                    />
+                    {savingUrgencyEnabled && <Loader2 className="w-4 h-4 animate-spin" />}
+                  </div>
                 </div>
 
                 {/* Título */}
