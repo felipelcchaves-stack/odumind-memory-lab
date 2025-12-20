@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/Header";
-import Hero from "@/components/Hero";
+import ABTestHero from "@/components/landing/ABTestHero";
 import Features from "@/components/Features";
 import Pricing from "@/components/Pricing";
 import Footer from "@/components/Footer";
@@ -49,7 +49,7 @@ const Index = () => {
       <Header />
       <ExitIntentPopup />
       <main>
-        <Hero />
+        <ABTestHero />
         <TopReferrers />
         <div id="features">
           <Features />
