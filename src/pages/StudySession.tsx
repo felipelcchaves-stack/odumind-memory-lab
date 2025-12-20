@@ -510,6 +510,59 @@ export default function StudySession() {
     setCardStartTime(Date.now());
   }
 
+  // Handler para pular exercício - funciona para todos os exercícios
+  function handleSkipExercise() {
+    toast.info('Exercício pulado', { duration: 1500 });
+    
+    if (isSingleOduMode) {
+      // Modo individual: avançar para próximo exercício do loop
+      advanceToNextExercise();
+    } else {
+      // Modo normal: selecionar outro Odu
+      selectRandomOdu();
+    }
+  }
+
+  // Função para variar conteúdo do Flashcard baseado no ciclo atual
+  function getFlashcardContent() {
+    if (!currentOdu) return { texto: '', versoResumido: null, significado: null };
+    
+    if (!isSingleOduMode) {
+      // Modo normal: conteúdo padrão
+      return {
+        texto: currentOdu.texto_principal,
+        versoResumido: currentOdu.verso_resumido,
+        significado: currentOdu.significado
+      };
+    }
+    
+    // Modo individual: variar baseado no foco do ciclo atual
+    switch (currentFlashcardFocus) {
+      case 'significado':
+        // Foco no significado - mostrar significado como verso (invertido)
+        return {
+          texto: currentOdu.significado || currentOdu.texto_principal,
+          versoResumido: currentOdu.texto_principal?.substring(0, 200) || null,
+          significado: currentOdu.verso_resumido
+        };
+      case 'texto':
+        // Foco no texto principal completo
+        return {
+          texto: currentOdu.texto_principal,
+          versoResumido: null,
+          significado: currentOdu.verso_resumido
+        };
+      case 'verso':
+      default:
+        // Foco padrão no verso resumido
+        return {
+          texto: currentOdu.texto_principal,
+          versoResumido: currentOdu.verso_resumido,
+          significado: currentOdu.significado
+        };
+    }
+  }
+
   async function fetchNextReviewDate() {
     if (!user) return null;
     
@@ -1020,17 +1073,24 @@ export default function StudySession() {
         }
       }
 
-      // Remove studied Odu from pool and select next
-      const remainingOdus = availableOdus.filter(o => o.id !== currentOdu.id);
+      // ✅ CORREÇÃO: Não remover Odu do pool no modo individual (loop contínuo)
+      let remainingOdus = availableOdus;
       
-      console.log('🔄 Transição de Odu:', {
-        estudado: `${currentOdu.numero}-${currentOdu.nome}`,
-        poolAntes: availableOdus.length,
-        poolDepois: remainingOdus.length,
-        proximosNaFila: remainingOdus.slice(0, 3).map(o => `${o.numero}-${o.nome}`)
-      });
-      
-      setAvailableOdus(remainingOdus);
+      if (!isSingleOduMode) {
+        // Modo normal (fase): remove do pool após estudar
+        remainingOdus = availableOdus.filter(o => o.id !== currentOdu.id);
+        setAvailableOdus(remainingOdus);
+        
+        console.log('🔄 Transição de Odu:', {
+          estudado: `${currentOdu.numero}-${currentOdu.nome}`,
+          poolAntes: availableOdus.length,
+          poolDepois: remainingOdus.length,
+          proximosNaFila: remainingOdus.slice(0, 3).map(o => `${o.numero}-${o.nome}`)
+        });
+      } else {
+        // Modo individual: manter Odu no pool para loop contínuo
+        console.log('🔁 Modo Individual - Odu permanece no pool para próximo ciclo');
+      }
       
       // ✅ CORREÇÃO: Usar callback com tempo aumentado para melhor feedback visual
       setTimeout(() => {
@@ -2006,12 +2066,13 @@ export default function StudySession() {
           />
         ) : mode === "flashcard" ? (
           <Flashcard
+            key={`flashcard-${loopCount}-${singleOduExerciseIndex}-${currentFlashcardFocus}`}
             numero={currentOdu.numero}
             nome={currentOdu.nome}
-            texto={currentOdu.texto_principal}
+            texto={getFlashcardContent().texto}
             verso={currentOdu.verso}
-            versoResumido={currentOdu.verso_resumido}
-            significado={currentOdu.significado}
+            versoResumido={getFlashcardContent().versoResumido}
+            significado={getFlashcardContent().significado}
             onRate={handleFlashcardRate}
             currentRevisoes={currentMemorizationData.revisoes}
             currentStrength={currentMemorizationData.forca_memoria}
@@ -2019,31 +2080,40 @@ export default function StudySession() {
             hideNumber={storyMode}
           />
         ) : mode === "quiz" && generateQuizQuestion ? (
-          <Quiz question={generateQuizQuestion} onAnswer={handleQuizAnswer} />
+          <Quiz 
+            key={`quiz-${loopCount}-${singleOduExerciseIndex}`}
+            question={generateQuizQuestion} 
+            onAnswer={handleQuizAnswer} 
+          />
         ) : mode === "cloze" && currentOdu.verso_resumido ? (
           <ClozeExercise
+            key={`cloze-${loopCount}-${singleOduExerciseIndex}`}
             numero={currentOdu.numero}
             nome={currentOdu.nome}
             oduId={currentOdu.id}
             versoResumido={currentOdu.verso_resumido}
             significado={currentOdu.significado}
             onAnswer={handleClozeAnswer}
+            onSkip={handleSkipExercise}
             hideNumber={storyMode}
           />
         ) : mode === "dragdrop" && currentOdu.verso_resumido ? (
           <DragDropWords
+            key={`dragdrop-${loopCount}-${singleOduExerciseIndex}`}
             oduName={currentOdu.nome}
             oduNumber={currentOdu.numero}
             versoResumido={currentOdu.verso_resumido}
             onComplete={handleClozeAnswer}
-            onSkip={() => selectRandomOdu()}
+            onSkip={handleSkipExercise}
           />
         ) : mode === "sentence-order" && currentOdu.verso_resumido ? (
           <SentenceOrderExercise
+            key={`sentence-order-${loopCount}-${singleOduExerciseIndex}`}
             numero={currentOdu.numero}
             nome={currentOdu.nome}
             versoResumido={currentOdu.verso_resumido}
             onComplete={handleClozeAnswer}
+            onSkip={handleSkipExercise}
           />
         ) : (
           // ✅ FALLBACK: Se modo não disponível, mostrar flashcard

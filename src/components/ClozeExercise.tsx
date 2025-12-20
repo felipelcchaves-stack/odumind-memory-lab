@@ -14,6 +14,7 @@ interface ClozeExerciseProps {
   versoResumido: string;
   significado?: string | null;
   onAnswer: (isCorrect: boolean, score: number) => void;
+  onSkip?: () => void; // Nova prop para skip externo
   hideNumber?: boolean;
 }
 
@@ -95,6 +96,7 @@ const ClozeExercise = memo(function ClozeExercise({
   versoResumido,
   significado,
   onAnswer,
+  onSkip,
   hideNumber = false
 }: ClozeExerciseProps) {
   const { logClozeSkip } = useExerciseMonitoring();
@@ -234,7 +236,11 @@ const ClozeExercise = memo(function ClozeExercise({
   
   // Pula o exercício (0 XP)
   const handleSkip = () => {
-    onAnswer(false, 0);
+    if (onSkip) {
+      onSkip(); // Usar handler externo se disponível
+    } else {
+      onAnswer(false, 0);
+    }
   };
   
   // Renderiza o texto com inputs nas lacunas

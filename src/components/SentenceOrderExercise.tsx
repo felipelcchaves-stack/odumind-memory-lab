@@ -20,6 +20,7 @@ interface SentenceOrderExerciseProps {
   nome: string;
   versoResumido: string;
   onComplete: (isCorrect: boolean, score: number) => void;
+  onSkip?: () => void; // Nova prop para skip externo
 }
 
 interface Sentence {
@@ -72,7 +73,8 @@ export const SentenceOrderExercise = memo(function SentenceOrderExercise({
   numero,
   nome,
   versoResumido,
-  onComplete
+  onComplete,
+  onSkip
 }: SentenceOrderExerciseProps) {
   const [sentences, setSentences] = useState<Sentence[]>([]);
   const [originalOrder, setOriginalOrder] = useState<string[]>([]);
@@ -164,8 +166,12 @@ export const SentenceOrderExercise = memo(function SentenceOrderExercise({
   }, []);
 
   const handleSkip = useCallback(() => {
-    onComplete(false, 0);
-  }, [onComplete]);
+    if (onSkip) {
+      onSkip(); // Usar handler externo se disponível
+    } else {
+      onComplete(false, 0);
+    }
+  }, [onSkip, onComplete]);
 
   const getPositionStatus = useCallback((sentence: Sentence, index: number) => {
     if (!isSubmitted) return 'neutral';
