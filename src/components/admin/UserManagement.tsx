@@ -7,11 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shield, Eye, Search, X, Edit, UserPlus, Settings, Download, Upload, RefreshCw, Mail, Trash2, MoreHorizontal, MoreVertical } from 'lucide-react';
+import { Shield, Eye, Search, X, Edit, UserPlus, Settings, Download, Upload, RefreshCw, KeyRound, Trash2, MoreHorizontal, MoreVertical } from 'lucide-react';
 import { toast } from 'sonner';
 import UserEditDialog from './UserEditDialog';
 import UserRoleDialog from './UserRoleDialog';
 import { CollaboratorPermissionsDialog } from './CollaboratorPermissionsDialog';
+import ResetPasswordDialog from './ResetPasswordDialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,7 +70,12 @@ export default function UserManagement() {
   const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
   const [permissionsUserId, setPermissionsUserId] = useState<string>('');
   const [permissionsUserName, setPermissionsUserName] = useState<string>('');
-  const [resendingPasswordFor, setResendingPasswordFor] = useState<string | null>(null);
+  
+  // Reset password dialog states
+  const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
+  const [resetPasswordUserId, setResetPasswordUserId] = useState<string>('');
+  const [resetPasswordUserEmail, setResetPasswordUserEmail] = useState<string>('');
+  const [resetPasswordUserName, setResetPasswordUserName] = useState<string>('');
   
   // Delete dialog states
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -359,39 +365,15 @@ export default function UserManagement() {
     loadUsers();
   };
 
-  const handleResendPassword = async (userId: string, email: string | undefined, name: string | undefined) => {
+  const handleResetPassword = (userId: string, email: string | undefined, name: string | undefined) => {
     if (!email) {
       toast.error('Usuário não possui email cadastrado');
       return;
     }
-
-    setResendingPasswordFor(userId);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error('Sessão expirada. Faça login novamente.');
-        return;
-      }
-
-      const response = await supabase.functions.invoke('resend-user-password', {
-        body: { user_id: userId },
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message || 'Erro ao reenviar senha');
-      }
-
-      if (response.data?.warning) {
-        toast.warning(response.data.warning);
-      } else {
-        toast.success(`Nova senha enviada para ${email}`);
-      }
-    } catch (error: any) {
-      console.error('Error resending password:', error);
-      toast.error(error.message || 'Erro ao reenviar senha');
-    } finally {
-      setResendingPasswordFor(null);
-    }
+    setResetPasswordUserId(userId);
+    setResetPasswordUserEmail(email);
+    setResetPasswordUserName(name || email.split('@')[0] || 'Usuário');
+    setResetPasswordDialogOpen(true);
   };
 
   const handleDeleteUser = (userId: string, userName: string, email: string | undefined, userRole: string) => {
@@ -670,11 +652,11 @@ export default function UserManagement() {
                             Alterar Função
                           </DropdownMenuItem>
                           <DropdownMenuItem 
-                            onClick={() => handleResendPassword(user.user_id, user.email, user.nome)}
-                            disabled={resendingPasswordFor === user.user_id || !user.email}
+                            onClick={() => handleResetPassword(user.user_id, user.email, user.nome)}
+                            disabled={!user.email}
                           >
-                            <Mail className="h-4 w-4 mr-2" />
-                            {resendingPasswordFor === user.user_id ? 'Enviando...' : 'Reenviar Senha'}
+                            <KeyRound className="h-4 w-4 mr-2" />
+                            Redefinir Senha
                           </DropdownMenuItem>
                           {userRole === 'colaborador' && (
                             <DropdownMenuItem
@@ -738,6 +720,14 @@ export default function UserManagement() {
       onOpenChange={setPermissionsDialogOpen}
       userId={permissionsUserId}
       userName={permissionsUserName}
+    />
+
+    <ResetPasswordDialog
+      open={resetPasswordDialogOpen}
+      onOpenChange={setResetPasswordDialogOpen}
+      userId={resetPasswordUserId}
+      userEmail={resetPasswordUserEmail}
+      userName={resetPasswordUserName}
     />
 
     <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
