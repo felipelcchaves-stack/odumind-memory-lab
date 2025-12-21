@@ -12,6 +12,17 @@ export interface AdvancedMetrics {
   arr: number;
   activeUsers: number;
   totalUsers: number;
+  // Financial planning metrics
+  mrrNet: number;           // MRR after commission
+  arrNet: number;           // ARR after commission
+  commissionAmount: number; // Commission value
+  mrrTarget: number;        // Configured target
+  arrTarget: number;        // Configured target
+  gapToTarget: number;      // How much is left
+  targetProgress: number;   // % achieved (0-100)
+  customersNeeded: number;  // Customers needed to reach target
+  monthsToTarget: number;   // Estimated months to reach target
+  averageTicket: number;    // Average ticket value
 }
 
 export interface MonthlyComparison {
@@ -71,7 +82,23 @@ const planPrices: Record<string, { price: number; interval: 'monthly' | 'yearly'
   'Gratuito': { price: 0, interval: 'monthly' },
 };
 
-export async function calculateAdvancedMetrics(startDate: Date, endDate: Date): Promise<AdvancedMetrics> {
+export interface FinancialConfig {
+  commissionPercent: number;
+  mrrTarget: number;
+  arrTarget: number;
+}
+
+const DEFAULT_FINANCIAL_CONFIG: FinancialConfig = {
+  commissionPercent: 0.10,
+  mrrTarget: 10000,
+  arrTarget: 120000,
+};
+
+export async function calculateAdvancedMetrics(
+  startDate: Date, 
+  endDate: Date,
+  financialConfig: FinancialConfig = DEFAULT_FINANCIAL_CONFIG
+): Promise<AdvancedMetrics> {
   try {
     // Total users
     const { count: totalUsers } = await supabase
@@ -145,6 +172,27 @@ export async function calculateAdvancedMetrics(startDate: Date, endDate: Date): 
     // For now, using a placeholder calculation
     const cac = 0; // This should be calculated from marketing spend data
 
+    // Financial planning calculations
+    const { commissionPercent, mrrTarget, arrTarget } = financialConfig;
+    const commissionAmount = mrr * commissionPercent;
+    const mrrNet = mrr - commissionAmount;
+    const arrNet = mrrNet * 12;
+
+    // Target progress calculations
+    const gapToTarget = Math.max(0, mrrTarget - mrrNet);
+    const targetProgress = mrrTarget > 0 ? Math.min(100, (mrrNet / mrrTarget) * 100) : 0;
+
+    // Average ticket and customers needed
+    const averageTicket = activeUsersCount > 0 ? mrrNet / activeUsersCount : mrr / Math.max(1, activeUsersCount);
+    const customersNeeded = averageTicket > 0 ? Math.ceil(gapToTarget / averageTicket) : 0;
+
+    // Estimate months to target based on historical growth
+    // Simple estimation: assume 10% monthly growth if we have active users
+    const estimatedMonthlyGrowth = mrrNet * 0.10; // Conservative 10% growth assumption
+    const monthsToTarget = estimatedMonthlyGrowth > 0 && gapToTarget > 0 
+      ? Math.ceil(gapToTarget / estimatedMonthlyGrowth) 
+      : gapToTarget > 0 ? 999 : 0;
+
     return {
       conversionRate: Number(conversionRate.toFixed(2)),
       retentionRate: Number(retentionRate.toFixed(2)),
@@ -154,7 +202,18 @@ export async function calculateAdvancedMetrics(startDate: Date, endDate: Date): 
       mrr: Number(mrr.toFixed(2)),
       arr: Number(arr.toFixed(2)),
       activeUsers: activeUsersCount,
-      totalUsers: totalUsers || 0
+      totalUsers: totalUsers || 0,
+      // Financial planning metrics
+      mrrNet: Number(mrrNet.toFixed(2)),
+      arrNet: Number(arrNet.toFixed(2)),
+      commissionAmount: Number(commissionAmount.toFixed(2)),
+      mrrTarget,
+      arrTarget,
+      gapToTarget: Number(gapToTarget.toFixed(2)),
+      targetProgress: Number(targetProgress.toFixed(1)),
+      customersNeeded,
+      monthsToTarget,
+      averageTicket: Number(averageTicket.toFixed(2))
     };
   } catch (error) {
     console.error('Error calculating advanced metrics:', error);
@@ -167,7 +226,17 @@ export async function calculateAdvancedMetrics(startDate: Date, endDate: Date): 
       mrr: 0,
       arr: 0,
       activeUsers: 0,
-      totalUsers: 0
+      totalUsers: 0,
+      mrrNet: 0,
+      arrNet: 0,
+      commissionAmount: 0,
+      mrrTarget: 0,
+      arrTarget: 0,
+      gapToTarget: 0,
+      targetProgress: 0,
+      customersNeeded: 0,
+      monthsToTarget: 0,
+      averageTicket: 0
     };
   }
 }
