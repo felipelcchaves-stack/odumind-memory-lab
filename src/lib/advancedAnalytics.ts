@@ -134,12 +134,14 @@ export interface FinancialConfig {
   commissionPercent: number;
   mrrTarget: number;
   arrTarget: number;
+  expectedChurnRate: number;
 }
 
 const DEFAULT_FINANCIAL_CONFIG: FinancialConfig = {
   commissionPercent: 0.10,
   mrrTarget: 10000,
   arrTarget: 120000,
+  expectedChurnRate: 0.05,
 };
 
 export async function calculateAdvancedMetrics(
@@ -237,11 +239,14 @@ export async function calculateAdvancedMetrics(
     const averageTicket = activeUsersCount > 0 ? mrrNet / activeUsersCount : mrr / Math.max(1, activeUsersCount);
     const customersNeeded = averageTicket > 0 ? Math.ceil(gapToTarget / averageTicket) : 0;
 
-    // Estimate months to target based on historical growth
-    // Simple estimation: assume 10% monthly growth if we have active users
-    const estimatedMonthlyGrowth = mrrNet * 0.10; // Conservative 10% growth assumption
+    // Estimate months to target using expected churn rate
+    // Net growth = gross growth - expected churn
+    const grossGrowthRate = 0.10; // 10% monthly growth assumption
+    const { expectedChurnRate = 0.05 } = financialConfig;
+    const netGrowthRate = grossGrowthRate - expectedChurnRate;
+    const estimatedMonthlyGrowth = mrrNet * Math.max(0.01, netGrowthRate); // Min 1% growth
     const monthsToTarget = estimatedMonthlyGrowth > 0 && gapToTarget > 0 
-      ? Math.ceil(gapToTarget / estimatedMonthlyGrowth) 
+      ? Math.ceil(Math.log(mrrTarget / mrrNet) / Math.log(1 + netGrowthRate)) 
       : gapToTarget > 0 ? 999 : 0;
 
     return {
