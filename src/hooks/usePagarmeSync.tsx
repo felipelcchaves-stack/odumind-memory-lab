@@ -126,7 +126,13 @@ export function usePagarmeSync() {
     setSyncing(true);
     
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      // Força refresh para evitar tokens com session_id inválido ("Auth session missing")
+      const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        console.error('Refresh session error:', refreshError);
+      }
+
+      const session = refreshed?.session ?? (await supabase.auth.getSession()).data.session;
       if (!session) {
         toast.error('Você precisa estar logado para sincronizar');
         return null;
@@ -134,6 +140,9 @@ export function usePagarmeSync() {
 
       const response = await supabase.functions.invoke('sync-pagarme-revenue', {
         body: { referenceMonth: targetMonth },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
       if (response.error) {
@@ -175,7 +184,13 @@ export function usePagarmeSync() {
     setHistoryProgress(0);
     
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      // Força refresh para evitar tokens com session_id inválido ("Auth session missing")
+      const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        console.error('Refresh session error:', refreshError);
+      }
+
+      const session = refreshed?.session ?? (await supabase.auth.getSession()).data.session;
       if (!session) {
         toast.error('Você precisa estar logado para sincronizar');
         return;
@@ -193,6 +208,9 @@ export function usePagarmeSync() {
         try {
           const response = await supabase.functions.invoke('sync-pagarme-revenue', {
             body: { referenceMonth: monthString },
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
           });
 
           results.push({ 
