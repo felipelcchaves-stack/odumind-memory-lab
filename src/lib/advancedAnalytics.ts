@@ -13,16 +13,19 @@ export interface AdvancedMetrics {
   activeUsers: number;
   totalUsers: number;
   
-  // Financial metrics - 3 níveis de receita
-  mrrAfterGateway: number;  // MRR após taxas do gateway
-  mrrNet: number;           // MRR líquido real (após todas as taxas)
-  arrAfterGateway: number;  // ARR após taxas do gateway
-  arrNet: number;           // ARR líquido real
+  // Financial metrics - 4 níveis de receita
+  mrrAfterGateway: number;     // MRR após taxas do gateway
+  mrrAfterCommission: number;  // MRR após comissão de vendedores
+  mrrNet: number;              // MRR líquido real (após todas as taxas)
+  arrAfterGateway: number;     // ARR após taxas do gateway
+  arrAfterCommission: number;  // ARR após comissão de vendedores
+  arrNet: number;              // ARR líquido real
   
   // Breakdown das taxas
-  gatewayFeeAmount: number;    // Valor das taxas do gateway
-  operationalTaxAmount: number; // Valor de outras taxas
-  totalFeesAmount: number;     // Total de taxas
+  gatewayFeeAmount: number;       // Valor das taxas do gateway
+  salesCommissionAmount: number;  // Valor da comissão de vendedores
+  operationalTaxAmount: number;   // Valor de outras taxas/impostos
+  totalFeesAmount: number;        // Total de taxas
   
   // Planejamento
   commissionAmount: number; // Deprecated: mantido para compatibilidade
@@ -145,26 +148,26 @@ export interface FinancialConfig {
   gatewayFeePercent: number;      // Ex: 0.0399 para 3.99%
   gatewayFeeFixed: number;        // Ex: 0.39 para R$ 0,39
   
+  // Comissão de Vendedores
+  salesCommissionPercent: number; // Ex: 0.10 para 10%
+  
   // Outras taxas
-  operationalTaxPercent: number;  // Ex: 0.10 para 10%
+  operationalTaxPercent: number;  // Ex: 0.05 para 5%
   
   // Metas
   mrrTarget: number;
   arrTarget: number;
   expectedChurnRate: number;
-  
-  // Legacy
-  commissionPercent: number;
 }
 
 const DEFAULT_FINANCIAL_CONFIG: FinancialConfig = {
   gatewayFeePercent: 0.0399,
   gatewayFeeFixed: 0.39,
+  salesCommissionPercent: 0.10,
   operationalTaxPercent: 0,
   mrrTarget: 10000,
   arrTarget: 120000,
   expectedChurnRate: 0.05,
-  commissionPercent: 0.10,
 };
 
 export async function calculateAdvancedMetrics(
@@ -248,14 +251,14 @@ export async function calculateAdvancedMetrics(
     // For now, using a placeholder calculation
     const cac = 0; // This should be calculated from marketing spend data
 
-    // Financial calculations - 3 níveis de receita
+    // Financial calculations - 4 níveis de receita
     const { 
       gatewayFeePercent = 0.0399, 
       gatewayFeeFixed = 0.39,
+      salesCommissionPercent = 0.10,
       operationalTaxPercent = 0,
       mrrTarget, 
       arrTarget,
-      commissionPercent = 0.10 // Legacy fallback
     } = financialConfig;
     
     // 1. MRR Bruto (o que o cliente paga) - já calculado acima
@@ -267,15 +270,20 @@ export async function calculateAdvancedMetrics(
     const gatewayFeeAmount = gatewayPercentFee + gatewayFixedFee;
     const mrrAfterGateway = mrr - gatewayFeeAmount;
     
-    // 3. Outras taxas operacionais/impostos
-    const operationalTaxAmount = mrrAfterGateway * operationalTaxPercent;
-    const mrrNet = mrrAfterGateway - operationalTaxAmount;
+    // 3. Comissão de Vendedores
+    const salesCommissionAmount = mrrAfterGateway * salesCommissionPercent;
+    const mrrAfterCommission = mrrAfterGateway - salesCommissionAmount;
+    
+    // 4. Outras taxas operacionais/impostos
+    const operationalTaxAmount = mrrAfterCommission * operationalTaxPercent;
+    const mrrNet = mrrAfterCommission - operationalTaxAmount;
     
     // Total de taxas
-    const totalFeesAmount = gatewayFeeAmount + operationalTaxAmount;
+    const totalFeesAmount = gatewayFeeAmount + salesCommissionAmount + operationalTaxAmount;
     
-    // ARR nos 3 níveis
+    // ARR nos 4 níveis
     const arrAfterGateway = mrrAfterGateway * 12;
+    const arrAfterCommission = mrrAfterCommission * 12;
     const arrNet = mrrNet * 12;
     
     // Legacy: commissionAmount para compatibilidade
@@ -308,13 +316,16 @@ export async function calculateAdvancedMetrics(
       arr: Number(arr.toFixed(2)),
       activeUsers: activeUsersCount,
       totalUsers: totalUsers || 0,
-      // Financial metrics - 3 níveis
+      // Financial metrics - 4 níveis
       mrrAfterGateway: Number(mrrAfterGateway.toFixed(2)),
+      mrrAfterCommission: Number(mrrAfterCommission.toFixed(2)),
       mrrNet: Number(mrrNet.toFixed(2)),
       arrAfterGateway: Number(arrAfterGateway.toFixed(2)),
+      arrAfterCommission: Number(arrAfterCommission.toFixed(2)),
       arrNet: Number(arrNet.toFixed(2)),
       // Breakdown das taxas
       gatewayFeeAmount: Number(gatewayFeeAmount.toFixed(2)),
+      salesCommissionAmount: Number(salesCommissionAmount.toFixed(2)),
       operationalTaxAmount: Number(operationalTaxAmount.toFixed(2)),
       totalFeesAmount: Number(totalFeesAmount.toFixed(2)),
       // Legacy
@@ -341,10 +352,13 @@ export async function calculateAdvancedMetrics(
       activeUsers: 0,
       totalUsers: 0,
       mrrAfterGateway: 0,
+      mrrAfterCommission: 0,
       mrrNet: 0,
       arrAfterGateway: 0,
+      arrAfterCommission: 0,
       arrNet: 0,
       gatewayFeeAmount: 0,
+      salesCommissionAmount: 0,
       operationalTaxAmount: 0,
       totalFeesAmount: 0,
       commissionAmount: 0,

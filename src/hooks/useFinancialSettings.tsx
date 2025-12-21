@@ -7,26 +7,26 @@ export interface FinancialSettings {
   gatewayFeePercent: number;      // Ex: 3.99%
   gatewayFeeFixed: number;        // Ex: R$ 0,39 por transação
   
+  // Comissão de Vendedores
+  salesCommissionPercent: number; // Ex: 10%
+  
   // Outras taxas (impostos, operacional)
-  operationalTaxPercent: number;  // Ex: 10%
+  operationalTaxPercent: number;  // Ex: 5%
   
   // Metas
   mrrTarget: number;
   arrTarget: number;
   expectedChurnRate: number;
-  
-  // Deprecated: substituído por gatewayFeePercent + operationalTaxPercent
-  commissionPercent: number;
 }
 
 const DEFAULT_SETTINGS: FinancialSettings = {
   gatewayFeePercent: 0.0399,    // 3.99%
   gatewayFeeFixed: 0.39,        // R$ 0,39
+  salesCommissionPercent: 0.10, // 10%
   operationalTaxPercent: 0,     // 0%
   mrrTarget: 10000,
   arrTarget: 120000,
   expectedChurnRate: 0.05,
-  commissionPercent: 0.10,      // Legacy, será calculado automaticamente
 };
 
 export function useFinancialSettings() {
@@ -40,9 +40,9 @@ export function useFinancialSettings() {
         .from('app_settings')
         .select('key, value')
         .in('key', [
-          'gateway_commission_percent',
           'gateway_fee_percent',
           'gateway_fee_fixed',
+          'sales_commission_percent',
           'operational_tax_percent',
           'mrr_target',
           'arr_target',
@@ -57,11 +57,10 @@ export function useFinancialSettings() {
           newSettings.gatewayFeePercent = parseFloat(item.value) / 100;
         } else if (item.key === 'gateway_fee_fixed' && item.value) {
           newSettings.gatewayFeeFixed = parseFloat(item.value);
+        } else if (item.key === 'sales_commission_percent' && item.value) {
+          newSettings.salesCommissionPercent = parseFloat(item.value) / 100;
         } else if (item.key === 'operational_tax_percent' && item.value) {
           newSettings.operationalTaxPercent = parseFloat(item.value) / 100;
-        } else if (item.key === 'gateway_commission_percent' && item.value) {
-          // Legacy: ainda usado para compatibilidade
-          newSettings.commissionPercent = parseFloat(item.value);
         } else if (item.key === 'mrr_target' && item.value) {
           newSettings.mrrTarget = parseFloat(item.value);
         } else if (item.key === 'arr_target' && item.value) {
@@ -100,16 +99,16 @@ export function useFinancialSettings() {
           value: newSettings.gatewayFeeFixed.toString(),
         });
       }
+      if (newSettings.salesCommissionPercent !== undefined) {
+        updates.push({
+          key: 'sales_commission_percent',
+          value: (newSettings.salesCommissionPercent * 100).toString(),
+        });
+      }
       if (newSettings.operationalTaxPercent !== undefined) {
         updates.push({
           key: 'operational_tax_percent',
           value: (newSettings.operationalTaxPercent * 100).toString(),
-        });
-      }
-      if (newSettings.commissionPercent !== undefined) {
-        updates.push({
-          key: 'gateway_commission_percent',
-          value: newSettings.commissionPercent.toString(),
         });
       }
       if (newSettings.mrrTarget !== undefined) {

@@ -70,6 +70,7 @@ export default function AdminAdvancedAnalytics() {
   const { settings: financialSettings, loading: loadingSettings, saving, updateSettings } = useFinancialSettingsContext();
   const [localGatewayFeePercent, setLocalGatewayFeePercent] = useState('');
   const [localGatewayFeeFixed, setLocalGatewayFeeFixed] = useState('');
+  const [localSalesCommission, setLocalSalesCommission] = useState('');
   const [localOperationalTax, setLocalOperationalTax] = useState('');
   const [localMrrTarget, setLocalMrrTarget] = useState('');
   const [localArrTarget, setLocalArrTarget] = useState('');
@@ -80,6 +81,7 @@ export default function AdminAdvancedAnalytics() {
     if (!loadingSettings) {
       setLocalGatewayFeePercent((financialSettings.gatewayFeePercent * 100).toString());
       setLocalGatewayFeeFixed(financialSettings.gatewayFeeFixed.toString());
+      setLocalSalesCommission((financialSettings.salesCommissionPercent * 100).toString());
       setLocalOperationalTax((financialSettings.operationalTaxPercent * 100).toString());
       setLocalMrrTarget(financialSettings.mrrTarget.toString());
       setLocalArrTarget(financialSettings.arrTarget.toString());
@@ -296,9 +298,28 @@ export default function AdminAdvancedAnalytics() {
                 </div>
               </div>
 
+              {/* Comissão de Vendedores */}
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Comissão de Vendedores</p>
+                <div className="grid gap-4 md:grid-cols-1 max-w-xs">
+                  <div className="space-y-2">
+                    <Label htmlFor="salesCommission">Comissão de Vendedores (%)</Label>
+                    <Input
+                      id="salesCommission"
+                      type="number"
+                      step="0.1"
+                      value={localSalesCommission}
+                      onChange={(e) => setLocalSalesCommission(e.target.value)}
+                      placeholder="10"
+                    />
+                    <p className="text-xs text-muted-foreground">Ex: 10 para 10% sobre vendas</p>
+                  </div>
+                </div>
+              </div>
+
               {/* Outras Taxas */}
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Outras Taxas</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Taxas Operacionais / Impostos</p>
                 <div className="grid gap-4 md:grid-cols-1 max-w-xs">
                   <div className="space-y-2">
                     <Label htmlFor="operationalTax">Taxas Operacionais/Impostos (%)</Label>
@@ -310,7 +331,7 @@ export default function AdminAdvancedAnalytics() {
                       onChange={(e) => setLocalOperationalTax(e.target.value)}
                       placeholder="0"
                     />
-                    <p className="text-xs text-muted-foreground">Ex: 10 para 10% (opcional)</p>
+                    <p className="text-xs text-muted-foreground">Ex: 5 para 5% (opcional)</p>
                   </div>
                 </div>
               </div>
@@ -384,6 +405,7 @@ export default function AdminAdvancedAnalytics() {
                   updateSettings({
                     gatewayFeePercent: parseFloat(localGatewayFeePercent) / 100,
                     gatewayFeeFixed: parseFloat(localGatewayFeeFixed),
+                    salesCommissionPercent: parseFloat(localSalesCommission) / 100,
                     operationalTaxPercent: parseFloat(localOperationalTax) / 100,
                     mrrTarget: parseFloat(localMrrTarget),
                     arrTarget: parseFloat(localArrTarget),
@@ -398,8 +420,8 @@ export default function AdminAdvancedAnalytics() {
             </div>
           )}
 
-          {/* Revenue Flow - 3 Níveis */}
-          <div className="grid gap-4 md:grid-cols-3">
+          {/* Revenue Flow - 4 Níveis */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {/* MRR Bruto */}
             <div className="p-4 rounded-lg bg-card border">
               <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
@@ -424,7 +446,21 @@ export default function AdminAdvancedAnalytics() {
                 R$ {currentMetrics?.mrrAfterGateway?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                -{(financialSettings.gatewayFeePercent * 100).toFixed(2)}% + R${financialSettings.gatewayFeeFixed}/trans (R$ {currentMetrics?.gatewayFeeAmount?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'})
+                -{(financialSettings.gatewayFeePercent * 100).toFixed(2)}% + R${financialSettings.gatewayFeeFixed}/trans
+              </p>
+            </div>
+
+            {/* MRR após Comissão */}
+            <div className="p-4 rounded-lg bg-card border border-purple-500/30">
+              <div className="flex items-center gap-2 text-purple-600 text-sm mb-2">
+                <Users className="h-4 w-4" />
+                MRR após Comissão
+              </div>
+              <p className="text-2xl font-bold text-purple-600">
+                R$ {currentMetrics?.mrrAfterCommission?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                -{(financialSettings.salesCommissionPercent * 100).toFixed(0)}% vendedores
               </p>
             </div>
 
@@ -439,22 +475,51 @@ export default function AdminAdvancedAnalytics() {
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 {financialSettings.operationalTaxPercent > 0 
-                  ? `-${(financialSettings.operationalTaxPercent * 100).toFixed(0)}% outras taxas (R$ ${currentMetrics?.operationalTaxAmount?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'})`
+                  ? `-${(financialSettings.operationalTaxPercent * 100).toFixed(0)}% taxas/impostos`
                   : 'O que você realmente recebe'
                 }
               </p>
             </div>
           </div>
 
-          {/* Total de Taxas */}
-          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Percent className="h-4 w-4 text-red-500" />
-              <span className="text-sm font-medium">Total de Taxas Deduzidas</span>
+          {/* Breakdown das Taxas */}
+          <div className="grid gap-3 md:grid-cols-4">
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Percent className="h-4 w-4 text-red-500" />
+                <span className="text-xs font-medium">Gateway</span>
+              </div>
+              <p className="text-sm font-bold text-red-500">
+                -R$ {currentMetrics?.gatewayFeeAmount?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+              </p>
             </div>
-            <p className="text-lg font-bold text-red-500">
-              -R$ {currentMetrics?.totalFeesAmount?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
-            </p>
+            <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-purple-500" />
+                <span className="text-xs font-medium">Comissão Vendedores</span>
+              </div>
+              <p className="text-sm font-bold text-purple-500">
+                -R$ {currentMetrics?.salesCommissionAmount?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+              </p>
+            </div>
+            <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Calculator className="h-4 w-4 text-orange-500" />
+                <span className="text-xs font-medium">Impostos/Operacional</span>
+              </div>
+              <p className="text-sm font-bold text-orange-500">
+                -R$ {currentMetrics?.operationalTaxAmount?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+              </p>
+            </div>
+            <div className="p-3 rounded-lg bg-red-600/10 border border-red-600/30 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Percent className="h-4 w-4 text-red-600" />
+                <span className="text-xs font-medium">Total Taxas</span>
+              </div>
+              <p className="text-sm font-bold text-red-600">
+                -R$ {currentMetrics?.totalFeesAmount?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+              </p>
+            </div>
           </div>
 
           {/* Financial Metrics Cards - Metas */}
