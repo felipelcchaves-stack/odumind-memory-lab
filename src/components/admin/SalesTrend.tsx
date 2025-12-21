@@ -13,87 +13,6 @@ interface SalesTrendProps {
   months?: number;
 }
 
-export function SalesTrend({ months = 12 }: SalesTrendProps) {
-  const [loading, setLoading] = useState(true);
-  const [salesData, setSalesData] = useState<SalesTrendData[]>([]);
-  const [metrics, setMetrics] = useState<GrowthMetrics | null>(null);
-  const { settings: financialSettings } = useFinancialSettings();
-
-  useEffect(() => {
-    loadData();
-  }, [months]);
-
-  async function loadData() {
-    setLoading(true);
-    try {
-      const data = await getSalesTrend(months);
-      setSalesData(data);
-      setMetrics(calculateGrowthMetrics(data));
-    } catch (error) {
-      console.error('Error loading sales trend:', error);
-      toast.error('Erro ao carregar tendência de vendas');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function formatCurrency(value: number): string {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-  }
-
-  function getTrendIcon(trend: 'growing' | 'stable' | 'declining') {
-    switch (trend) {
-      case 'growing':
-        return <TrendingUp className="h-5 w-5 text-green-500" />;
-      case 'declining':
-        return <TrendingDown className="h-5 w-5 text-red-500" />;
-      default:
-        return <Minus className="h-5 w-5 text-yellow-500" />;
-    }
-  }
-
-  function getTrendBadge(trend: 'growing' | 'stable' | 'declining') {
-    switch (trend) {
-      case 'growing':
-        return <Badge className="bg-green-500 hover:bg-green-600">Crescendo</Badge>;
-      case 'declining':
-        return <Badge variant="destructive">Diminuindo</Badge>;
-      default:
-        return <Badge variant="secondary">Estável</Badge>;
-    }
-  }
-
-  // Prepare chart data with moving average
-  const chartDataWithMA = salesData.map((item, index) => {
-    let movingAvg = null;
-    if (index >= 2) {
-      movingAvg = (salesData[index].salesCount + salesData[index - 1].salesCount + salesData[index - 2].salesCount) / 3;
-    }
-    return {
-      ...item,
-      movingAverage: movingAvg
-    };
-  });
-
-  if (loading) {
-    return (
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-4 w-72" />
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map(i => (
-              <Skeleton key={i} className="h-20" />
-            ))}
-          </div>
-          <Skeleton className="h-64" />
-        </CardContent>
-      </Card>
-    );
-  }
-
 // Next Month Projection Component
 function NextMonthProjection({ 
   currentMRR, 
@@ -121,7 +40,7 @@ function NextMonthProjection({
   const churnImpact = revenueWithoutChurn - revenueWithChurn;
   
   // Ticket médio estimado (baseado em planos típicos)
-  const averageTicket = currentMRR > 0 ? 97 : 0; // Valor médio aproximado
+  const averageTicket = currentMRR > 0 ? 97 : 0;
   const lostSubscriptions = averageTicket > 0 ? churnImpact / averageTicket : 0;
 
   // Dados para o gráfico comparativo
@@ -221,6 +140,87 @@ function NextMonthProjection({
     </div>
   );
 }
+
+export function SalesTrend({ months = 12 }: SalesTrendProps) {
+  const [loading, setLoading] = useState(true);
+  const [salesData, setSalesData] = useState<SalesTrendData[]>([]);
+  const [metrics, setMetrics] = useState<GrowthMetrics | null>(null);
+  const { settings: financialSettings } = useFinancialSettings();
+
+  useEffect(() => {
+    loadData();
+  }, [months]);
+
+  async function loadData() {
+    setLoading(true);
+    try {
+      const data = await getSalesTrend(months);
+      setSalesData(data);
+      setMetrics(calculateGrowthMetrics(data));
+    } catch (error) {
+      console.error('Error loading sales trend:', error);
+      toast.error('Erro ao carregar tendência de vendas');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function formatCurrency(value: number): string {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+  }
+
+  function getTrendIcon(trend: 'growing' | 'stable' | 'declining') {
+    switch (trend) {
+      case 'growing':
+        return <TrendingUp className="h-5 w-5 text-green-500" />;
+      case 'declining':
+        return <TrendingDown className="h-5 w-5 text-red-500" />;
+      default:
+        return <Minus className="h-5 w-5 text-yellow-500" />;
+    }
+  }
+
+  function getTrendBadge(trend: 'growing' | 'stable' | 'declining') {
+    switch (trend) {
+      case 'growing':
+        return <Badge className="bg-green-500 hover:bg-green-600">Crescendo</Badge>;
+      case 'declining':
+        return <Badge variant="destructive">Diminuindo</Badge>;
+      default:
+        return <Badge variant="secondary">Estável</Badge>;
+    }
+  }
+
+  // Prepare chart data with moving average
+  const chartDataWithMA = salesData.map((item, index) => {
+    let movingAvg = null;
+    if (index >= 2) {
+      movingAvg = (salesData[index].salesCount + salesData[index - 1].salesCount + salesData[index - 2].salesCount) / 3;
+    }
+    return {
+      ...item,
+      movingAverage: movingAvg
+    };
+  });
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-4 w-72" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map(i => (
+              <Skeleton key={i} className="h-20" />
+            ))}
+          </div>
+          <Skeleton className="h-64" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
