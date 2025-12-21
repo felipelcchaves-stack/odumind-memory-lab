@@ -159,35 +159,15 @@ serve(async (req) => {
 
     console.log(`Total charges fetched: ${allCharges.length}`);
 
-    // ========== DIAGNOSTIC: Log structure of first 5 charges ==========
-    console.log('=== DIAGNOSTIC: First 5 charges metadata structure ===');
-    allCharges.slice(0, 5).forEach((charge: any, idx: number) => {
-      console.log(`\n--- Charge ${idx + 1} ---`);
-      console.log(`ID: ${charge.id}`);
-      console.log(`Status: ${charge.status}`);
-      console.log(`Amount: ${charge.amount}`);
-      console.log(`Metadata:`, JSON.stringify(charge.metadata, null, 2));
-      console.log(`Order:`, JSON.stringify(charge.order, null, 2));
-      console.log(`Order Metadata:`, JSON.stringify(charge.order?.metadata, null, 2));
-      console.log(`Customer:`, JSON.stringify(charge.customer, null, 2));
-      console.log(`Customer Metadata:`, JSON.stringify(charge.customer?.metadata, null, 2));
-      console.log(`All keys:`, Object.keys(charge));
-    });
-    console.log('=== END DIAGNOSTIC ===\n');
-
-    // ========== 2. FILTER BY ISESEMIND PRODUCT ==========
-    // Try multiple possible paths for the product identifier
+    // ========== 2. FILTER BY SUBSCRIPTION CHARGES (recurrence_cycle) ==========
+    // Cobranças com recurrence_cycle são assinaturas (Isesemind)
     const isesemindCharges = allCharges.filter((charge: any) => {
-      const chargeProduct = charge.metadata?.product;
-      const orderProduct = charge.order?.metadata?.product;
-      const customerProduct = charge.customer?.metadata?.product;
-      
-      return chargeProduct === ISESEMIND_PRODUCT_ID || 
-             orderProduct === ISESEMIND_PRODUCT_ID || 
-             customerProduct === ISESEMIND_PRODUCT_ID;
+      return charge.recurrence_cycle !== null && charge.recurrence_cycle !== undefined;
     });
 
-    console.log(`Isesemind charges: ${isesemindCharges.length} of ${allCharges.length} total`);
+    const nonSubscriptionCharges = allCharges.length - isesemindCharges.length;
+    console.log(`Subscription charges (Isesemind): ${isesemindCharges.length}`);
+    console.log(`Non-subscription charges: ${nonSubscriptionCharges}`);
     
     // Log charges by status for debugging
     const statusCounts = isesemindCharges.reduce((acc, charge) => {
