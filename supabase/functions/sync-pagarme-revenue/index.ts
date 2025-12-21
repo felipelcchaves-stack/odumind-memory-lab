@@ -159,9 +159,32 @@ serve(async (req) => {
 
     console.log(`Total charges fetched: ${allCharges.length}`);
 
+    // ========== DIAGNOSTIC: Log structure of first 5 charges ==========
+    console.log('=== DIAGNOSTIC: First 5 charges metadata structure ===');
+    allCharges.slice(0, 5).forEach((charge: any, idx: number) => {
+      console.log(`\n--- Charge ${idx + 1} ---`);
+      console.log(`ID: ${charge.id}`);
+      console.log(`Status: ${charge.status}`);
+      console.log(`Amount: ${charge.amount}`);
+      console.log(`Metadata:`, JSON.stringify(charge.metadata, null, 2));
+      console.log(`Order:`, JSON.stringify(charge.order, null, 2));
+      console.log(`Order Metadata:`, JSON.stringify(charge.order?.metadata, null, 2));
+      console.log(`Customer:`, JSON.stringify(charge.customer, null, 2));
+      console.log(`Customer Metadata:`, JSON.stringify(charge.customer?.metadata, null, 2));
+      console.log(`All keys:`, Object.keys(charge));
+    });
+    console.log('=== END DIAGNOSTIC ===\n');
+
     // ========== 2. FILTER BY ISESEMIND PRODUCT ==========
-    const isesemindCharges = allCharges.filter(charge => {
-      return charge.metadata?.product === ISESEMIND_PRODUCT_ID;
+    // Try multiple possible paths for the product identifier
+    const isesemindCharges = allCharges.filter((charge: any) => {
+      const chargeProduct = charge.metadata?.product;
+      const orderProduct = charge.order?.metadata?.product;
+      const customerProduct = charge.customer?.metadata?.product;
+      
+      return chargeProduct === ISESEMIND_PRODUCT_ID || 
+             orderProduct === ISESEMIND_PRODUCT_ID || 
+             customerProduct === ISESEMIND_PRODUCT_ID;
     });
 
     console.log(`Isesemind charges: ${isesemindCharges.length} of ${allCharges.length} total`);
