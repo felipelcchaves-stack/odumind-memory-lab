@@ -48,8 +48,8 @@ export const PLANS: Plan[] = [
   {
     id: PLAN_IDS.AWO,
     name: "Awo",
-    price: "R$ 49,90",
-    priceValue: 49.90,
+    price: "R$ 129,00",
+    priceValue: 129.00,
     description: "Para estudantes dedicados",
     features: [
       { text: "Acesso a todos os 256 Odu", included: true },
