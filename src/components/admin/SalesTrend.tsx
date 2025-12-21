@@ -4,9 +4,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ComposedChart, Area } from 'recharts';
-import { TrendingUp, TrendingDown, Minus, ShoppingCart, DollarSign, BarChart3, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, ShoppingCart, DollarSign, BarChart3, ArrowUpRight, ArrowDownRight, Calendar, AlertTriangle } from 'lucide-react';
 import { getSalesTrend, calculateGrowthMetrics, SalesTrendData, GrowthMetrics } from '@/lib/advancedAnalytics';
 import { toast } from 'sonner';
+import { useFinancialSettings } from '@/hooks/useFinancialSettings';
 
 interface SalesTrendProps {
   months?: number;
@@ -16,6 +17,7 @@ export function SalesTrend({ months = 12 }: SalesTrendProps) {
   const [loading, setLoading] = useState(true);
   const [salesData, setSalesData] = useState<SalesTrendData[]>([]);
   const [metrics, setMetrics] = useState<GrowthMetrics | null>(null);
+  const { settings: financialSettings } = useFinancialSettings();
 
   useEffect(() => {
     loadData();
@@ -92,6 +94,134 @@ export function SalesTrend({ months = 12 }: SalesTrendProps) {
     );
   }
 
+// Next Month Projection Component
+function NextMonthProjection({ 
+  currentMRR, 
+  growthRate, 
+  expectedChurnRate,
+  formatCurrency 
+}: { 
+  currentMRR: number; 
+  growthRate: number; 
+  expectedChurnRate: number;
+  formatCurrency: (value: number) => string;
+}) {
+  // Cálculos de projeção
+  const growthRateDecimal = growthRate / 100;
+  const churnRateDecimal = expectedChurnRate / 100;
+  
+  // Receita sem churn (otimista)
+  const revenueWithoutChurn = currentMRR * (1 + growthRateDecimal);
+  
+  // Receita com churn (realista)
+  const netGrowthRate = growthRateDecimal - churnRateDecimal;
+  const revenueWithChurn = currentMRR * (1 + netGrowthRate);
+  
+  // Impacto do churn
+  const churnImpact = revenueWithoutChurn - revenueWithChurn;
+  
+  // Ticket médio estimado (baseado em planos típicos)
+  const averageTicket = currentMRR > 0 ? 97 : 0; // Valor médio aproximado
+  const lostSubscriptions = averageTicket > 0 ? churnImpact / averageTicket : 0;
+
+  // Dados para o gráfico comparativo
+  const comparisonData = [
+    { name: 'Sem Churn', value: revenueWithoutChurn, fill: 'hsl(var(--chart-2))' },
+    { name: 'Com Churn', value: revenueWithChurn, fill: 'hsl(var(--chart-3))' }
+  ];
+
+  return (
+    <div className="space-y-4 pt-2">
+      {/* Cards de Projeção */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Projeção Otimista */}
+        <Card className="border-green-500/30 bg-green-500/5">
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2 text-green-600 mb-2">
+              <TrendingUp className="h-4 w-4" />
+              <span className="text-xs font-medium">Sem Churn (Otimista)</span>
+            </div>
+            <p className="text-2xl font-bold text-green-600">{formatCurrency(revenueWithoutChurn)}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              +{growthRate.toFixed(1)}% crescimento bruto
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Projeção Realista */}
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2 text-amber-600 mb-2">
+              <TrendingDown className="h-4 w-4" />
+              <span className="text-xs font-medium">Com Churn (Realista)</span>
+            </div>
+            <p className="text-2xl font-bold text-amber-600">{formatCurrency(revenueWithChurn)}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {netGrowthRate >= 0 ? '+' : ''}{(netGrowthRate * 100).toFixed(1)}% crescimento líquido
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Impacto do Churn */}
+        <Card className="border-red-500/30 bg-red-500/5">
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2 text-red-600 mb-2">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="text-xs font-medium">Impacto do Churn</span>
+            </div>
+            <p className="text-2xl font-bold text-red-600">-{formatCurrency(churnImpact)}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              ≈ {lostSubscriptions.toFixed(1)} assinaturas perdidas
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Gráfico Comparativo */}
+      <div className="pt-4">
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={comparisonData} layout="vertical">
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis 
+              type="number" 
+              stroke="hsl(var(--muted-foreground))" 
+              fontSize={12} 
+              tickFormatter={(v) => `R$ ${v.toLocaleString('pt-BR')}`}
+            />
+            <YAxis 
+              type="category" 
+              dataKey="name" 
+              stroke="hsl(var(--muted-foreground))" 
+              fontSize={12}
+              width={80}
+            />
+            <Tooltip 
+              contentStyle={{ 
+                backgroundColor: 'hsl(var(--card))', 
+                border: '1px solid hsl(var(--border))',
+                borderRadius: '8px'
+              }}
+              formatter={(value: number) => [formatCurrency(value), 'Receita']}
+            />
+            <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+              {comparisonData.map((entry, index) => (
+                <rect key={`bar-${index}`} fill={entry.fill} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Info adicional */}
+      <div className="flex items-center justify-center gap-2 pt-2 text-xs text-muted-foreground border-t">
+        <span>Churn esperado configurado: {expectedChurnRate.toFixed(1)}%</span>
+        <span>•</span>
+        <span>MRR atual: {formatCurrency(currentMRR)}</span>
+      </div>
+    </div>
+  );
+}
+
   return (
     <Card>
       <CardHeader>
@@ -160,6 +290,10 @@ export function SalesTrend({ months = 12 }: SalesTrendProps) {
             <TabsTrigger value="sales">Vendas Mensais</TabsTrigger>
             <TabsTrigger value="revenue">Receita Mensal</TabsTrigger>
             <TabsTrigger value="combined">Visão Combinada</TabsTrigger>
+            <TabsTrigger value="nextMonth" className="flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              Próximo Mês
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="sales">
@@ -263,6 +397,15 @@ export function SalesTrend({ months = 12 }: SalesTrendProps) {
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
+          </TabsContent>
+
+          <TabsContent value="nextMonth">
+            <NextMonthProjection 
+              currentMRR={metrics?.averageRevenuePerMonth || 0}
+              growthRate={metrics?.momGrowth || 0}
+              expectedChurnRate={financialSettings.expectedChurnRate * 100}
+              formatCurrency={formatCurrency}
+            />
           </TabsContent>
         </Tabs>
 
