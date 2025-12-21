@@ -308,7 +308,7 @@ export default function AdminAdvancedAnalytics() {
           )}
 
           {/* Financial Metrics Cards */}
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-5">
             <div className="p-4 rounded-lg bg-card border">
               <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
                 <Wallet className="h-4 w-4" />
@@ -344,7 +344,20 @@ export default function AdminAdvancedAnalytics() {
                 R$ {currentMetrics?.gapToTarget?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                {currentMetrics?.customersNeeded || 0} clientes necessários
+                Faltam para a meta mensal
+              </p>
+            </div>
+
+            <div className="p-4 rounded-lg bg-card border">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                <Users className="h-4 w-4" />
+                Assinaturas Necessárias
+              </div>
+              <p className="text-2xl font-bold text-blue-500">
+                {currentMetrics?.customersNeeded || 0}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Ticket médio: R$ {currentMetrics?.averageTicket?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
               </p>
             </div>
 
@@ -379,7 +392,7 @@ export default function AdminAdvancedAnalytics() {
             <p className="text-sm text-muted-foreground">
               {(currentMetrics?.targetProgress || 0) >= 100 
                 ? '🎉 Parabéns! Você atingiu sua meta mensal!' 
-                : `Você está a R$ ${currentMetrics?.gapToTarget?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'} da sua meta mensal`}
+                : `Você está a R$ ${currentMetrics?.gapToTarget?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'} (${currentMetrics?.customersNeeded || 0} assinaturas) da sua meta mensal`}
             </p>
           </div>
 
