@@ -71,8 +71,8 @@ export interface GrowthMetrics {
   movingAverage: number[];
 }
 
-// Plan prices with interval info (monthly or yearly)
-const planPrices: Record<string, { price: number; interval: 'monthly' | 'yearly' }> = {
+// Default fallback prices (used when DB fetch fails or for unmapped plans)
+const DEFAULT_PLAN_PRICES: Record<string, { price: number; interval: 'monthly' | 'yearly' }> = {
   'Akapo': { price: 49.90, interval: 'monthly' },
   'Awo': { price: 97.00, interval: 'monthly' },
   'Egbe': { price: 129.90, interval: 'monthly' },
@@ -81,6 +81,54 @@ const planPrices: Record<string, { price: number; interval: 'monthly' | 'yearly'
   'Profissional': { price: 697.00, interval: 'yearly' },
   'Gratuito': { price: 0, interval: 'monthly' },
 };
+
+// Cache for plan prices (refreshed every 5 minutes)
+let planPricesCache: Record<string, { price: number; interval: 'monthly' | 'yearly' }> | null = null;
+let planPricesCacheTime: number = 0;
+const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+
+// Fetch plan prices from database
+async function getPlanPrices(): Promise<Record<string, { price: number; interval: 'monthly' | 'yearly' }>> {
+  const now = Date.now();
+  
+  // Return cached prices if still valid
+  if (planPricesCache && (now - planPricesCacheTime) < CACHE_DURATION_MS) {
+    return planPricesCache;
+  }
+  
+  try {
+    const { data: plans, error } = await supabase
+      .from('subscription_plans')
+      .select('nome, preco, periodo')
+      .eq('ativo', true);
+    
+    if (error) {
+      console.error('Error fetching plan prices from DB:', error);
+      return DEFAULT_PLAN_PRICES;
+    }
+    
+    const prices: Record<string, { price: number; interval: 'monthly' | 'yearly' }> = {
+      ...DEFAULT_PLAN_PRICES // Start with defaults
+    };
+    
+    // Override with database values
+    plans?.forEach(plan => {
+      const interval: 'monthly' | 'yearly' = plan.periodo === 'anual' ? 'yearly' : 'monthly';
+      prices[plan.nome] = { price: plan.preco, interval };
+    });
+    
+    // Update cache
+    planPricesCache = prices;
+    planPricesCacheTime = now;
+    
+    console.log('Plan prices refreshed from database:', Object.keys(prices).length, 'plans');
+    
+    return prices;
+  } catch (error) {
+    console.error('Failed to fetch plan prices:', error);
+    return DEFAULT_PLAN_PRICES;
+  }
+}
 
 export interface FinancialConfig {
   commissionPercent: number;
@@ -100,6 +148,9 @@ export async function calculateAdvancedMetrics(
   financialConfig: FinancialConfig = DEFAULT_FINANCIAL_CONFIG
 ): Promise<AdvancedMetrics> {
   try {
+    // Fetch dynamic plan prices from database
+    const planPrices = await getPlanPrices();
+    
     // Total users
     const { count: totalUsers } = await supabase
       .from('profiles')
@@ -156,7 +207,7 @@ export async function calculateAdvancedMetrics(
         return sum + (isYearly ? sub.amount_paid / 12 : sub.amount_paid);
       }
       
-      // Fallback: usar tabela de preços
+      // Fallback: usar tabela de preços dinâmica do banco
       const plan = planPrices[sub.plan_name];
       if (!plan || plan.price === 0) return sum;
       return sum + (plan.interval === 'yearly' ? plan.price / 12 : plan.price);
@@ -315,6 +366,9 @@ export async function getRenewalForecast(): Promise<RenewalSummary> {
   try {
     const today = new Date();
     
+    // Fetch dynamic plan prices from database
+    const planPrices = await getPlanPrices();
+    
     // Fetch all active subscriptions with expiration dates
     const { data: subscriptions, error } = await supabase
       .from('subscriptions')
@@ -322,7 +376,8 @@ export async function getRenewalForecast(): Promise<RenewalSummary> {
         user_id,
         plan_name,
         current_period_end,
-        status
+        status,
+        amount_paid
       `)
       .in('status', ['active', 'trialing'])
       .not('plan_name', 'eq', 'Gratuito');
@@ -346,7 +401,10 @@ export async function getRenewalForecast(): Promise<RenewalSummary> {
       const expiresAt = sub.current_period_end ? new Date(sub.current_period_end) : null;
       const daysUntilExpiry = expiresAt ? differenceInDays(expiresAt, today) : 999;
       const plan = planPrices[sub.plan_name] || { price: 0, interval: 'monthly' as const };
-      const monthlyValue = plan.interval === 'yearly' ? plan.price / 12 : plan.price;
+      
+      // Usar amount_paid se disponível, senão usar preço do plano
+      const actualValue = sub.amount_paid && sub.amount_paid > 0 ? sub.amount_paid : plan.price;
+      const monthlyValue = plan.interval === 'yearly' ? actualValue / 12 : actualValue;
       const profile = profileMap.get(sub.user_id);
 
       return {
@@ -356,7 +414,7 @@ export async function getRenewalForecast(): Promise<RenewalSummary> {
         planName: sub.plan_name,
         expiresAt: expiresAt?.toISOString() || '',
         daysUntilExpiry,
-        monthlyValue: plan.price // Use full value for renewal
+        monthlyValue: actualValue // Use actual value for renewal
       };
     }).sort((a, b) => a.daysUntilExpiry - b.daysUntilExpiry);
 
@@ -420,16 +478,19 @@ export async function getSalesTrend(months: number = 12): Promise<SalesTrendData
   try {
     const today = new Date();
     const results: SalesTrendData[] = [];
+    
+    // Fetch dynamic plan prices from database
+    const planPrices = await getPlanPrices();
 
     for (let i = months - 1; i >= 0; i--) {
       const monthDate = subMonths(today, i);
       const startDate = startOfMonth(monthDate);
       const endDate = endOfMonth(monthDate);
 
-      // Fetch subscriptions created in this month
+      // Fetch subscriptions created in this month (incluir amount_paid)
       const { data: subscriptions } = await supabase
         .from('subscriptions')
-        .select('plan_name, created_at')
+        .select('plan_name, created_at, amount_paid')
         .gte('created_at', startDate.toISOString())
         .lte('created_at', endDate.toISOString())
         .not('plan_name', 'eq', 'Gratuito');
@@ -439,12 +500,15 @@ export async function getSalesTrend(months: number = 12): Promise<SalesTrendData
 
       (subscriptions || []).forEach(sub => {
         const plan = planPrices[sub.plan_name] || { price: 0 };
+        // Usar amount_paid se disponível, senão usar preço do plano
+        const actualPrice = sub.amount_paid && sub.amount_paid > 0 ? sub.amount_paid : plan.price;
+        
         if (!planBreakdown[sub.plan_name]) {
           planBreakdown[sub.plan_name] = { count: 0, revenue: 0 };
         }
         planBreakdown[sub.plan_name].count++;
-        planBreakdown[sub.plan_name].revenue += plan.price;
-        totalRevenue += plan.price;
+        planBreakdown[sub.plan_name].revenue += actualPrice;
+        totalRevenue += actualPrice;
       });
 
       results.push({
