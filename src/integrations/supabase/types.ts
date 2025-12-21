@@ -1819,10 +1819,13 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          amount_paid: number | null
           cancel_at_period_end: boolean | null
+          coupon_code: string | null
           created_at: string | null
           current_period_end: string | null
           current_period_start: string | null
+          discount_applied: number | null
           guru_customer_id: string | null
           guru_subscription_id: string | null
           id: string
@@ -1836,10 +1839,13 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          amount_paid?: number | null
           cancel_at_period_end?: boolean | null
+          coupon_code?: string | null
           created_at?: string | null
           current_period_end?: string | null
           current_period_start?: string | null
+          discount_applied?: number | null
           guru_customer_id?: string | null
           guru_subscription_id?: string | null
           id?: string
@@ -1853,10 +1859,13 @@ export type Database = {
           user_id: string
         }
         Update: {
+          amount_paid?: number | null
           cancel_at_period_end?: boolean | null
+          coupon_code?: string | null
           created_at?: string | null
           current_period_end?: string | null
           current_period_start?: string | null
+          discount_applied?: number | null
           guru_customer_id?: string | null
           guru_subscription_id?: string | null
           id?: string

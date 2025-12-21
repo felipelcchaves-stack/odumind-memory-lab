@@ -80,9 +80,10 @@ export async function calculateAdvancedMetrics(startDate: Date, endDate: Date): 
       .lte('created_at', endDate.toISOString());
 
     // All currently active subscriptions (for MRR calculation - no date filter)
+    // Incluir amount_paid para cálculo de MRR real
     const { data: currentSubscriptions } = await supabase
       .from('subscriptions')
-      .select('plan_name, user_id')
+      .select('plan_name, user_id, amount_paid, current_period_end')
       .in('status', ['active', 'trialing']);
 
     // Count active paying users (exclude free plan)
@@ -118,11 +119,19 @@ export async function calculateAdvancedMetrics(startDate: Date, endDate: Date): 
     // Churn rate: 100 - retention rate
     const churnRate = 100 - retentionRate;
 
-    // MRR calculation - considers yearly plans divided by 12
+    // MRR calculation - priorizar valores reais pagos (amount_paid)
     const mrr = activePayingSubscriptions.reduce((sum, sub) => {
+      // Se tem amount_paid (valor real pago), usar ele
+      if (sub.amount_paid && sub.amount_paid > 0) {
+        const plan = planPrices[sub.plan_name];
+        // Se for plano anual, dividir por 12 para obter MRR
+        const isYearly = plan?.interval === 'yearly';
+        return sum + (isYearly ? sub.amount_paid / 12 : sub.amount_paid);
+      }
+      
+      // Fallback: usar tabela de preços
       const plan = planPrices[sub.plan_name];
       if (!plan || plan.price === 0) return sum;
-      // Divide annual plans by 12 to get monthly revenue
       return sum + (plan.interval === 'yearly' ? plan.price / 12 : plan.price);
     }, 0);
 

@@ -579,7 +579,12 @@ serve(async (req) => {
         periodEnd.setDate(periodEnd.getDate() + durationDays);
       }
 
-      const subscriptionData = {
+      // Capturar valor pago do Guru (se disponível no payload)
+      const amountPaid = payload.subscription?.price || payload.price || payload.value || null;
+      
+      logStep("Payment details from Guru", { amountPaid });
+
+      const subscriptionData: Record<string, any> = {
         user_id: userId,
         status: subscriptionStatus,
         plan_name: planName,
@@ -590,6 +595,11 @@ serve(async (req) => {
         current_period_end: subscriptionStatus === 'canceled' ? now.toISOString() : periodEnd.toISOString(),
         updated_at: now.toISOString(),
       };
+
+      // Adicionar amount_paid se disponível
+      if (amountPaid && typeof amountPaid === 'number' && amountPaid > 0) {
+        subscriptionData.amount_paid = amountPaid;
+      }
 
       logStep("Dados de assinatura a salvar", subscriptionData);
 
