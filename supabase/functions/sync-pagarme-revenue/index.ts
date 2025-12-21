@@ -6,6 +6,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Isesemind product ID for filtering
+const ISESEMIND_PRODUCT_ID = 'a0734b00-ff78-47ed-8516-0bc2aae38f64';
+
 interface Charge {
   id: string;
   status: string;
@@ -14,6 +17,7 @@ interface Charge {
   created_at: string;
   paid_at?: string;
   gateway_id?: string;
+  metadata?: Record<string, string>;
   last_transaction?: {
     gateway_response?: {
       code?: string;
@@ -94,7 +98,7 @@ serve(async (req) => {
     const { referenceMonth } = await req.json();
     const targetMonth = referenceMonth || new Date().toISOString().slice(0, 7);
     
-    console.log(`Syncing Pagar.me data for month: ${targetMonth}`);
+    console.log(`Syncing Pagar.me data for month: ${targetMonth} (filtered by Isesemind product)`);
 
     const [year, month] = targetMonth.split('-').map(Number);
     const startDate = new Date(year, month - 1, 1);
@@ -107,64 +111,69 @@ serve(async (req) => {
       'Accept': 'application/json',
     };
 
-  // ========== 1. FETCH CHARGES (TPV) ==========
-  console.log('Fetching charges...');
-  let allCharges: Charge[] = [];
-  let page = 1;
-  let hasMore = true;
+    // ========== 1. FETCH ALL CHARGES ==========
+    console.log('Fetching charges...');
+    let allCharges: Charge[] = [];
+    let page = 1;
+    let hasMore = true;
 
-  while (hasMore && page <= 100) {
-    const chargesUrl = new URL('https://api.pagar.me/core/v5/charges');
-    chargesUrl.searchParams.set('created_since', startDate.toISOString());
-    chargesUrl.searchParams.set('created_until', endDate.toISOString());
-    chargesUrl.searchParams.set('size', '100');
-    chargesUrl.searchParams.set('page', String(page));
+    while (hasMore && page <= 100) {
+      const chargesUrl = new URL('https://api.pagar.me/core/v5/charges');
+      chargesUrl.searchParams.set('created_since', startDate.toISOString());
+      chargesUrl.searchParams.set('created_until', endDate.toISOString());
+      chargesUrl.searchParams.set('size', '100');
+      chargesUrl.searchParams.set('page', String(page));
 
-    console.log(`Fetching charges page ${page}: ${chargesUrl.toString()}`);
+      console.log(`Fetching charges page ${page}: ${chargesUrl.toString()}`);
 
-    const chargesResponse = await fetch(chargesUrl.toString(), { method: 'GET', headers });
+      const chargesResponse = await fetch(chargesUrl.toString(), { method: 'GET', headers });
 
-    if (!chargesResponse.ok) {
-      const errorText = await chargesResponse.text();
-      console.error('Pagar.me charges API error:', chargesResponse.status, errorText);
-      return new Response(
-        JSON.stringify({ error: `Erro na API Pagar.me (charges): ${chargesResponse.status}`, details: errorText }),
-        { status: chargesResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const chargesData: PagarmeListResponse<Charge> = await chargesResponse.json();
-    const chargesFound = chargesData.data?.length || 0;
-    const hasNextPage = !!chargesData.paging?.next;
-    
-    console.log(`Page ${page}: Found ${chargesFound} charges, has_next: ${hasNextPage}`);
-
-    if (chargesData.data && chargesData.data.length > 0) {
-      allCharges = [...allCharges, ...chargesData.data];
-      page++;
-      
-      // FIX: Continue if API indicates next page OR if we got items (API may return partial pages)
-      hasMore = hasNextPage || chargesData.data.length >= 30;
-      
-      // Small delay to avoid rate limiting
-      if (hasMore) {
-        await new Promise(resolve => setTimeout(resolve, 150));
+      if (!chargesResponse.ok) {
+        const errorText = await chargesResponse.text();
+        console.error('Pagar.me charges API error:', chargesResponse.status, errorText);
+        return new Response(
+          JSON.stringify({ error: `Erro na API Pagar.me (charges): ${chargesResponse.status}`, details: errorText }),
+          { status: chargesResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
-    } else {
-      hasMore = false;
+
+      const chargesData: PagarmeListResponse<Charge> = await chargesResponse.json();
+      const chargesFound = chargesData.data?.length || 0;
+      const hasNextPage = !!chargesData.paging?.next;
+      
+      console.log(`Page ${page}: Found ${chargesFound} charges, has_next: ${hasNextPage}`);
+
+      if (chargesData.data && chargesData.data.length > 0) {
+        allCharges = [...allCharges, ...chargesData.data];
+        page++;
+        
+        hasMore = hasNextPage || chargesData.data.length >= 30;
+        
+        if (hasMore) {
+          await new Promise(resolve => setTimeout(resolve, 150));
+        }
+      } else {
+        hasMore = false;
+      }
     }
-  }
 
-  console.log(`Total charges fetched: ${allCharges.length}`);
-  
-  // Log charges by status for debugging
-  const statusCounts = allCharges.reduce((acc, charge) => {
-    acc[charge.status] = (acc[charge.status] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  console.log('Charges by status:', JSON.stringify(statusCounts));
+    console.log(`Total charges fetched: ${allCharges.length}`);
 
-    // ========== 2. FETCH CURRENT BALANCE ==========
+    // ========== 2. FILTER BY ISESEMIND PRODUCT ==========
+    const isesemindCharges = allCharges.filter(charge => {
+      return charge.metadata?.product === ISESEMIND_PRODUCT_ID;
+    });
+
+    console.log(`Isesemind charges: ${isesemindCharges.length} of ${allCharges.length} total`);
+    
+    // Log charges by status for debugging
+    const statusCounts = isesemindCharges.reduce((acc, charge) => {
+      acc[charge.status] = (acc[charge.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    console.log('Isesemind charges by status:', JSON.stringify(statusCounts));
+
+    // ========== 3. FETCH CURRENT BALANCE ==========
     console.log('Fetching balance...');
     let balanceData: BalanceResponse | null = null;
 
@@ -181,14 +190,14 @@ serve(async (req) => {
       console.warn('Error fetching balance:', balanceError);
     }
 
-    // ========== 3. CALCULATE METRICS ==========
-    let chargesCreated = 0;      // All charges amount
-    let tpv = 0;                 // Authorized/paid charges (TPV)
+    // ========== 4. CALCULATE METRICS (ISESEMIND ONLY) ==========
+    let chargesCreated = 0;      // All Isesemind charges amount
+    let tpv = 0;                 // Authorized/paid Isesemind charges (TPV)
     let totalPaidAmount = 0;     // Actually paid amount
-    let chargesCount = 0;        // Total charges count
-    let paidChargesCount = 0;    // Paid charges count
+    let chargesCount = 0;        // Total Isesemind charges count
+    let paidChargesCount = 0;    // Paid Isesemind charges count
 
-    for (const charge of allCharges) {
+    for (const charge of isesemindCharges) {
       chargesCount++;
       chargesCreated += (charge.amount || 0);
 
@@ -212,7 +221,7 @@ serve(async (req) => {
     // Calculate average ticket
     const averageTicket = paidChargesCount > 0 ? totalPaidAmount / paidChargesCount : 0;
 
-    // Balance data (already in reais from API)
+    // Balance data (already in reais from API) - Note: this is total balance, not Isesemind-specific
     const availableBalance = balanceData ? (balanceData.available_amount || 0) / 100 : 0;
     const waitingFunds = balanceData?.waiting_funds ? (balanceData.waiting_funds.amount || 0) / 100 : 0;
     const transferredAmount = balanceData ? (balanceData.transferred_amount || 0) / 100 : 0;
@@ -221,7 +230,7 @@ serve(async (req) => {
     const estimatedGatewayFees = totalPaidAmount * 0.035;
     const netRevenue = totalPaidAmount - estimatedGatewayFees;
 
-    console.log(`Calculated metrics:
+    console.log(`Calculated metrics (ISESEMIND ONLY):
       - Charges Created: R$ ${chargesCreated.toFixed(2)}
       - TPV (Authorized): R$ ${tpv.toFixed(2)}
       - Paid Amount: R$ ${totalPaidAmount.toFixed(2)}
@@ -235,7 +244,7 @@ serve(async (req) => {
       - Net Revenue: R$ ${netRevenue.toFixed(2)}
     `);
 
-    // ========== 4. SAVE TO DATABASE ==========
+    // ========== 5. SAVE TO DATABASE ==========
     const { data: snapshot, error: upsertError } = await supabase
       .from('financial_snapshots')
       .upsert({
@@ -256,7 +265,9 @@ serve(async (req) => {
         synced_at: new Date().toISOString(),
         source: 'pagarme',
         raw_data: {
-          total_charges: allCharges.length,
+          product_filter: ISESEMIND_PRODUCT_ID,
+          total_charges_before_filter: allCharges.length,
+          isesemind_charges: isesemindCharges.length,
           period: {
             start: startDate.toISOString(),
             end: endDate.toISOString(),
@@ -304,6 +315,8 @@ serve(async (req) => {
           waitingFunds,
           transferredAmount,
           syncedAt: snapshot.synced_at,
+          isesemindChargesFiltered: isesemindCharges.length,
+          totalChargesBeforeFilter: allCharges.length,
         },
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

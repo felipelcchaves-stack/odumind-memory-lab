@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { calculateMetricsFromPagarme, PagarmeMetrics } from '@/lib/advancedAnalytics';
+import { subMonths, format } from 'date-fns';
 
 export interface FinancialSnapshot {
   id: string;
@@ -26,8 +28,11 @@ export interface FinancialSnapshot {
 export function usePagarmeSync() {
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [syncingHistory, setSyncingHistory] = useState(false);
+  const [historyProgress, setHistoryProgress] = useState(0);
   const [currentSnapshot, setCurrentSnapshot] = useState<FinancialSnapshot | null>(null);
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
+  const [calculatedMetrics, setCalculatedMetrics] = useState<PagarmeMetrics | null>(null);
 
   // Get current month in YYYY-MM format
   const getCurrentMonth = () => {
@@ -51,7 +56,7 @@ export function usePagarmeSync() {
       
       if (data) {
         // Map database fields to interface, handling null values
-        setCurrentSnapshot({
+        const snapshot: FinancialSnapshot = {
           ...data,
           tpv: Number(data.tpv) || 0,
           charges_created: Number(data.charges_created) || 0,
@@ -66,9 +71,26 @@ export function usePagarmeSync() {
           net_revenue: Number(data.net_revenue) || 0,
           sales_commission: Number(data.sales_commission) || 0,
           transaction_count: Number(data.transaction_count) || 0,
+        };
+        setCurrentSnapshot(snapshot);
+        
+        // Calculate metrics from snapshot
+        const metrics = await calculateMetricsFromPagarme({
+          reference_month: snapshot.reference_month,
+          gross_revenue: snapshot.gross_revenue,
+          net_revenue: snapshot.net_revenue,
+          gateway_fees: snapshot.gateway_fees,
+          tpv: snapshot.tpv,
+          average_ticket: snapshot.average_ticket,
+          paid_charges_count: snapshot.paid_charges_count,
+          charges_count: snapshot.charges_count,
+          available_balance: snapshot.available_balance,
+          waiting_funds: snapshot.waiting_funds,
         });
+        setCalculatedMetrics(metrics);
       } else {
         setCurrentSnapshot(null);
+        setCalculatedMetrics(null);
       }
     } catch (error) {
       console.error('Error loading snapshot:', error);
@@ -123,7 +145,11 @@ export function usePagarmeSync() {
         return null;
       }
 
-      toast.success(`Sincronizado! TPV: R$ ${result.snapshot.tpv?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}`);
+      const filteredInfo = result.snapshot.isesemindChargesFiltered !== undefined
+        ? ` (${result.snapshot.isesemindChargesFiltered} Isesemind de ${result.snapshot.totalChargesBeforeFilter} total)`
+        : '';
+
+      toast.success(`Sincronizado! TPV: R$ ${result.snapshot.tpv?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}${filteredInfo}`);
       
       // Reload the snapshot
       await loadSnapshot(targetMonth);
@@ -139,6 +165,85 @@ export function usePagarmeSync() {
     }
   }, [loadSnapshot, loadAvailableMonths]);
 
+  // Sync historical data (last 12 months)
+  const syncHistoricalData = useCallback(async (months: number = 12) => {
+    setSyncingHistory(true);
+    setHistoryProgress(0);
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Você precisa estar logado para sincronizar');
+        return;
+      }
+
+      const today = new Date();
+      const results: { month: string; success: boolean }[] = [];
+
+      for (let i = 0; i < months; i++) {
+        const monthDate = subMonths(today, i);
+        const monthString = format(monthDate, 'yyyy-MM');
+        
+        setHistoryProgress(((i + 1) / months) * 100);
+
+        try {
+          const response = await supabase.functions.invoke('sync-pagarme-revenue', {
+            body: { referenceMonth: monthString },
+          });
+
+          results.push({ 
+            month: monthString, 
+            success: !response.error && !response.data?.error 
+          });
+        } catch (err) {
+          results.push({ month: monthString, success: false });
+        }
+
+        // Delay between requests to avoid rate limiting
+        if (i < months - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
+      const successCount = results.filter(r => r.success).length;
+      toast.success(`Histórico sincronizado! ${successCount}/${months} meses`);
+
+      // Reload current data
+      await loadSnapshot();
+      await loadAvailableMonths();
+
+    } catch (error: any) {
+      console.error('Error syncing historical data:', error);
+      toast.error('Erro ao sincronizar histórico');
+    } finally {
+      setSyncingHistory(false);
+      setHistoryProgress(0);
+    }
+  }, [loadSnapshot, loadAvailableMonths]);
+
+  // Recalculate metrics with new settings
+  const recalculateMetrics = useCallback(async (
+    salesCommissionPercent: number,
+    targetOverride?: { mrrTarget?: number; churnTarget?: number }
+  ) => {
+    if (!currentSnapshot) return;
+
+    const metrics = await calculateMetricsFromPagarme({
+      reference_month: currentSnapshot.reference_month,
+      gross_revenue: currentSnapshot.gross_revenue,
+      net_revenue: currentSnapshot.net_revenue,
+      gateway_fees: currentSnapshot.gateway_fees,
+      tpv: currentSnapshot.tpv,
+      average_ticket: currentSnapshot.average_ticket,
+      paid_charges_count: currentSnapshot.paid_charges_count,
+      charges_count: currentSnapshot.charges_count,
+      available_balance: currentSnapshot.available_balance,
+      waiting_funds: currentSnapshot.waiting_funds,
+    }, salesCommissionPercent, targetOverride);
+    
+    setCalculatedMetrics(metrics);
+  }, [currentSnapshot]);
+
   // Initial load
   useEffect(() => {
     loadSnapshot();
@@ -148,10 +253,15 @@ export function usePagarmeSync() {
   return {
     loading,
     syncing,
+    syncingHistory,
+    historyProgress,
     currentSnapshot,
     availableMonths,
+    calculatedMetrics,
     loadSnapshot,
     syncWithPagarme,
+    syncHistoricalData,
+    recalculateMetrics,
     getCurrentMonth,
   };
 }
