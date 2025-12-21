@@ -13,7 +13,7 @@ import { ptBR } from 'date-fns/locale';
 import { MarketingInsights } from '@/components/admin/MarketingInsights';
 import { RenewalForecast } from '@/components/admin/RenewalForecast';
 import { SalesTrend } from '@/components/admin/SalesTrend';
-import { useFinancialSettings } from '@/hooks/useFinancialSettings';
+import { useFinancialSettingsContext } from '@/contexts/FinancialSettingsContext';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -67,7 +67,7 @@ export default function AdminAdvancedAnalytics() {
   const [showSettings, setShowSettings] = useState(false);
   
   // Financial settings
-  const { settings: financialSettings, loading: loadingSettings, saving, updateSettings } = useFinancialSettings();
+  const { settings: financialSettings, loading: loadingSettings, saving, updateSettings } = useFinancialSettingsContext();
   const [localCommission, setLocalCommission] = useState('');
   const [localMrrTarget, setLocalMrrTarget] = useState('');
   const [localArrTarget, setLocalArrTarget] = useState('');
