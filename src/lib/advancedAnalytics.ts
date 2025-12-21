@@ -668,3 +668,263 @@ export function calculateGrowthMetrics(salesData: SalesTrendData[]): GrowthMetri
     movingAverage
   };
 }
+
+// ============= PAGAR.ME METRICS FROM SNAPSHOTS =============
+
+export interface PagarmeMetrics {
+  // Current Month Metrics (from snapshot)
+  mrr: number;
+  mrrNet: number;
+  arr: number;
+  arrNet: number;
+  tpv: number;
+  chargesCreated: number;
+  grossRevenue: number;
+  gatewayFees: number;
+  averageTicket: number;
+  paidChargesCount: number;
+  chargesCount: number;
+  availableBalance: number;
+  waitingFunds: number;
+  
+  // Calculated Metrics (from historical data)
+  conversionRate: number;
+  retentionRate: number;
+  churnRate: number;
+  ltv: number;
+  
+  // Automatic Targets (based on growth)
+  avgMonthlyGrowth: number;
+  suggestedMrrTarget: number;
+  suggestedArrTarget: number;
+  suggestedChurnTarget: number;
+  projectedMrr6Months: number;
+  projectedMrr12Months: number;
+  monthsToDouble: number;
+  
+  // Target Progress (using overrides if set)
+  targetMrr: number;
+  gapToTarget: number;
+  targetProgress: number;
+  monthsToTarget: number;
+  
+  // Historical context
+  lastMonthMrr: number;
+  monthOverMonthGrowth: number;
+  bestMonth: { month: string; mrr: number };
+  worstMonth: { month: string; mrr: number };
+}
+
+interface SnapshotData {
+  reference_month: string;
+  gross_revenue: number;
+  net_revenue: number;
+  gateway_fees: number;
+  tpv: number;
+  average_ticket: number;
+  paid_charges_count: number;
+  charges_count: number;
+  available_balance: number;
+  waiting_funds: number;
+}
+
+export async function calculateMetricsFromPagarme(
+  currentSnapshot: SnapshotData | null,
+  salesCommissionPercent: number = 0.10,
+  targetOverride?: { mrrTarget?: number; churnTarget?: number }
+): Promise<PagarmeMetrics> {
+  try {
+    // Fetch last 12 months of snapshots
+    const { data: snapshots, error } = await supabase
+      .from('financial_snapshots')
+      .select('reference_month, gross_revenue, net_revenue, gateway_fees, tpv, average_ticket, paid_charges_count, charges_count')
+      .eq('source', 'pagarme')
+      .order('reference_month', { ascending: false })
+      .limit(12);
+
+    if (error) throw error;
+
+    const historicalSnapshots = (snapshots || []) as SnapshotData[];
+    
+    // Current month data
+    const current = currentSnapshot || (historicalSnapshots.length > 0 ? historicalSnapshots[0] : null);
+    
+    if (!current) {
+      return getEmptyPagarmeMetrics();
+    }
+
+    // Calculate MRR (gross revenue = what customer pays in the month)
+    const mrr = current.gross_revenue || 0;
+    const gatewayFees = current.gateway_fees || 0;
+    const mrrAfterGateway = mrr - gatewayFees;
+    const salesCommission = mrrAfterGateway * salesCommissionPercent;
+    const mrrNet = mrrAfterGateway - salesCommission;
+    const arr = mrr * 12;
+    const arrNet = mrrNet * 12;
+
+    // Get user metrics for conversion/retention
+    const { count: totalUsers } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true });
+
+    const { data: activeSubscriptions } = await supabase
+      .from('subscriptions')
+      .select('user_id')
+      .in('status', ['active', 'trialing'])
+      .not('plan_name', 'in', '("Gratuito","free")');
+
+    const activePayingUsers = activeSubscriptions?.length || 0;
+    const conversionRate = totalUsers ? (activePayingUsers / totalUsers) * 100 : 0;
+
+    // Calculate churn and retention from historical data
+    let churnRate = 5; // Default 5%
+    let retentionRate = 95;
+    let avgMonthlyGrowth = 0;
+    let lastMonthMrr = 0;
+    let monthOverMonthGrowth = 0;
+    let bestMonth = { month: current.reference_month, mrr: mrr };
+    let worstMonth = { month: current.reference_month, mrr: mrr };
+
+    if (historicalSnapshots.length >= 2) {
+      // Calculate growth rates
+      const growthRates: number[] = [];
+      
+      for (let i = 0; i < historicalSnapshots.length - 1; i++) {
+        const currentMonth = historicalSnapshots[i];
+        const prevMonth = historicalSnapshots[i + 1];
+        
+        if (prevMonth.gross_revenue > 0) {
+          const growth = ((currentMonth.gross_revenue - prevMonth.gross_revenue) / prevMonth.gross_revenue) * 100;
+          growthRates.push(growth);
+        }
+
+        // Track best/worst months
+        if (currentMonth.gross_revenue > bestMonth.mrr) {
+          bestMonth = { month: currentMonth.reference_month, mrr: currentMonth.gross_revenue };
+        }
+        if (currentMonth.gross_revenue < worstMonth.mrr && currentMonth.gross_revenue > 0) {
+          worstMonth = { month: currentMonth.reference_month, mrr: currentMonth.gross_revenue };
+        }
+      }
+
+      if (growthRates.length > 0) {
+        avgMonthlyGrowth = growthRates.reduce((a, b) => a + b, 0) / growthRates.length;
+        monthOverMonthGrowth = growthRates[0] || 0;
+      }
+
+      lastMonthMrr = historicalSnapshots[1]?.gross_revenue || 0;
+
+      // Estimate churn based on revenue decline months
+      const declineMonths = growthRates.filter(g => g < 0);
+      if (declineMonths.length > 0) {
+        churnRate = Math.abs(declineMonths.reduce((a, b) => a + b, 0) / declineMonths.length);
+      } else {
+        churnRate = 3; // Low churn if no decline months
+      }
+      retentionRate = 100 - churnRate;
+    }
+
+    // LTV calculation
+    const churnDecimal = Math.max(0.01, churnRate / 100);
+    const avgTicket = current.average_ticket || (mrr / Math.max(1, activePayingUsers));
+    const ltv = avgTicket * (1 / churnDecimal);
+
+    // Automatic targets based on growth
+    const growthDecimal = avgMonthlyGrowth / 100;
+    const projectedMrr6Months = mrr * Math.pow(1 + Math.max(0, growthDecimal), 6);
+    const projectedMrr12Months = mrr * Math.pow(1 + Math.max(0, growthDecimal), 12);
+    const suggestedMrrTarget = projectedMrr12Months;
+    const suggestedArrTarget = suggestedMrrTarget * 12;
+    const suggestedChurnTarget = Math.max(2, churnRate * 0.8); // 20% better than current
+    
+    // Months to double
+    const monthsToDouble = growthDecimal > 0 
+      ? Math.ceil(Math.log(2) / Math.log(1 + growthDecimal))
+      : 999;
+
+    // Target progress (use override if provided)
+    const targetMrr = targetOverride?.mrrTarget || suggestedMrrTarget;
+    const gapToTarget = Math.max(0, targetMrr - mrrNet);
+    const targetProgress = targetMrr > 0 ? Math.min(100, (mrrNet / targetMrr) * 100) : 0;
+    
+    // Months to target
+    const monthsToTarget = growthDecimal > 0 && gapToTarget > 0 && mrrNet > 0
+      ? Math.ceil(Math.log(targetMrr / mrrNet) / Math.log(1 + growthDecimal))
+      : gapToTarget > 0 ? 999 : 0;
+
+    return {
+      mrr: Number(mrr.toFixed(2)),
+      mrrNet: Number(mrrNet.toFixed(2)),
+      arr: Number(arr.toFixed(2)),
+      arrNet: Number(arrNet.toFixed(2)),
+      tpv: Number((current.tpv || 0).toFixed(2)),
+      chargesCreated: current.charges_count || 0,
+      grossRevenue: Number(mrr.toFixed(2)),
+      gatewayFees: Number(gatewayFees.toFixed(2)),
+      averageTicket: Number((current.average_ticket || avgTicket).toFixed(2)),
+      paidChargesCount: current.paid_charges_count || 0,
+      chargesCount: current.charges_count || 0,
+      availableBalance: Number((current.available_balance || 0).toFixed(2)),
+      waitingFunds: Number((current.waiting_funds || 0).toFixed(2)),
+      conversionRate: Number(conversionRate.toFixed(2)),
+      retentionRate: Number(retentionRate.toFixed(2)),
+      churnRate: Number(churnRate.toFixed(2)),
+      ltv: Number(ltv.toFixed(2)),
+      avgMonthlyGrowth: Number(avgMonthlyGrowth.toFixed(2)),
+      suggestedMrrTarget: Number(suggestedMrrTarget.toFixed(2)),
+      suggestedArrTarget: Number(suggestedArrTarget.toFixed(2)),
+      suggestedChurnTarget: Number(suggestedChurnTarget.toFixed(2)),
+      projectedMrr6Months: Number(projectedMrr6Months.toFixed(2)),
+      projectedMrr12Months: Number(projectedMrr12Months.toFixed(2)),
+      monthsToDouble,
+      targetMrr: Number(targetMrr.toFixed(2)),
+      gapToTarget: Number(gapToTarget.toFixed(2)),
+      targetProgress: Number(targetProgress.toFixed(1)),
+      monthsToTarget,
+      lastMonthMrr: Number(lastMonthMrr.toFixed(2)),
+      monthOverMonthGrowth: Number(monthOverMonthGrowth.toFixed(2)),
+      bestMonth,
+      worstMonth,
+    };
+  } catch (error) {
+    console.error('Error calculating Pagar.me metrics:', error);
+    return getEmptyPagarmeMetrics();
+  }
+}
+
+function getEmptyPagarmeMetrics(): PagarmeMetrics {
+  return {
+    mrr: 0,
+    mrrNet: 0,
+    arr: 0,
+    arrNet: 0,
+    tpv: 0,
+    chargesCreated: 0,
+    grossRevenue: 0,
+    gatewayFees: 0,
+    averageTicket: 0,
+    paidChargesCount: 0,
+    chargesCount: 0,
+    availableBalance: 0,
+    waitingFunds: 0,
+    conversionRate: 0,
+    retentionRate: 0,
+    churnRate: 0,
+    ltv: 0,
+    avgMonthlyGrowth: 0,
+    suggestedMrrTarget: 0,
+    suggestedArrTarget: 0,
+    suggestedChurnTarget: 0,
+    projectedMrr6Months: 0,
+    projectedMrr12Months: 0,
+    monthsToDouble: 999,
+    targetMrr: 0,
+    gapToTarget: 0,
+    targetProgress: 0,
+    monthsToTarget: 999,
+    lastMonthMrr: 0,
+    monthOverMonthGrowth: 0,
+    bestMonth: { month: '', mrr: 0 },
+    worstMonth: { month: '', mrr: 0 },
+  };
+}

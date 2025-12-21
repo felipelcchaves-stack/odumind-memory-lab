@@ -5,8 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, Area, ComposedChart } from 'recharts';
-import { TrendingUp, Users, DollarSign, Target, UserMinus, MapPin, Calendar, CalendarClock, BarChart3, Percent, Wallet, Calculator, Clock, Settings, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
-import { calculateAdvancedMetrics, getMonthlyComparison, getDemographicData, AdvancedMetrics, MonthlyComparison, DemographicData } from '@/lib/advancedAnalytics';
+import { TrendingUp, Users, DollarSign, Target, UserMinus, MapPin, Calendar, CalendarClock, BarChart3, Percent, Wallet, Calculator, Clock, Settings, RefreshCw, CheckCircle2, AlertCircle, History, Sparkles, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
+import { calculateAdvancedMetrics, getMonthlyComparison, getDemographicData, AdvancedMetrics, MonthlyComparison, DemographicData, PagarmeMetrics } from '@/lib/advancedAnalytics';
 import { Skeleton } from '@/components/ui/skeleton';
 import { startOfMonth, endOfMonth, subMonths, addMonths, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -23,12 +23,11 @@ import { Badge } from '@/components/ui/badge';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))', 'hsl(var(--muted))', 'hsl(var(--chart-1))', 'hsl(var(--chart-2))'];
 
-// Generate projection data for chart - using expected churn rate for realistic projections
-function generateProjectionData(currentMrr: number, target: number, expectedChurnRate: number = 0.05) {
+// Generate projection data for chart - using calculated growth rate
+function generateProjectionData(currentMrr: number, target: number, avgGrowthRate: number = 10) {
   const data = [];
   const today = new Date();
-  const grossGrowthRate = 0.10; // 10% monthly growth assumption
-  const netGrowthRate = grossGrowthRate - expectedChurnRate; // Net growth after churn
+  const netGrowthRate = Math.max(0.01, avgGrowthRate / 100); // Use actual growth rate
 
   for (let i = 0; i <= 12; i++) {
     const monthDate = addMonths(today, i);
@@ -73,33 +72,29 @@ export default function AdminAdvancedAnalytics() {
   const { 
     loading: loadingPagarme, 
     syncing, 
+    syncingHistory,
+    historyProgress,
     currentSnapshot, 
     availableMonths, 
+    calculatedMetrics,
     loadSnapshot, 
     syncWithPagarme,
+    syncHistoricalData,
+    recalculateMetrics,
     getCurrentMonth 
   } = usePagarmeSync();
   
-  // Financial settings
+  // Financial settings - simplified (only sales commission and optional overrides)
   const { settings: financialSettings, loading: loadingSettings, saving, updateSettings } = useFinancialSettingsContext();
-  const [localGatewayFeePercent, setLocalGatewayFeePercent] = useState('');
-  const [localGatewayFeeFixed, setLocalGatewayFeeFixed] = useState('');
   const [localSalesCommission, setLocalSalesCommission] = useState('');
-  const [localOperationalTax, setLocalOperationalTax] = useState('');
-  const [localMrrTarget, setLocalMrrTarget] = useState('');
-  const [localArrTarget, setLocalArrTarget] = useState('');
-  const [localChurnRate, setLocalChurnRate] = useState('');
+  const [localMrrTargetOverride, setLocalMrrTargetOverride] = useState('');
+  const [useAutoTargets, setUseAutoTargets] = useState(true);
 
   // Initialize local values when settings load
   useEffect(() => {
     if (!loadingSettings) {
-      setLocalGatewayFeePercent((financialSettings.gatewayFeePercent * 100).toString());
-      setLocalGatewayFeeFixed(financialSettings.gatewayFeeFixed.toString());
       setLocalSalesCommission((financialSettings.salesCommissionPercent * 100).toString());
-      setLocalOperationalTax((financialSettings.operationalTaxPercent * 100).toString());
-      setLocalMrrTarget(financialSettings.mrrTarget.toString());
-      setLocalArrTarget(financialSettings.arrTarget.toString());
-      setLocalChurnRate((financialSettings.expectedChurnRate * 100).toString());
+      setLocalMrrTargetOverride(financialSettings.mrrTarget.toString());
     }
   }, [financialSettings, loadingSettings]);
 
@@ -172,6 +167,9 @@ export default function AdminAdvancedAnalytics() {
     return acc;
   }, [] as { sexo: string; total: number; label: string }[]);
 
+  // Use calculated metrics from Pagar.me if available, fallback to DB metrics
+  const displayMetrics = calculatedMetrics || null;
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -193,7 +191,7 @@ export default function AdminAdvancedAnalytics() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Analytics Avançadas</h1>
-          <p className="text-muted-foreground">Métricas detalhadas de conversão, retenção e demografia</p>
+          <p className="text-muted-foreground">Métricas detalhadas filtradas por Isesemind (Pagar.me)</p>
         </div>
         <Select value={period} onValueChange={(value: any) => setPeriod(value)}>
           <SelectTrigger className="w-[180px]">
@@ -207,29 +205,29 @@ export default function AdminAdvancedAnalytics() {
         </Select>
       </div>
 
-      {/* Main Metrics */}
+      {/* Main Metrics - Using Pagar.me calculated metrics when available */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Taxa de Conversão"
-          value={`${currentMetrics?.conversionRate || 0}%`}
+          value={`${displayMetrics?.conversionRate || currentMetrics?.conversionRate || 0}%`}
           description="Usuários → Pagantes"
           icon={Target}
         />
         <StatsCard
           title="Retention Rate"
-          value={`${currentMetrics?.retentionRate || 0}%`}
+          value={`${displayMetrics?.retentionRate || currentMetrics?.retentionRate || 0}%`}
           description="Usuários retidos"
           icon={Users}
         />
         <StatsCard
           title="Churn Mensal"
-          value={`${currentMetrics?.churnRate || 0}%`}
+          value={`${displayMetrics?.churnRate || currentMetrics?.churnRate || 0}%`}
           description="Taxa de cancelamento"
           icon={UserMinus}
         />
         <StatsCard
           title="LTV (Lifetime Value)"
-          value={`R$ ${currentMetrics?.ltv || 0}`}
+          value={`R$ ${(displayMetrics?.ltv || currentMetrics?.ltv || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
           description="Valor médio por cliente"
           icon={DollarSign}
         />
@@ -237,15 +235,15 @@ export default function AdminAdvancedAnalytics() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <StatsCard
-          title="MRR (Monthly Recurring Revenue)"
-          value={`R$ ${currentMetrics?.mrr?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}`}
-          description="Receita mensal recorrente bruta"
+          title="MRR Bruto (Isesemind)"
+          value={`R$ ${(displayMetrics?.mrr || currentMetrics?.mrr || 0)?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+          description={displayMetrics ? "Receita real Pagar.me" : "Receita mensal recorrente bruta"}
           icon={DollarSign}
         />
         <StatsCard
           title="ARR (Annual Recurring Revenue)"
-          value={`R$ ${currentMetrics?.arr?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}`}
-          description="Receita anual recorrente bruta"
+          value={`R$ ${(displayMetrics?.arr || currentMetrics?.arr || 0)?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+          description="Receita anual recorrente"
           icon={TrendingUp}
         />
       </div>
@@ -256,11 +254,11 @@ export default function AdminAdvancedAnalytics() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Wallet className="h-5 w-5 text-green-600" />
-              <CardTitle>Receita Real (Pagar.me)</CardTitle>
+              <CardTitle>Receita Real Isesemind (Pagar.me)</CardTitle>
               {currentSnapshot && (
                 <Badge variant="outline" className="text-green-600 border-green-500/30">
                   <CheckCircle2 className="h-3 w-3 mr-1" />
-                  Sincronizado
+                  Filtrado
                 </Badge>
               )}
             </div>
@@ -270,7 +268,7 @@ export default function AdminAdvancedAnalytics() {
                   <SelectValue placeholder="Mês" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: 7 }, (_, i) => {
+                  {Array.from({ length: 12 }, (_, i) => {
                     const date = subMonths(new Date(), i);
                     const monthValue = format(date, 'yyyy-MM');
                     const monthLabel = format(date, 'MMMM yyyy', { locale: ptBR });
@@ -292,14 +290,24 @@ export default function AdminAdvancedAnalytics() {
                 <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
                 {syncing ? 'Sincronizando...' : 'Sincronizar'}
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => syncHistoricalData(12)}
+                disabled={syncingHistory}
+                className="gap-2"
+              >
+                <History className={`h-4 w-4 ${syncingHistory ? 'animate-spin' : ''}`} />
+                {syncingHistory ? `${historyProgress.toFixed(0)}%` : 'Histórico 12m'}
+              </Button>
             </div>
           </div>
           <CardDescription>
-            Valores reais extraídos diretamente da API da Pagar.me (endpoint /charges)
+            Dados filtrados por metadata: product = Isesemind
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {loadingPagarme ? (
             <div className="grid gap-4 md:grid-cols-4">
               {[...Array(8)].map((_, i) => (
                 <Skeleton key={i} className="h-24" />
@@ -318,7 +326,7 @@ export default function AdminAdvancedAnalytics() {
                     R$ {currentSnapshot.charges_created.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {currentSnapshot.charges_count} cobranças
+                    {currentSnapshot.charges_count} cobranças Isesemind
                   </p>
                 </div>
 
@@ -338,7 +346,7 @@ export default function AdminAdvancedAnalytics() {
                 <div className="p-4 rounded-lg bg-card border">
                   <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
                     <DollarSign className="h-4 w-4" />
-                    Receita Bruta (Pagas)
+                    MRR Bruto (Pagas)
                   </div>
                   <p className="text-2xl font-bold">
                     R$ {currentSnapshot.gross_revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -367,7 +375,7 @@ export default function AdminAdvancedAnalytics() {
                 <div className="p-4 rounded-lg bg-card border border-red-500/30">
                   <div className="flex items-center gap-2 text-red-600 text-sm mb-2">
                     <Percent className="h-4 w-4" />
-                    Taxas Pagar.me (est.)
+                    Taxas Gateway (real)
                   </div>
                   <p className="text-2xl font-bold text-red-600">
                     -R$ {currentSnapshot.gateway_fees.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -393,10 +401,10 @@ export default function AdminAdvancedAnalytics() {
                 <div className="p-4 rounded-lg bg-card border-2 border-green-500/50 bg-green-500/5">
                   <div className="flex items-center gap-2 text-green-600 text-sm mb-2">
                     <Wallet className="h-4 w-4" />
-                    Receita Líquida Final
+                    MRR Líquido Final
                   </div>
                   <p className="text-2xl font-bold text-green-600">
-                    R$ {(currentSnapshot.net_revenue * (1 - financialSettings.salesCommissionPercent)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {displayMetrics?.mrrNet?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || (currentSnapshot.net_revenue * (1 - financialSettings.salesCommissionPercent)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     O que você realmente recebe
@@ -436,85 +444,185 @@ export default function AdminAdvancedAnalytics() {
               <p className="text-muted-foreground mb-4">
                 Nenhum dado sincronizado para este mês
               </p>
-              <Button
-                onClick={() => syncWithPagarme(selectedSyncMonth)}
-                disabled={syncing}
-                className="gap-2"
-              >
-                <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-                Sincronizar Agora
-              </Button>
+              <div className="flex gap-2 justify-center">
+                <Button
+                  onClick={() => syncWithPagarme(selectedSyncMonth)}
+                  disabled={syncing}
+                  className="gap-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+                  Sincronizar Agora
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => syncHistoricalData(12)}
+                  disabled={syncingHistory}
+                  className="gap-2"
+                >
+                  <History className={`h-4 w-4 ${syncingHistory ? 'animate-spin' : ''}`} />
+                  Sincronizar Histórico (12 meses)
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Financial Planning Section */}
-      <Card className="border-primary/20 bg-gradient-to-br from-background to-primary/5">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Calculator className="h-5 w-5 text-primary" />
-              <CardTitle>Planejamento Financeiro</CardTitle>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowSettings(!showSettings)}
-              className="gap-2"
-            >
-              <Settings className="h-4 w-4" />
-              {showSettings ? 'Ocultar' : 'Configurar'}
-            </Button>
-          </div>
-          <CardDescription>
-            MRR/ARR líquido após comissões e progresso em relação às metas
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Settings Panel */}
-          {showSettings && (
-            <div className="p-4 border rounded-lg bg-muted/50 space-y-4">
-              <h4 className="font-medium text-sm flex items-center gap-2">
+      {/* Automatic Targets Section - NEW */}
+      {displayMetrics && (
+        <Card className="border-primary/20 bg-gradient-to-br from-background to-primary/5">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                <CardTitle>Metas & Projeções Automáticas</CardTitle>
+                <Badge variant="secondary" className="ml-2">Baseado em dados reais</Badge>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowSettings(!showSettings)}
+                className="gap-2"
+              >
                 <Settings className="h-4 w-4" />
-                Configurações de Taxas e Metas
-              </h4>
-              
-              {/* Taxas do Gateway */}
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Taxas do Gateway (Pagar.me/Guru)</p>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="gatewayFeePercent">Taxa do Gateway (%)</Label>
-                    <Input
-                      id="gatewayFeePercent"
-                      type="number"
-                      step="0.01"
-                      value={localGatewayFeePercent}
-                      onChange={(e) => setLocalGatewayFeePercent(e.target.value)}
-                      placeholder="3.99"
-                    />
-                    <p className="text-xs text-muted-foreground">Ex: 3.99 para 3.99%</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="gatewayFeeFixed">Taxa Fixa por Transação (R$)</Label>
-                    <Input
-                      id="gatewayFeeFixed"
-                      type="number"
-                      step="0.01"
-                      value={localGatewayFeeFixed}
-                      onChange={(e) => setLocalGatewayFeeFixed(e.target.value)}
-                      placeholder="0.39"
-                    />
-                    <p className="text-xs text-muted-foreground">Ex: 0.39 por transação</p>
-                  </div>
+                {showSettings ? 'Ocultar' : 'Configurar'}
+              </Button>
+            </div>
+            <CardDescription>
+              Metas calculadas automaticamente baseadas no histórico de crescimento do Isesemind
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Growth and Performance Cards */}
+            <div className="grid gap-4 md:grid-cols-4">
+              <div className="p-4 rounded-lg bg-card border">
+                <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Crescimento Médio/Mês
                 </div>
+                <div className="flex items-center gap-2">
+                  <p className="text-2xl font-bold">
+                    {displayMetrics.avgMonthlyGrowth.toFixed(1)}%
+                  </p>
+                  {displayMetrics.avgMonthlyGrowth > 0 ? (
+                    <ArrowUpRight className="h-5 w-5 text-green-500" />
+                  ) : displayMetrics.avgMonthlyGrowth < 0 ? (
+                    <ArrowDownRight className="h-5 w-5 text-red-500" />
+                  ) : (
+                    <Minus className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Último mês: {displayMetrics.monthOverMonthGrowth.toFixed(1)}%
+                </p>
               </div>
 
-              {/* Comissão de Vendedores */}
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Comissão de Vendedores</p>
-                <div className="grid gap-4 md:grid-cols-1 max-w-xs">
+              <div className="p-4 rounded-lg bg-card border border-green-500/30">
+                <div className="flex items-center gap-2 text-green-600 text-sm mb-2">
+                  <Target className="h-4 w-4" />
+                  Meta MRR Sugerida
+                </div>
+                <p className="text-2xl font-bold text-green-600">
+                  R$ {displayMetrics.suggestedMrrTarget.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Projeção 12 meses com crescimento atual
+                </p>
+              </div>
+
+              <div className="p-4 rounded-lg bg-card border border-blue-500/30">
+                <div className="flex items-center gap-2 text-blue-600 text-sm mb-2">
+                  <Calendar className="h-4 w-4" />
+                  Meses para Dobrar MRR
+                </div>
+                <p className="text-2xl font-bold text-blue-600">
+                  {displayMetrics.monthsToDouble < 999 ? displayMetrics.monthsToDouble : '∞'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Com crescimento de {displayMetrics.avgMonthlyGrowth.toFixed(1)}%/mês
+                </p>
+              </div>
+
+              <div className="p-4 rounded-lg bg-card border border-amber-500/30">
+                <div className="flex items-center gap-2 text-amber-600 text-sm mb-2">
+                  <UserMinus className="h-4 w-4" />
+                  Churn Sugerido
+                </div>
+                <p className="text-2xl font-bold text-amber-600">
+                  {displayMetrics.suggestedChurnTarget.toFixed(1)}%
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  20% melhor que atual ({displayMetrics.churnRate.toFixed(1)}%)
+                </p>
+              </div>
+            </div>
+
+            {/* Projections */}
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="p-4 rounded-lg bg-card border">
+                <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                  <TrendingUp className="h-4 w-4" />
+                  MRR em 6 Meses
+                </div>
+                <p className="text-xl font-bold">
+                  R$ {displayMetrics.projectedMrr6Months.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+              <div className="p-4 rounded-lg bg-card border">
+                <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                  <TrendingUp className="h-4 w-4" />
+                  MRR em 12 Meses
+                </div>
+                <p className="text-xl font-bold">
+                  R$ {displayMetrics.projectedMrr12Months.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+              <div className="p-4 rounded-lg bg-card border">
+                <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                  <Calendar className="h-4 w-4" />
+                  ARR Projetado (12m)
+                </div>
+                <p className="text-xl font-bold">
+                  R$ {(displayMetrics.projectedMrr12Months * 12).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+            </div>
+
+            {/* Historical Context */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-green-600 font-medium">Melhor Mês</p>
+                  <p className="text-sm font-bold text-green-600">
+                    R$ {displayMetrics.bestMonth.mrr.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {displayMetrics.bestMonth.month}
+                </span>
+              </div>
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-red-600 font-medium">Pior Mês</p>
+                  <p className="text-sm font-bold text-red-600">
+                    R$ {displayMetrics.worstMonth.mrr.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {displayMetrics.worstMonth.month}
+                </span>
+              </div>
+            </div>
+
+            {/* Settings Panel */}
+            {showSettings && (
+              <div className="p-4 border rounded-lg bg-muted/50 space-y-4">
+                <h4 className="font-medium text-sm flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  Configurações
+                </h4>
+                
+                <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="salesCommission">Comissão de Vendedores (%)</Label>
                     <Input
@@ -527,353 +635,125 @@ export default function AdminAdvancedAnalytics() {
                     />
                     <p className="text-xs text-muted-foreground">Ex: 10 para 10% sobre vendas</p>
                   </div>
-                </div>
-              </div>
-
-              {/* Outras Taxas */}
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Taxas Operacionais / Impostos</p>
-                <div className="grid gap-4 md:grid-cols-1 max-w-xs">
                   <div className="space-y-2">
-                    <Label htmlFor="operationalTax">Taxas Operacionais/Impostos (%)</Label>
+                    <Label htmlFor="mrrTargetOverride">Override Meta MRR (opcional)</Label>
                     <Input
-                      id="operationalTax"
+                      id="mrrTargetOverride"
                       type="number"
-                      step="0.1"
-                      value={localOperationalTax}
-                      onChange={(e) => setLocalOperationalTax(e.target.value)}
-                      placeholder="0"
+                      value={localMrrTargetOverride}
+                      onChange={(e) => {
+                        setLocalMrrTargetOverride(e.target.value);
+                        setUseAutoTargets(false);
+                      }}
+                      placeholder="Deixe vazio para usar meta automática"
                     />
-                    <p className="text-xs text-muted-foreground">Ex: 5 para 5% (opcional)</p>
+                    <p className="text-xs text-muted-foreground">
+                      Meta automática: R$ {displayMetrics.suggestedMrrTarget.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
                   </div>
                 </div>
-              </div>
 
-              {/* Metas */}
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Metas</p>
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="mrrTarget">Meta MRR Mensal (R$)</Label>
-                    <Input
-                      id="mrrTarget"
-                      type="number"
-                      value={localMrrTarget}
-                      onChange={(e) => setLocalMrrTarget(e.target.value)}
-                      placeholder="10000"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="arrTarget">Meta ARR Anual (R$)</Label>
-                    <Input
-                      id="arrTarget"
-                      type="number"
-                      value={localArrTarget}
-                      onChange={(e) => setLocalArrTarget(e.target.value)}
-                      placeholder="120000"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="churnRate">Churn Esperado (%)</Label>
-                    <Input
-                      id="churnRate"
-                      type="number"
-                      step="0.1"
-                      value={localChurnRate}
-                      onChange={(e) => setLocalChurnRate(e.target.value)}
-                      placeholder="5"
-                    />
-                    <p className="text-xs text-muted-foreground">Para projeções realistas</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Churn comparison cards */}
-              <div className="grid gap-4 md:grid-cols-3 mt-4">
-                <div className="p-3 rounded-lg bg-background border">
-                  <p className="text-xs text-muted-foreground">Churn Real (Calculado)</p>
-                  <p className="text-lg font-bold">{currentMetrics?.churnRate || 0}%</p>
-                </div>
-                <div className="p-3 rounded-lg bg-background border">
-                  <p className="text-xs text-muted-foreground">Churn Esperado</p>
-                  <p className="text-lg font-bold">{(financialSettings.expectedChurnRate * 100).toFixed(1)}%</p>
-                </div>
-                <div className="p-3 rounded-lg bg-background border">
-                  <p className="text-xs text-muted-foreground">Diferença</p>
-                  <p className={`text-lg font-bold ${
-                    (currentMetrics?.churnRate || 0) <= financialSettings.expectedChurnRate * 100 
-                      ? 'text-green-500' 
-                      : 'text-red-500'
-                  }`}>
-                    {((currentMetrics?.churnRate || 0) - financialSettings.expectedChurnRate * 100).toFixed(1)}%
-                    {(currentMetrics?.churnRate || 0) <= financialSettings.expectedChurnRate * 100 
-                      ? ' (melhor)' 
-                      : ' (pior)'}
-                  </p>
-                </div>
-              </div>
-
-              <Button
-                onClick={() => {
-                  updateSettings({
-                    gatewayFeePercent: parseFloat(localGatewayFeePercent) / 100,
-                    gatewayFeeFixed: parseFloat(localGatewayFeeFixed),
-                    salesCommissionPercent: parseFloat(localSalesCommission) / 100,
-                    operationalTaxPercent: parseFloat(localOperationalTax) / 100,
-                    mrrTarget: parseFloat(localMrrTarget),
-                    arrTarget: parseFloat(localArrTarget),
-                    expectedChurnRate: parseFloat(localChurnRate) / 100,
-                  });
-                }}
-                disabled={saving}
-                className="w-full md:w-auto"
-              >
-                {saving ? 'Salvando...' : 'Salvar Configurações'}
-              </Button>
-            </div>
-          )}
-
-          {/* Revenue Flow - 4 Níveis */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {/* MRR Bruto */}
-            <div className="p-4 rounded-lg bg-card border">
-              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
-                <DollarSign className="h-4 w-4" />
-                MRR Bruto
-              </div>
-              <p className="text-2xl font-bold">
-                R$ {currentMetrics?.mrr?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                O que o cliente paga
-              </p>
-            </div>
-
-            {/* MRR após Gateway */}
-            <div className="p-4 rounded-lg bg-card border border-amber-500/30">
-              <div className="flex items-center gap-2 text-amber-600 text-sm mb-2">
-                <Wallet className="h-4 w-4" />
-                MRR após Gateway
-              </div>
-              <p className="text-2xl font-bold text-amber-600">
-                R$ {currentMetrics?.mrrAfterGateway?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                -{(financialSettings.gatewayFeePercent * 100).toFixed(2)}% + R${financialSettings.gatewayFeeFixed}/trans
-              </p>
-            </div>
-
-            {/* MRR após Comissão */}
-            <div className="p-4 rounded-lg bg-card border border-purple-500/30">
-              <div className="flex items-center gap-2 text-purple-600 text-sm mb-2">
-                <Users className="h-4 w-4" />
-                MRR após Comissão
-              </div>
-              <p className="text-2xl font-bold text-purple-600">
-                R$ {currentMetrics?.mrrAfterCommission?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                -{(financialSettings.salesCommissionPercent * 100).toFixed(0)}% vendedores
-              </p>
-            </div>
-
-            {/* MRR Líquido Real */}
-            <div className="p-4 rounded-lg bg-card border border-green-500/30">
-              <div className="flex items-center gap-2 text-green-600 text-sm mb-2">
-                <Wallet className="h-4 w-4" />
-                MRR Líquido Real
-              </div>
-              <p className="text-2xl font-bold text-green-600">
-                R$ {currentMetrics?.mrrNet?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {financialSettings.operationalTaxPercent > 0 
-                  ? `-${(financialSettings.operationalTaxPercent * 100).toFixed(0)}% taxas/impostos`
-                  : 'O que você realmente recebe'
-                }
-              </p>
-            </div>
-          </div>
-
-          {/* Breakdown das Taxas */}
-          <div className="grid gap-3 md:grid-cols-4">
-            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Percent className="h-4 w-4 text-red-500" />
-                <span className="text-xs font-medium">Gateway</span>
-              </div>
-              <p className="text-sm font-bold text-red-500">
-                -R$ {currentMetrics?.gatewayFeeAmount?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
-              </p>
-            </div>
-            <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-purple-500" />
-                <span className="text-xs font-medium">Comissão Vendedores</span>
-              </div>
-              <p className="text-sm font-bold text-purple-500">
-                -R$ {currentMetrics?.salesCommissionAmount?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
-              </p>
-            </div>
-            <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Calculator className="h-4 w-4 text-orange-500" />
-                <span className="text-xs font-medium">Impostos/Operacional</span>
-              </div>
-              <p className="text-sm font-bold text-orange-500">
-                -R$ {currentMetrics?.operationalTaxAmount?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
-              </p>
-            </div>
-            <div className="p-3 rounded-lg bg-red-600/10 border border-red-600/30 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Percent className="h-4 w-4 text-red-600" />
-                <span className="text-xs font-medium">Total Taxas</span>
-              </div>
-              <p className="text-sm font-bold text-red-600">
-                -R$ {currentMetrics?.totalFeesAmount?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
-              </p>
-            </div>
-          </div>
-
-          {/* Financial Metrics Cards - Metas */}
-          <div className="grid gap-4 md:grid-cols-4">
-            <div className="p-4 rounded-lg bg-card border">
-              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
-                <Target className="h-4 w-4" />
-                Meta MRR Líquido
-              </div>
-              <p className="text-2xl font-bold">
-                R$ {financialSettings.mrrTarget.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {currentMetrics?.targetProgress?.toFixed(1) || 0}% atingido
-              </p>
-            </div>
-
-            <div className="p-4 rounded-lg bg-card border">
-              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
-                <TrendingUp className="h-4 w-4" />
-                Gap para Meta
-              </div>
-              <p className="text-2xl font-bold text-amber-500">
-                R$ {currentMetrics?.gapToTarget?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Faltam para a meta mensal
-              </p>
-            </div>
-
-            <div className="p-4 rounded-lg bg-card border">
-              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
-                <Users className="h-4 w-4" />
-                Assinaturas Necessárias
-              </div>
-              <p className="text-2xl font-bold text-blue-500">
-                {currentMetrics?.customersNeeded || 0}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Ticket médio: R$ {currentMetrics?.averageTicket?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
-              </p>
-            </div>
-
-            <div className="p-4 rounded-lg bg-card border">
-              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
-                <Clock className="h-4 w-4" />
-                Previsão
-              </div>
-              <p className="text-2xl font-bold">
-                {currentMetrics?.monthsToTarget === 0 
-                  ? '🎉 Meta atingida!' 
-                  : currentMetrics?.monthsToTarget === 999 
-                    ? 'N/A' 
-                    : `${currentMetrics?.monthsToTarget || 0} meses`}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Para atingir a meta
-              </p>
-            </div>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Progresso da Meta Mensal</span>
-              <span className="font-medium">{currentMetrics?.targetProgress?.toFixed(1) || 0}%</span>
-            </div>
-            <Progress 
-              value={Math.min(100, currentMetrics?.targetProgress || 0)} 
-              className="h-3"
-            />
-            <p className="text-sm text-muted-foreground">
-              {(currentMetrics?.targetProgress || 0) >= 100 
-                ? '🎉 Parabéns! Você atingiu sua meta mensal!' 
-                : `Você está a R$ ${currentMetrics?.gapToTarget?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'} (${currentMetrics?.customersNeeded || 0} assinaturas) da sua meta mensal`}
-            </p>
-          </div>
-
-          {/* Projection Chart */}
-          <div className="space-y-4">
-            <h4 className="font-medium text-sm flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Projeção de Crescimento (próximos 12 meses)
-            </h4>
-            <ResponsiveContainer width="100%" height={250}>
-              <ComposedChart 
-                data={generateProjectionData(
-                  currentMetrics?.mrrNet || 0, 
-                  financialSettings.mrrTarget,
-                  financialSettings.expectedChurnRate
-                )}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))', 
-                    border: '1px solid hsl(var(--border))' 
+                <Button
+                  onClick={() => {
+                    updateSettings({
+                      salesCommissionPercent: parseFloat(localSalesCommission) / 100,
+                      mrrTarget: parseFloat(localMrrTargetOverride) || displayMetrics.suggestedMrrTarget,
+                      arrTarget: (parseFloat(localMrrTargetOverride) || displayMetrics.suggestedMrrTarget) * 12,
+                    });
+                    recalculateMetrics(
+                      parseFloat(localSalesCommission) / 100,
+                      { mrrTarget: parseFloat(localMrrTargetOverride) || undefined }
+                    );
                   }}
-                  formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, '']}
-                />
-                <Legend />
-                <ReferenceLine 
-                  y={financialSettings.mrrTarget} 
-                  stroke="hsl(var(--primary))" 
-                  strokeDasharray="5 5" 
-                  label={{ value: 'Meta', position: 'right', fill: 'hsl(var(--primary))' }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="projection" 
-                  fill="hsl(var(--primary) / 0.1)" 
-                  stroke="hsl(var(--primary))" 
-                  name="Projeção MRR"
-                  strokeWidth={2}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-            <p className="text-xs text-muted-foreground text-center">
-              * Projeção baseada em crescimento estimado de 10% ao mês
-            </p>
-          </div>
+                  disabled={saving}
+                  className="w-full md:w-auto"
+                >
+                  {saving ? 'Salvando...' : 'Salvar Configurações'}
+                </Button>
+              </div>
+            )}
 
-          {/* ARR Summary */}
-          <div className="grid gap-4 md:grid-cols-2 p-4 rounded-lg bg-muted/30 border">
-            <div>
-              <p className="text-sm text-muted-foreground">ARR Líquido (Atual)</p>
-              <p className="text-xl font-bold">
-                R$ {currentMetrics?.arrNet?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+            {/* Target Progress */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Progresso da Meta MRR</span>
+                <span className="font-medium">{displayMetrics.targetProgress.toFixed(1)}%</span>
+              </div>
+              <Progress 
+                value={Math.min(100, displayMetrics.targetProgress)} 
+                className="h-3"
+              />
+              <p className="text-sm text-muted-foreground">
+                {displayMetrics.targetProgress >= 100 
+                  ? '🎉 Parabéns! Você atingiu sua meta!' 
+                  : `Faltam R$ ${displayMetrics.gapToTarget.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} para a meta (${displayMetrics.monthsToTarget < 999 ? `~${displayMetrics.monthsToTarget} meses` : 'calculando...'})`}
               </p>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Meta ARR</p>
-              <p className="text-xl font-bold">
-                R$ {financialSettings.arrTarget.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+
+            {/* Projection Chart */}
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Projeção de Crescimento (próximos 12 meses)
+              </h4>
+              <ResponsiveContainer width="100%" height={250}>
+                <ComposedChart 
+                  data={generateProjectionData(
+                    displayMetrics.mrrNet, 
+                    displayMetrics.targetMrr,
+                    displayMetrics.avgMonthlyGrowth
+                  )}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))' 
+                    }}
+                    formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, '']}
+                  />
+                  <Legend />
+                  <ReferenceLine 
+                    y={displayMetrics.targetMrr} 
+                    stroke="hsl(var(--primary))" 
+                    strokeDasharray="5 5" 
+                    label={{ value: 'Meta', position: 'right', fill: 'hsl(var(--primary))' }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="projection" 
+                    fill="hsl(var(--primary) / 0.1)" 
+                    stroke="hsl(var(--primary))" 
+                    name="Projeção MRR"
+                    strokeWidth={2}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+              <p className="text-xs text-muted-foreground text-center">
+                * Projeção baseada em crescimento médio de {displayMetrics.avgMonthlyGrowth.toFixed(1)}% ao mês (dados históricos reais)
               </p>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+
+            {/* ARR Summary */}
+            <div className="grid gap-4 md:grid-cols-2 p-4 rounded-lg bg-muted/30 border">
+              <div>
+                <p className="text-sm text-muted-foreground">ARR Líquido (Atual)</p>
+                <p className="text-xl font-bold">
+                  R$ {displayMetrics.arrNet.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">ARR Meta Sugerida</p>
+                <p className="text-xl font-bold">
+                  R$ {displayMetrics.suggestedArrTarget.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Renewal Forecast & Sales Trend */}
       <div className="grid gap-6 lg:grid-cols-1">
