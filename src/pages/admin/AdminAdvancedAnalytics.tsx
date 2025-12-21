@@ -21,6 +21,24 @@ import { Progress } from '@/components/ui/progress';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))', 'hsl(var(--muted))', 'hsl(var(--chart-1))', 'hsl(var(--chart-2))'];
 
+// Generate projection data for chart - moved outside component to avoid reference issues
+function generateProjectionData(currentMrr: number, target: number, monthsToTarget: number) {
+  const data = [];
+  const today = new Date();
+  const growthRate = 0.10; // 10% monthly growth assumption
+
+  for (let i = 0; i <= 12; i++) {
+    const monthDate = addMonths(today, i);
+    const projectedMrr = currentMrr * Math.pow(1 + growthRate, i);
+    data.push({
+      month: format(monthDate, 'MMM', { locale: ptBR }),
+      projection: Math.round(projectedMrr * 100) / 100,
+      target: target
+    });
+  }
+  return data;
+}
+
 const AGE_LABELS: Record<string, string> = {
   'menor_18': 'Menor de 18',
   '18_24': '18-24 anos',
@@ -98,24 +116,6 @@ export default function AdminAdvancedAnalytics() {
     } finally {
       setLoading(false);
     }
-  }
-
-  // Generate projection data for chart
-  function generateProjectionData(currentMrr: number, target: number, monthsToTarget: number) {
-    const data = [];
-    const today = new Date();
-    const growthRate = 0.10; // 10% monthly growth assumption
-
-    for (let i = 0; i <= 12; i++) {
-      const monthDate = addMonths(today, i);
-      const projectedMrr = currentMrr * Math.pow(1 + growthRate, i);
-      data.push({
-        month: format(monthDate, 'MMM', { locale: ptBR }),
-        projection: Math.round(projectedMrr * 100) / 100,
-        target: target
-      });
-    }
-    return data;
   }
 
   // Aggregate demographic data
