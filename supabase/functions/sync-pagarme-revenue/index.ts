@@ -58,7 +58,12 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+    // Cliente admin (banco) - não depende de sessão
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
 
     // Get auth user
     const authHeader = req.headers.get('Authorization');
@@ -73,7 +78,13 @@ serve(async (req) => {
     const token = authHeader.replace('Bearer ', '');
     console.log('[SYNC-PAGARME] Token received, length:', token.length);
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    // Cliente de auth usando ANON + header (evita "Auth session missing" em ambientes serverless)
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
 
     if (authError) {
       console.log('[SYNC-PAGARME] Auth error:', authError.message);
@@ -94,7 +105,7 @@ serve(async (req) => {
     console.log('[SYNC-PAGARME] User authenticated:', user.id, user.email);
 
     // Check if user is admin
-    const { data: roles } = await supabase
+    const { data: roles } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
@@ -261,7 +272,7 @@ serve(async (req) => {
     `);
 
     // ========== 5. SAVE TO DATABASE ==========
-    const { data: snapshot, error: upsertError } = await supabase
+    const { data: snapshot, error: upsertError } = await supabaseAdmin
       .from('financial_snapshots')
       .upsert({
         reference_month: targetMonth,
