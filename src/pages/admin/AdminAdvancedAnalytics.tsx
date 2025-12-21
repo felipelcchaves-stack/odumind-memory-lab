@@ -21,15 +21,16 @@ import { Progress } from '@/components/ui/progress';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))', 'hsl(var(--muted))', 'hsl(var(--chart-1))', 'hsl(var(--chart-2))'];
 
-// Generate projection data for chart - moved outside component to avoid reference issues
-function generateProjectionData(currentMrr: number, target: number, monthsToTarget: number) {
+// Generate projection data for chart - using expected churn rate for realistic projections
+function generateProjectionData(currentMrr: number, target: number, expectedChurnRate: number = 0.05) {
   const data = [];
   const today = new Date();
-  const growthRate = 0.10; // 10% monthly growth assumption
+  const grossGrowthRate = 0.10; // 10% monthly growth assumption
+  const netGrowthRate = grossGrowthRate - expectedChurnRate; // Net growth after churn
 
   for (let i = 0; i <= 12; i++) {
     const monthDate = addMonths(today, i);
-    const projectedMrr = currentMrr * Math.pow(1 + growthRate, i);
+    const projectedMrr = currentMrr * Math.pow(1 + netGrowthRate, i);
     data.push({
       month: format(monthDate, 'MMM', { locale: ptBR }),
       projection: Math.round(projectedMrr * 100) / 100,
@@ -70,6 +71,7 @@ export default function AdminAdvancedAnalytics() {
   const [localCommission, setLocalCommission] = useState('');
   const [localMrrTarget, setLocalMrrTarget] = useState('');
   const [localArrTarget, setLocalArrTarget] = useState('');
+  const [localChurnRate, setLocalChurnRate] = useState('');
 
   // Initialize local values when settings load
   useEffect(() => {
@@ -77,6 +79,7 @@ export default function AdminAdvancedAnalytics() {
       setLocalCommission((financialSettings.commissionPercent * 100).toString());
       setLocalMrrTarget(financialSettings.mrrTarget.toString());
       setLocalArrTarget(financialSettings.arrTarget.toString());
+      setLocalChurnRate((financialSettings.expectedChurnRate * 100).toString());
     }
   }, [financialSettings, loadingSettings]);
 
@@ -257,7 +260,7 @@ export default function AdminAdvancedAnalytics() {
                 <Settings className="h-4 w-4" />
                 Configurações de Meta
               </h4>
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-4">
                 <div className="space-y-2">
                   <Label htmlFor="commission">Comissão do Gateway (%)</Label>
                   <Input
@@ -290,13 +293,52 @@ export default function AdminAdvancedAnalytics() {
                     placeholder="120000"
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="churnRate">Churn Esperado (%)</Label>
+                  <Input
+                    id="churnRate"
+                    type="number"
+                    step="0.1"
+                    value={localChurnRate}
+                    onChange={(e) => setLocalChurnRate(e.target.value)}
+                    placeholder="5"
+                  />
+                  <p className="text-xs text-muted-foreground">Para projeções realistas</p>
+                </div>
               </div>
+
+              {/* Churn comparison cards */}
+              <div className="grid gap-4 md:grid-cols-3 mt-4">
+                <div className="p-3 rounded-lg bg-background border">
+                  <p className="text-xs text-muted-foreground">Churn Real (Calculado)</p>
+                  <p className="text-lg font-bold">{currentMetrics?.churnRate || 0}%</p>
+                </div>
+                <div className="p-3 rounded-lg bg-background border">
+                  <p className="text-xs text-muted-foreground">Churn Esperado</p>
+                  <p className="text-lg font-bold">{(financialSettings.expectedChurnRate * 100).toFixed(1)}%</p>
+                </div>
+                <div className="p-3 rounded-lg bg-background border">
+                  <p className="text-xs text-muted-foreground">Diferença</p>
+                  <p className={`text-lg font-bold ${
+                    (currentMetrics?.churnRate || 0) <= financialSettings.expectedChurnRate * 100 
+                      ? 'text-green-500' 
+                      : 'text-red-500'
+                  }`}>
+                    {((currentMetrics?.churnRate || 0) - financialSettings.expectedChurnRate * 100).toFixed(1)}%
+                    {(currentMetrics?.churnRate || 0) <= financialSettings.expectedChurnRate * 100 
+                      ? ' (melhor)' 
+                      : ' (pior)'}
+                  </p>
+                </div>
+              </div>
+
               <Button
                 onClick={() => {
                   updateSettings({
                     commissionPercent: parseFloat(localCommission) / 100,
                     mrrTarget: parseFloat(localMrrTarget),
                     arrTarget: parseFloat(localArrTarget),
+                    expectedChurnRate: parseFloat(localChurnRate) / 100,
                   });
                 }}
                 disabled={saving}
@@ -407,7 +449,7 @@ export default function AdminAdvancedAnalytics() {
                 data={generateProjectionData(
                   currentMetrics?.mrrNet || 0, 
                   financialSettings.mrrTarget,
-                  currentMetrics?.monthsToTarget || 12
+                  financialSettings.expectedChurnRate
                 )}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
