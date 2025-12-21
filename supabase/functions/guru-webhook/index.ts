@@ -579,10 +579,41 @@ serve(async (req) => {
         periodEnd.setDate(periodEnd.getDate() + durationDays);
       }
 
-      // Capturar valor pago do Guru (se disponível no payload)
-      const amountPaid = payload.subscription?.price || payload.price || payload.value || null;
+      // Capturar valor pago do Guru - verificar múltiplos campos possíveis
+      let amountPaid = 
+        payload.subscription?.price || 
+        payload.subscription?.value ||
+        payload.price || 
+        payload.value || 
+        payload.order?.value ||
+        payload.order?.total ||
+        payload.offer?.price ||
+        payload.purchase?.price ||
+        payload.purchase?.value ||
+        null;
       
-      logStep("Payment details from Guru", { amountPaid });
+      // Converter para número se for string
+      if (typeof amountPaid === 'string') {
+        amountPaid = parseFloat(amountPaid.replace(',', '.'));
+      }
+      
+      // Se for centavos (valor muito alto), converter para reais
+      if (amountPaid && amountPaid > 10000) {
+        amountPaid = amountPaid / 100;
+      }
+      
+      logStep("Payment details from Guru", { 
+        amountPaid,
+        originalFields: {
+          subscription_price: payload.subscription?.price,
+          subscription_value: payload.subscription?.value,
+          price: payload.price,
+          value: payload.value,
+          order_value: payload.order?.value,
+          order_total: payload.order?.total,
+          offer_price: payload.offer?.price,
+        }
+      });
 
       const subscriptionData: Record<string, any> = {
         user_id: userId,
@@ -596,9 +627,12 @@ serve(async (req) => {
         updated_at: now.toISOString(),
       };
 
-      // Adicionar amount_paid se disponível
-      if (amountPaid && typeof amountPaid === 'number' && amountPaid > 0) {
+      // Adicionar amount_paid se disponível e válido
+      if (amountPaid && typeof amountPaid === 'number' && amountPaid > 0 && !isNaN(amountPaid)) {
         subscriptionData.amount_paid = amountPaid;
+        logStep("amount_paid será salvo", { amountPaid });
+      } else {
+        logStep("amount_paid não disponível ou inválido, não será salvo");
       }
 
       logStep("Dados de assinatura a salvar", subscriptionData);
