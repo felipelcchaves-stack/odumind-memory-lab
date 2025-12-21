@@ -6,8 +6,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Isesemind product ID for filtering
-const ISESEMIND_PRODUCT_ID = 'a0734b00-ff78-47ed-8516-0bc2aae38f64';
+// Isesemind product IDs for filtering (supports multiple products/plans)
+const ISESEMIND_PRODUCT_IDS = [
+  'a0734b00-ff78-47ed-8516-0bc2aae38f64', // Plano original R$97
+  // Adicione aqui novos product_ids quando criar novos planos (ex: R$129)
+];
 
 interface Charge {
   id: string;
@@ -219,7 +222,9 @@ serve(async (req) => {
     }
 
     // ========== 2. FILTER BY PRODUCT_ID (Isesemind specific) ==========
-    // Filtrar apenas cobranças do produto Isesemind usando o product_id
+    // Filtrar apenas cobranças do produto Isesemind usando os product_ids configurados
+    console.log(`[CONFIG] Isesemind Product IDs: ${ISESEMIND_PRODUCT_IDS.join(', ')}`);
+    
     const isesemindCharges = allCharges.filter((charge: any) => {
       // Deve ser uma cobrança de assinatura (recurrence_cycle presente)
       if (!charge.recurrence_cycle) return false;
@@ -229,19 +234,19 @@ serve(async (req) => {
       // 1. No invoice -> subscription -> plan -> items
       const planItems = charge.invoice?.subscription?.plan?.items || [];
       const hasPlanProduct = planItems.some((item: any) => 
-        item.product_id === ISESEMIND_PRODUCT_ID
+        ISESEMIND_PRODUCT_IDS.includes(item.product_id)
       );
       if (hasPlanProduct) return true;
 
       // 2. Nos items da cobrança diretamente
       const chargeItems = charge.items || [];
       const hasChargeProduct = chargeItems.some((item: any) => 
-        item.product_id === ISESEMIND_PRODUCT_ID
+        ISESEMIND_PRODUCT_IDS.includes(item.product_id)
       );
       if (hasChargeProduct) return true;
 
       // 3. No metadata
-      if (charge.metadata?.product_id === ISESEMIND_PRODUCT_ID) return true;
+      if (ISESEMIND_PRODUCT_IDS.includes(charge.metadata?.product_id)) return true;
 
       return false;
     });
@@ -354,7 +359,7 @@ serve(async (req) => {
         synced_at: new Date().toISOString(),
         source: 'pagarme',
         raw_data: {
-          product_filter: ISESEMIND_PRODUCT_ID,
+          product_filter: ISESEMIND_PRODUCT_IDS,
           total_charges_before_filter: allCharges.length,
           isesemind_charges: isesemindCharges.length,
           period: {
