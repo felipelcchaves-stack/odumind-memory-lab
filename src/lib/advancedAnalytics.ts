@@ -734,6 +734,11 @@ export async function calculateMetricsFromPagarme(
   targetOverride?: { mrrTarget?: number; churnTarget?: number }
 ): Promise<PagarmeMetrics> {
   try {
+    // Return empty metrics if no data
+    if (!currentSnapshot) {
+      return getEmptyPagarmeMetrics();
+    }
+
     // Fetch last 12 months of snapshots
     const { data: snapshots, error } = await supabase
       .from('financial_snapshots')
@@ -742,7 +747,10 @@ export async function calculateMetricsFromPagarme(
       .order('reference_month', { ascending: false })
       .limit(12);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching historical snapshots:', error);
+      // Continue with current snapshot only
+    }
 
     const historicalSnapshots = (snapshots || []) as SnapshotData[];
     

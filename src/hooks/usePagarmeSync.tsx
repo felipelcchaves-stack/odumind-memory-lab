@@ -75,19 +75,23 @@ export function usePagarmeSync() {
         setCurrentSnapshot(snapshot);
         
         // Calculate metrics from snapshot
-        const metrics = await calculateMetricsFromPagarme({
-          reference_month: snapshot.reference_month,
-          gross_revenue: snapshot.gross_revenue,
-          net_revenue: snapshot.net_revenue,
-          gateway_fees: snapshot.gateway_fees,
-          tpv: snapshot.tpv,
-          average_ticket: snapshot.average_ticket,
-          paid_charges_count: snapshot.paid_charges_count,
-          charges_count: snapshot.charges_count,
-          available_balance: snapshot.available_balance,
-          waiting_funds: snapshot.waiting_funds,
-        });
-        setCalculatedMetrics(metrics);
+        try {
+          const metrics = await calculateMetricsFromPagarme({
+            reference_month: snapshot.reference_month,
+            gross_revenue: snapshot.gross_revenue,
+            net_revenue: snapshot.net_revenue,
+            gateway_fees: snapshot.gateway_fees,
+            tpv: snapshot.tpv,
+            average_ticket: snapshot.average_ticket,
+            paid_charges_count: snapshot.paid_charges_count,
+            charges_count: snapshot.charges_count,
+            available_balance: snapshot.available_balance,
+            waiting_funds: snapshot.waiting_funds,
+          });
+          setCalculatedMetrics(metrics);
+        } catch (metricsError) {
+          console.error('Error calculating metrics:', metricsError);
+        }
       } else {
         setCurrentSnapshot(null);
         setCalculatedMetrics(null);
