@@ -316,7 +316,20 @@ export default function AdminAdvancedAnalytics() {
           ) : currentSnapshot ? (
             <div className="space-y-6">
               {/* TPV and Charges Row */}
-              <div className="grid gap-4 md:grid-cols-4">
+              <div className="grid gap-4 md:grid-cols-5">
+                <div className="p-4 rounded-lg bg-card border-2 border-primary/40 bg-primary/5">
+                  <div className="flex items-center gap-2 text-primary text-sm mb-2">
+                    <Users className="h-4 w-4" />
+                    Assinaturas
+                  </div>
+                  <p className="text-3xl font-bold text-primary">
+                    {currentSnapshot.charges_count}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {currentSnapshot.paid_charges_count} pagas ({currentSnapshot.charges_count > 0 ? ((currentSnapshot.paid_charges_count / currentSnapshot.charges_count) * 100).toFixed(0) : 0}%)
+                  </p>
+                </div>
+
                 <div className="p-4 rounded-lg bg-card border border-blue-500/30">
                   <div className="flex items-center gap-2 text-blue-600 text-sm mb-2">
                     <BarChart3 className="h-4 w-4" />
@@ -326,7 +339,7 @@ export default function AdminAdvancedAnalytics() {
                     R$ {currentSnapshot.charges_created.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {currentSnapshot.charges_count} cobranças Isesemind
+                    Valor total criado
                   </p>
                 </div>
 
