@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, Area, ComposedChart } from 'recharts';
-import { TrendingUp, Users, DollarSign, Target, UserMinus, MapPin, Calendar, CalendarClock, BarChart3, Percent, Wallet, Calculator, Clock, Settings } from 'lucide-react';
+import { TrendingUp, Users, DollarSign, Target, UserMinus, MapPin, Calendar, CalendarClock, BarChart3, Percent, Wallet, Calculator, Clock, Settings, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
 import { calculateAdvancedMetrics, getMonthlyComparison, getDemographicData, AdvancedMetrics, MonthlyComparison, DemographicData } from '@/lib/advancedAnalytics';
 import { Skeleton } from '@/components/ui/skeleton';
 import { startOfMonth, endOfMonth, subMonths, addMonths, format } from 'date-fns';
@@ -18,6 +18,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { usePagarmeSync } from '@/hooks/usePagarmeSync';
+import { Badge } from '@/components/ui/badge';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))', 'hsl(var(--muted))', 'hsl(var(--chart-1))', 'hsl(var(--chart-2))'];
 
@@ -65,6 +67,18 @@ export default function AdminAdvancedAnalytics() {
   const [monthlyData, setMonthlyData] = useState<MonthlyComparison[]>([]);
   const [demographicData, setDemographicData] = useState<DemographicData[]>([]);
   const [showSettings, setShowSettings] = useState(false);
+  const [selectedSyncMonth, setSelectedSyncMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  
+  // Pagar.me sync
+  const { 
+    loading: loadingPagarme, 
+    syncing, 
+    currentSnapshot, 
+    availableMonths, 
+    loadSnapshot, 
+    syncWithPagarme,
+    getCurrentMonth 
+  } = usePagarmeSync();
   
   // Financial settings
   const { settings: financialSettings, loading: loadingSettings, saving, updateSettings } = useFinancialSettingsContext();
@@ -235,6 +249,148 @@ export default function AdminAdvancedAnalytics() {
           icon={TrendingUp}
         />
       </div>
+
+      {/* Pagar.me Sync Section */}
+      <Card className="border-green-500/30 bg-gradient-to-br from-background to-green-500/5">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-green-600" />
+              <CardTitle>Receita Real (Pagar.me)</CardTitle>
+              {currentSnapshot && (
+                <Badge variant="outline" className="text-green-600 border-green-500/30">
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  Sincronizado
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={selectedSyncMonth} onValueChange={setSelectedSyncMonth}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Mês" />
+                </SelectTrigger>
+                <SelectContent>
+                  {/* Current month and last 6 months */}
+                  {Array.from({ length: 7 }, (_, i) => {
+                    const date = subMonths(new Date(), i);
+                    const monthValue = format(date, 'yyyy-MM');
+                    const monthLabel = format(date, 'MMMM yyyy', { locale: ptBR });
+                    return (
+                      <SelectItem key={monthValue} value={monthValue}>
+                        {monthLabel}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => syncWithPagarme(selectedSyncMonth)}
+                disabled={syncing}
+                className="gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? 'Sincronizando...' : 'Sincronizar'}
+              </Button>
+            </div>
+          </div>
+          <CardDescription>
+            Valores reais extraídos diretamente da API da Pagar.me
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loadingPagarme ? (
+            <div className="grid gap-4 md:grid-cols-4">
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="h-24" />
+              ))}
+            </div>
+          ) : currentSnapshot ? (
+            <div className="space-y-4">
+              {/* Real Revenue Cards */}
+              <div className="grid gap-4 md:grid-cols-4">
+                <div className="p-4 rounded-lg bg-card border">
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                    <DollarSign className="h-4 w-4" />
+                    Receita Bruta
+                  </div>
+                  <p className="text-2xl font-bold">
+                    R$ {currentSnapshot.gross_revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {currentSnapshot.transaction_count} transações
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-lg bg-card border border-red-500/30">
+                  <div className="flex items-center gap-2 text-red-600 text-sm mb-2">
+                    <Percent className="h-4 w-4" />
+                    Taxas Pagar.me
+                  </div>
+                  <p className="text-2xl font-bold text-red-600">
+                    -R$ {currentSnapshot.gateway_fees.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {((currentSnapshot.gateway_fees / currentSnapshot.gross_revenue) * 100).toFixed(2)}% do bruto
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-lg bg-card border border-purple-500/30">
+                  <div className="flex items-center gap-2 text-purple-600 text-sm mb-2">
+                    <Users className="h-4 w-4" />
+                    Comissão Vendedores
+                  </div>
+                  <p className="text-2xl font-bold text-purple-600">
+                    -R$ {(currentSnapshot.net_revenue * financialSettings.salesCommissionPercent).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {(financialSettings.salesCommissionPercent * 100).toFixed(0)}% sobre líquido
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-lg bg-card border-2 border-green-500/50 bg-green-500/5">
+                  <div className="flex items-center gap-2 text-green-600 text-sm mb-2">
+                    <Wallet className="h-4 w-4" />
+                    Receita Líquida Final
+                  </div>
+                  <p className="text-2xl font-bold text-green-600">
+                    R$ {(currentSnapshot.net_revenue * (1 - financialSettings.salesCommissionPercent)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    O que você realmente recebe
+                  </p>
+                </div>
+              </div>
+
+              {/* Sync info */}
+              <div className="flex items-center justify-between text-xs text-muted-foreground p-2 bg-muted/50 rounded">
+                <span>
+                  Última sincronização: {format(new Date(currentSnapshot.synced_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                </span>
+                <span>
+                  Mês de referência: {format(new Date(currentSnapshot.reference_month + '-01'), 'MMMM yyyy', { locale: ptBR })}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground mb-4">
+                Nenhum dado sincronizado para este mês
+              </p>
+              <Button
+                onClick={() => syncWithPagarme(selectedSyncMonth)}
+                disabled={syncing}
+                className="gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+                Sincronizar Agora
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Financial Planning Section */}
       <Card className="border-primary/20 bg-gradient-to-br from-background to-primary/5">

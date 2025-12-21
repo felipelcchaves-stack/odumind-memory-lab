@@ -571,6 +571,51 @@ export type Database = {
           },
         ]
       }
+      financial_snapshots: {
+        Row: {
+          created_at: string | null
+          gateway_fees: number | null
+          gross_revenue: number | null
+          id: string
+          net_revenue: number | null
+          raw_data: Json | null
+          reference_month: string
+          sales_commission: number | null
+          source: string | null
+          synced_at: string | null
+          transaction_count: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          gateway_fees?: number | null
+          gross_revenue?: number | null
+          id?: string
+          net_revenue?: number | null
+          raw_data?: Json | null
+          reference_month: string
+          sales_commission?: number | null
+          source?: string | null
+          synced_at?: string | null
+          transaction_count?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          gateway_fees?: number | null
+          gross_revenue?: number | null
+          id?: string
+          net_revenue?: number | null
+          raw_data?: Json | null
+          reference_month?: string
+          sales_commission?: number | null
+          source?: string | null
+          synced_at?: string | null
+          transaction_count?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       gamification_logs: {
         Row: {
           created_at: string
