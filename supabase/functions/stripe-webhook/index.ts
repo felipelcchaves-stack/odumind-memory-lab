@@ -109,7 +109,24 @@ serve(async (req) => {
           const subscription = await stripe.subscriptions.retrieve(
             session.subscription as string
           );
-          await updateSubscription(subscription, session.metadata?.user_id);
+          
+          // Capturar valores pagos para MRR real
+          const amountPaid = session.amount_total ? session.amount_total / 100 : null;
+          const discountApplied = session.total_details?.amount_discount 
+            ? session.total_details.amount_discount / 100 : 0;
+          const couponCode = (session as any).discounts?.[0]?.coupon?.name || null;
+          
+          logStep("Payment details captured", { 
+            amountPaid, 
+            discountApplied, 
+            couponCode 
+          });
+          
+          await updateSubscription(subscription, session.metadata?.user_id, {
+            amountPaid,
+            discountApplied,
+            couponCode
+          });
         }
         break;
       }
@@ -121,7 +138,7 @@ serve(async (req) => {
           subscriptionId: subscription.id, 
           status: subscription.status 
         });
-        await updateSubscription(subscription);
+        await updateSubscription(subscription, undefined, undefined);
         break;
       }
 
@@ -222,9 +239,16 @@ serve(async (req) => {
   }
 });
 
+interface PaymentDetails {
+  amountPaid?: number | null;
+  discountApplied?: number | null;
+  couponCode?: string | null;
+}
+
 async function updateSubscription(
   subscription: Stripe.Subscription,
-  userId?: string
+  userId?: string,
+  paymentDetails?: PaymentDetails
 ) {
   try {
     const customer = await stripe.customers.retrieve(subscription.customer as string);
@@ -284,7 +308,7 @@ async function updateSubscription(
       logStep("Error converting period_end in webhook", { value: subscription.current_period_end, error: errorMessage });
     }
 
-    const subscriptionData = {
+    const subscriptionData: Record<string, any> = {
       user_id: targetUserId,
       status: subscription.status,
       plan_name: planName,
@@ -296,10 +320,27 @@ async function updateSubscription(
       cancel_at_period_end: subscription.cancel_at_period_end || false,
     };
 
+    // Adicionar campos de pagamento se fornecidos (vindos do checkout.session.completed)
+    if (paymentDetails) {
+      if (paymentDetails.amountPaid !== undefined) {
+        subscriptionData.amount_paid = paymentDetails.amountPaid;
+      }
+      if (paymentDetails.discountApplied !== undefined) {
+        subscriptionData.discount_applied = paymentDetails.discountApplied;
+      }
+      if (paymentDetails.couponCode !== undefined) {
+        subscriptionData.coupon_code = paymentDetails.couponCode;
+      }
+      logStep("Payment details added to subscription", paymentDetails);
+    }
+
     logStep("Subscription data to upsert", { 
       userId: targetUserId, 
       plan: planName,
-      status: subscription.status 
+      status: subscription.status,
+      amountPaid: subscriptionData.amount_paid,
+      discountApplied: subscriptionData.discount_applied,
+      couponCode: subscriptionData.coupon_code
     });
 
     // Check if subscription exists, then update or insert
