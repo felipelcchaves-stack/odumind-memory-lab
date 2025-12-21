@@ -107,49 +107,62 @@ serve(async (req) => {
       'Accept': 'application/json',
     };
 
-    // ========== 1. FETCH CHARGES (TPV) ==========
-    console.log('Fetching charges...');
-    let allCharges: Charge[] = [];
-    let page = 1;
-    let hasMore = true;
+  // ========== 1. FETCH CHARGES (TPV) ==========
+  console.log('Fetching charges...');
+  let allCharges: Charge[] = [];
+  let page = 1;
+  let hasMore = true;
 
-    while (hasMore && page <= 50) {
-      const chargesUrl = new URL('https://api.pagar.me/core/v5/charges');
-      chargesUrl.searchParams.set('created_since', startDate.toISOString());
-      chargesUrl.searchParams.set('created_until', endDate.toISOString());
-      chargesUrl.searchParams.set('size', '100');
-      chargesUrl.searchParams.set('page', String(page));
+  while (hasMore && page <= 100) {
+    const chargesUrl = new URL('https://api.pagar.me/core/v5/charges');
+    chargesUrl.searchParams.set('created_since', startDate.toISOString());
+    chargesUrl.searchParams.set('created_until', endDate.toISOString());
+    chargesUrl.searchParams.set('size', '100');
+    chargesUrl.searchParams.set('page', String(page));
 
-      console.log(`Fetching charges page ${page}: ${chargesUrl.toString()}`);
+    console.log(`Fetching charges page ${page}: ${chargesUrl.toString()}`);
 
-      const chargesResponse = await fetch(chargesUrl.toString(), { method: 'GET', headers });
+    const chargesResponse = await fetch(chargesUrl.toString(), { method: 'GET', headers });
 
-      if (!chargesResponse.ok) {
-        const errorText = await chargesResponse.text();
-        console.error('Pagar.me charges API error:', chargesResponse.status, errorText);
-        return new Response(
-          JSON.stringify({ error: `Erro na API Pagar.me (charges): ${chargesResponse.status}`, details: errorText }),
-          { status: chargesResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const chargesData: PagarmeListResponse<Charge> = await chargesResponse.json();
-      console.log(`Page ${page}: Found ${chargesData.data?.length || 0} charges`);
-
-      if (chargesData.data && chargesData.data.length > 0) {
-        allCharges = [...allCharges, ...chargesData.data];
-        page++;
-      } else {
-        hasMore = false;
-      }
-
-      // Check if there are more pages
-      if (!chargesData.data || chargesData.data.length < 100) {
-        hasMore = false;
-      }
+    if (!chargesResponse.ok) {
+      const errorText = await chargesResponse.text();
+      console.error('Pagar.me charges API error:', chargesResponse.status, errorText);
+      return new Response(
+        JSON.stringify({ error: `Erro na API Pagar.me (charges): ${chargesResponse.status}`, details: errorText }),
+        { status: chargesResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    console.log(`Total charges fetched: ${allCharges.length}`);
+    const chargesData: PagarmeListResponse<Charge> = await chargesResponse.json();
+    const chargesFound = chargesData.data?.length || 0;
+    const hasNextPage = !!chargesData.paging?.next;
+    
+    console.log(`Page ${page}: Found ${chargesFound} charges, has_next: ${hasNextPage}`);
+
+    if (chargesData.data && chargesData.data.length > 0) {
+      allCharges = [...allCharges, ...chargesData.data];
+      page++;
+      
+      // FIX: Continue if API indicates next page OR if we got items (API may return partial pages)
+      hasMore = hasNextPage || chargesData.data.length >= 30;
+      
+      // Small delay to avoid rate limiting
+      if (hasMore) {
+        await new Promise(resolve => setTimeout(resolve, 150));
+      }
+    } else {
+      hasMore = false;
+    }
+  }
+
+  console.log(`Total charges fetched: ${allCharges.length}`);
+  
+  // Log charges by status for debugging
+  const statusCounts = allCharges.reduce((acc, charge) => {
+    acc[charge.status] = (acc[charge.status] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  console.log('Charges by status:', JSON.stringify(statusCounts));
 
     // ========== 2. FETCH CURRENT BALANCE ==========
     console.log('Fetching balance...');
