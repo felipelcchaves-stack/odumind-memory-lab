@@ -12,6 +12,15 @@ export interface FinancialSnapshot {
   transaction_count: number;
   synced_at: string;
   source: string;
+  // New fields
+  tpv: number;
+  charges_created: number;
+  available_balance: number;
+  waiting_funds: number;
+  transferred_amount: number;
+  average_ticket: number;
+  charges_count: number;
+  paid_charges_count: number;
 }
 
 export function usePagarmeSync() {
@@ -40,7 +49,27 @@ export function usePagarmeSync() {
 
       if (error) throw error;
       
-      setCurrentSnapshot(data);
+      if (data) {
+        // Map database fields to interface, handling null values
+        setCurrentSnapshot({
+          ...data,
+          tpv: Number(data.tpv) || 0,
+          charges_created: Number(data.charges_created) || 0,
+          available_balance: Number(data.available_balance) || 0,
+          waiting_funds: Number(data.waiting_funds) || 0,
+          transferred_amount: Number(data.transferred_amount) || 0,
+          average_ticket: Number(data.average_ticket) || 0,
+          charges_count: Number(data.charges_count) || 0,
+          paid_charges_count: Number(data.paid_charges_count) || 0,
+          gross_revenue: Number(data.gross_revenue) || 0,
+          gateway_fees: Number(data.gateway_fees) || 0,
+          net_revenue: Number(data.net_revenue) || 0,
+          sales_commission: Number(data.sales_commission) || 0,
+          transaction_count: Number(data.transaction_count) || 0,
+        });
+      } else {
+        setCurrentSnapshot(null);
+      }
     } catch (error) {
       console.error('Error loading snapshot:', error);
     } finally {
@@ -94,7 +123,7 @@ export function usePagarmeSync() {
         return null;
       }
 
-      toast.success(`Sincronizado! Receita líquida: R$ ${result.snapshot.netRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
+      toast.success(`Sincronizado! TPV: R$ ${result.snapshot.tpv?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}`);
       
       // Reload the snapshot
       await loadSnapshot(targetMonth);

@@ -1,0 +1,10 @@
+-- Add new columns to financial_snapshots for complete Pagar.me metrics
+ALTER TABLE public.financial_snapshots 
+ADD COLUMN IF NOT EXISTS tpv DECIMAL(12,2) DEFAULT 0,
+ADD COLUMN IF NOT EXISTS charges_created DECIMAL(12,2) DEFAULT 0,
+ADD COLUMN IF NOT EXISTS available_balance DECIMAL(12,2) DEFAULT 0,
+ADD COLUMN IF NOT EXISTS waiting_funds DECIMAL(12,2) DEFAULT 0,
+ADD COLUMN IF NOT EXISTS transferred_amount DECIMAL(12,2) DEFAULT 0,
+ADD COLUMN IF NOT EXISTS average_ticket DECIMAL(12,2) DEFAULT 0,
+ADD COLUMN IF NOT EXISTS charges_count INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS paid_charges_count INTEGER DEFAULT 0;

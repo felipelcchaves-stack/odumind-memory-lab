@@ -573,46 +573,70 @@ export type Database = {
       }
       financial_snapshots: {
         Row: {
+          available_balance: number | null
+          average_ticket: number | null
+          charges_count: number | null
+          charges_created: number | null
           created_at: string | null
           gateway_fees: number | null
           gross_revenue: number | null
           id: string
           net_revenue: number | null
+          paid_charges_count: number | null
           raw_data: Json | null
           reference_month: string
           sales_commission: number | null
           source: string | null
           synced_at: string | null
+          tpv: number | null
           transaction_count: number | null
+          transferred_amount: number | null
           updated_at: string | null
+          waiting_funds: number | null
         }
         Insert: {
+          available_balance?: number | null
+          average_ticket?: number | null
+          charges_count?: number | null
+          charges_created?: number | null
           created_at?: string | null
           gateway_fees?: number | null
           gross_revenue?: number | null
           id?: string
           net_revenue?: number | null
+          paid_charges_count?: number | null
           raw_data?: Json | null
           reference_month: string
           sales_commission?: number | null
           source?: string | null
           synced_at?: string | null
+          tpv?: number | null
           transaction_count?: number | null
+          transferred_amount?: number | null
           updated_at?: string | null
+          waiting_funds?: number | null
         }
         Update: {
+          available_balance?: number | null
+          average_ticket?: number | null
+          charges_count?: number | null
+          charges_created?: number | null
           created_at?: string | null
           gateway_fees?: number | null
           gross_revenue?: number | null
           id?: string
           net_revenue?: number | null
+          paid_charges_count?: number | null
           raw_data?: Json | null
           reference_month?: string
           sales_commission?: number | null
           source?: string | null
           synced_at?: string | null
+          tpv?: number | null
           transaction_count?: number | null
+          transferred_amount?: number | null
           updated_at?: string | null
+          waiting_funds?: number | null
         }
         Relationships: []
       }

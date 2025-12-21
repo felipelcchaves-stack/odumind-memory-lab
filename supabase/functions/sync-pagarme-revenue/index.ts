@@ -6,26 +6,31 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface BalanceOperation {
+interface Charge {
   id: string;
   status: string;
   amount: number;
-  fee: number;
-  type: string;
+  paid_amount: number;
   created_at: string;
-  movement_object?: {
-    payment_method?: {
-      type?: string;
-    };
-    transaction?: {
-      id?: string;
-      amount?: number;
+  paid_at?: string;
+  gateway_id?: string;
+  last_transaction?: {
+    gateway_response?: {
+      code?: string;
     };
   };
 }
 
-interface PagarmeResponse {
-  data: BalanceOperation[];
+interface BalanceResponse {
+  available_amount: number;
+  waiting_funds: {
+    amount: number;
+  };
+  transferred_amount: number;
+}
+
+interface PagarmeListResponse<T> {
+  data: T[];
   paging?: {
     next?: string;
     previous?: string;
@@ -33,7 +38,6 @@ interface PagarmeResponse {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -88,117 +92,170 @@ serve(async (req) => {
     }
 
     const { referenceMonth } = await req.json();
-    
-    // Default to current month if not specified
-    const targetMonth = referenceMonth || new Date().toISOString().slice(0, 7); // 'YYYY-MM'
+    const targetMonth = referenceMonth || new Date().toISOString().slice(0, 7);
     
     console.log(`Syncing Pagar.me data for month: ${targetMonth}`);
 
-    // Calculate date range for the month
     const [year, month] = targetMonth.split('-').map(Number);
     const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0, 23, 59, 59); // Last day of month
+    const endDate = new Date(year, month, 0, 23, 59, 59);
 
-    // Fetch balance operations from Pagar.me API
     const authString = btoa(`${pagarmeSecretKey}:`);
-    
-    let allOperations: BalanceOperation[] = [];
-    let nextCursor: string | null = null;
+    const headers = {
+      'Authorization': `Basic ${authString}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+
+    // ========== 1. FETCH CHARGES (TPV) ==========
+    console.log('Fetching charges...');
+    let allCharges: Charge[] = [];
     let page = 1;
-    const maxPages = 50; // Safety limit
+    let hasMore = true;
 
-    do {
-      const url = new URL('https://api.pagar.me/core/v5/balance/operations');
-      url.searchParams.set('created_since', startDate.toISOString());
-      url.searchParams.set('created_until', endDate.toISOString());
-      url.searchParams.set('size', '100');
-      if (nextCursor) {
-        url.searchParams.set('cursor', nextCursor);
-      }
+    while (hasMore && page <= 50) {
+      const chargesUrl = new URL('https://api.pagar.me/core/v5/charges');
+      chargesUrl.searchParams.set('created_since', startDate.toISOString());
+      chargesUrl.searchParams.set('created_until', endDate.toISOString());
+      chargesUrl.searchParams.set('size', '100');
+      chargesUrl.searchParams.set('page', String(page));
 
-      console.log(`Fetching page ${page}: ${url.toString()}`);
+      console.log(`Fetching charges page ${page}: ${chargesUrl.toString()}`);
 
-      const response = await fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-          'Authorization': `Basic ${authString}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      });
+      const chargesResponse = await fetch(chargesUrl.toString(), { method: 'GET', headers });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Pagar.me API error:', response.status, errorText);
+      if (!chargesResponse.ok) {
+        const errorText = await chargesResponse.text();
+        console.error('Pagar.me charges API error:', chargesResponse.status, errorText);
         return new Response(
-          JSON.stringify({ 
-            error: `Erro na API Pagar.me: ${response.status}`,
-            details: errorText 
-          }),
-          { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: `Erro na API Pagar.me (charges): ${chargesResponse.status}`, details: errorText }),
+          { status: chargesResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      const data: PagarmeResponse = await response.json();
-      console.log(`Page ${page}: Found ${data.data?.length || 0} operations`);
-      
-      if (data.data && data.data.length > 0) {
-        allOperations = [...allOperations, ...data.data];
+      const chargesData: PagarmeListResponse<Charge> = await chargesResponse.json();
+      console.log(`Page ${page}: Found ${chargesData.data?.length || 0} charges`);
+
+      if (chargesData.data && chargesData.data.length > 0) {
+        allCharges = [...allCharges, ...chargesData.data];
+        page++;
+      } else {
+        hasMore = false;
       }
 
-      // Check for next page
-      nextCursor = data.paging?.next ? data.paging.next.split('cursor=')[1]?.split('&')[0] : null;
-      page++;
+      // Check if there are more pages
+      if (!chargesData.data || chargesData.data.length < 100) {
+        hasMore = false;
+      }
+    }
 
-    } while (nextCursor && page <= maxPages);
+    console.log(`Total charges fetched: ${allCharges.length}`);
 
-    console.log(`Total operations fetched: ${allOperations.length}`);
+    // ========== 2. FETCH CURRENT BALANCE ==========
+    console.log('Fetching balance...');
+    let balanceData: BalanceResponse | null = null;
 
-    // Process operations to calculate totals
-    let grossRevenue = 0;
-    let totalFees = 0;
-    let netRevenue = 0;
-    let transactionCount = 0;
+    try {
+      const balanceResponse = await fetch('https://api.pagar.me/core/v5/balance', { method: 'GET', headers });
+      
+      if (balanceResponse.ok) {
+        balanceData = await balanceResponse.json();
+        console.log('Balance fetched:', balanceData);
+      } else {
+        console.warn('Could not fetch balance:', await balanceResponse.text());
+      }
+    } catch (balanceError) {
+      console.warn('Error fetching balance:', balanceError);
+    }
 
-    for (const op of allOperations) {
-      // Only count credit operations (incoming money)
-      if (op.type === 'payable' && op.status === 'available') {
-        grossRevenue += op.amount || 0;
-        totalFees += op.fee || 0;
-        transactionCount++;
+    // ========== 3. CALCULATE METRICS ==========
+    let chargesCreated = 0;      // All charges amount
+    let tpv = 0;                 // Authorized/paid charges (TPV)
+    let totalPaidAmount = 0;     // Actually paid amount
+    let chargesCount = 0;        // Total charges count
+    let paidChargesCount = 0;    // Paid charges count
+
+    for (const charge of allCharges) {
+      chargesCount++;
+      chargesCreated += (charge.amount || 0);
+
+      // TPV = paid, captured, or pending charges (authorized)
+      if (['paid', 'captured', 'pending'].includes(charge.status)) {
+        tpv += (charge.amount || 0);
+      }
+
+      // Actually paid
+      if (charge.status === 'paid') {
+        paidChargesCount++;
+        totalPaidAmount += (charge.paid_amount || charge.amount || 0);
       }
     }
 
     // Convert from cents to reais
-    grossRevenue = grossRevenue / 100;
-    totalFees = totalFees / 100;
-    netRevenue = grossRevenue - totalFees;
+    chargesCreated = chargesCreated / 100;
+    tpv = tpv / 100;
+    totalPaidAmount = totalPaidAmount / 100;
 
-    console.log(`Calculated totals - Gross: ${grossRevenue}, Fees: ${totalFees}, Net: ${netRevenue}, Transactions: ${transactionCount}`);
+    // Calculate average ticket
+    const averageTicket = paidChargesCount > 0 ? totalPaidAmount / paidChargesCount : 0;
 
-    // Upsert the snapshot in database
+    // Balance data (already in reais from API)
+    const availableBalance = balanceData ? (balanceData.available_amount || 0) / 100 : 0;
+    const waitingFunds = balanceData?.waiting_funds ? (balanceData.waiting_funds.amount || 0) / 100 : 0;
+    const transferredAmount = balanceData ? (balanceData.transferred_amount || 0) / 100 : 0;
+
+    // Estimate gateway fees (approximately 3.5% for card transactions)
+    const estimatedGatewayFees = totalPaidAmount * 0.035;
+    const netRevenue = totalPaidAmount - estimatedGatewayFees;
+
+    console.log(`Calculated metrics:
+      - Charges Created: R$ ${chargesCreated.toFixed(2)}
+      - TPV (Authorized): R$ ${tpv.toFixed(2)}
+      - Paid Amount: R$ ${totalPaidAmount.toFixed(2)}
+      - Average Ticket: R$ ${averageTicket.toFixed(2)}
+      - Charges Count: ${chargesCount}
+      - Paid Charges: ${paidChargesCount}
+      - Available Balance: R$ ${availableBalance.toFixed(2)}
+      - Waiting Funds: R$ ${waitingFunds.toFixed(2)}
+      - Transferred: R$ ${transferredAmount.toFixed(2)}
+      - Estimated Fees: R$ ${estimatedGatewayFees.toFixed(2)}
+      - Net Revenue: R$ ${netRevenue.toFixed(2)}
+    `);
+
+    // ========== 4. SAVE TO DATABASE ==========
     const { data: snapshot, error: upsertError } = await supabase
       .from('financial_snapshots')
       .upsert({
         reference_month: targetMonth,
-        gross_revenue: grossRevenue,
-        gateway_fees: totalFees,
-        sales_commission: 0, // Will be calculated on frontend based on settings
+        gross_revenue: totalPaidAmount,
+        gateway_fees: estimatedGatewayFees,
+        sales_commission: 0,
         net_revenue: netRevenue,
-        transaction_count: transactionCount,
+        transaction_count: paidChargesCount,
+        tpv: tpv,
+        charges_created: chargesCreated,
+        available_balance: availableBalance,
+        waiting_funds: waitingFunds,
+        transferred_amount: transferredAmount,
+        average_ticket: averageTicket,
+        charges_count: chargesCount,
+        paid_charges_count: paidChargesCount,
         synced_at: new Date().toISOString(),
         source: 'pagarme',
         raw_data: {
-          total_operations: allOperations.length,
+          total_charges: allCharges.length,
           period: {
             start: startDate.toISOString(),
             end: endDate.toISOString(),
           },
+          balance: balanceData,
           summary: {
-            gross_revenue: grossRevenue,
-            gateway_fees: totalFees,
+            charges_created: chargesCreated,
+            tpv: tpv,
+            paid_amount: totalPaidAmount,
+            average_ticket: averageTicket,
+            gateway_fees: estimatedGatewayFees,
             net_revenue: netRevenue,
-            transaction_count: transactionCount,
           }
         },
       }, {
@@ -222,10 +279,17 @@ serve(async (req) => {
         success: true,
         snapshot: {
           referenceMonth: targetMonth,
-          grossRevenue,
-          gatewayFees: totalFees,
+          chargesCreated,
+          tpv,
+          grossRevenue: totalPaidAmount,
+          gatewayFees: estimatedGatewayFees,
           netRevenue,
-          transactionCount,
+          averageTicket,
+          chargesCount,
+          paidChargesCount,
+          availableBalance,
+          waitingFunds,
+          transferredAmount,
           syncedAt: snapshot.synced_at,
         },
       }),
