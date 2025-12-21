@@ -63,22 +63,35 @@ serve(async (req) => {
     // Get auth user
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.log('[SYNC-PAGARME] No authorization header');
       return new Response(
         JSON.stringify({ error: 'Não autorizado' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
+    const token = authHeader.replace('Bearer ', '');
+    console.log('[SYNC-PAGARME] Token received, length:', token.length);
 
-    if (authError || !user) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError) {
+      console.log('[SYNC-PAGARME] Auth error:', authError.message);
+      return new Response(
+        JSON.stringify({ error: 'Erro de autenticação: ' + authError.message }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!user) {
+      console.log('[SYNC-PAGARME] No user found');
       return new Response(
         JSON.stringify({ error: 'Usuário não autenticado' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log('[SYNC-PAGARME] User authenticated:', user.id, user.email);
 
     // Check if user is admin
     const { data: roles } = await supabase
