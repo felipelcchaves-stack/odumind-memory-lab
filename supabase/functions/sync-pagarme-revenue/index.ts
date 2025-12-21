@@ -183,22 +183,84 @@ serve(async (req) => {
 
     console.log(`Total charges fetched: ${allCharges.length}`);
 
-    // ========== 2. FILTER BY SUBSCRIPTION CHARGES (recurrence_cycle) ==========
-    // Cobranças com recurrence_cycle são assinaturas (Isesemind)
+    // ========== DIAGNOSTIC LOGS ==========
+    // Log sample charges to understand structure and find product_id location
+    if (allCharges.length > 0) {
+      const sampleCharges = allCharges.slice(0, 5).map((charge: any) => ({
+        id: charge.id,
+        amount: charge.amount / 100,
+        status: charge.status,
+        recurrence_cycle: charge.recurrence_cycle,
+        invoice: charge.invoice ? {
+          id: charge.invoice.id,
+          subscription: charge.invoice.subscription ? {
+            id: charge.invoice.subscription.id,
+            plan: charge.invoice.subscription.plan ? {
+              id: charge.invoice.subscription.plan.id,
+              name: charge.invoice.subscription.plan.name,
+              items: charge.invoice.subscription.plan.items?.map((item: any) => ({
+                id: item.id,
+                name: item.name,
+                product_id: item.product_id,
+              })),
+            } : null,
+          } : null,
+        } : null,
+        items: charge.items?.map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          product_id: item.product_id,
+          description: item.description,
+        })),
+        metadata: charge.metadata,
+        customer: charge.customer ? { id: charge.customer.id, name: charge.customer.name } : null,
+      }));
+      console.log('[DIAGNOSTIC] Sample charges structure:', JSON.stringify(sampleCharges, null, 2));
+    }
+
+    // ========== 2. FILTER BY PRODUCT_ID (Isesemind specific) ==========
+    // Filtrar apenas cobranças do produto Isesemind usando o product_id
     const isesemindCharges = allCharges.filter((charge: any) => {
-      return charge.recurrence_cycle !== null && charge.recurrence_cycle !== undefined;
+      // Deve ser uma cobrança de assinatura (recurrence_cycle presente)
+      if (!charge.recurrence_cycle) return false;
+
+      // Verificar product_id em diferentes locais possíveis:
+      
+      // 1. No invoice -> subscription -> plan -> items
+      const planItems = charge.invoice?.subscription?.plan?.items || [];
+      const hasPlanProduct = planItems.some((item: any) => 
+        item.product_id === ISESEMIND_PRODUCT_ID
+      );
+      if (hasPlanProduct) return true;
+
+      // 2. Nos items da cobrança diretamente
+      const chargeItems = charge.items || [];
+      const hasChargeProduct = chargeItems.some((item: any) => 
+        item.product_id === ISESEMIND_PRODUCT_ID
+      );
+      if (hasChargeProduct) return true;
+
+      // 3. No metadata
+      if (charge.metadata?.product_id === ISESEMIND_PRODUCT_ID) return true;
+
+      return false;
     });
 
-    const nonSubscriptionCharges = allCharges.length - isesemindCharges.length;
-    console.log(`Subscription charges (Isesemind): ${isesemindCharges.length}`);
-    console.log(`Non-subscription charges: ${nonSubscriptionCharges}`);
+    // Log para debug: cobranças com recurrence_cycle mas sem product_id Isesemind
+    const subscriptionChargesTotal = allCharges.filter((c: any) => c.recurrence_cycle).length;
+    const nonIsesemindSubscriptions = subscriptionChargesTotal - isesemindCharges.length;
+    
+    console.log(`[FILTER] Total charges: ${allCharges.length}`);
+    console.log(`[FILTER] Subscription charges (with recurrence_cycle): ${subscriptionChargesTotal}`);
+    console.log(`[FILTER] Isesemind charges (product_id match): ${isesemindCharges.length}`);
+    console.log(`[FILTER] Other subscription charges (NOT Isesemind): ${nonIsesemindSubscriptions}`);
     
     // Log charges by status for debugging
     const statusCounts = isesemindCharges.reduce((acc, charge) => {
       acc[charge.status] = (acc[charge.status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-    console.log('Isesemind charges by status:', JSON.stringify(statusCounts));
+    console.log('[FILTER] Isesemind charges by status:', JSON.stringify(statusCounts));
 
     // ========== 3. FETCH CURRENT BALANCE ==========
     console.log('Fetching balance...');
