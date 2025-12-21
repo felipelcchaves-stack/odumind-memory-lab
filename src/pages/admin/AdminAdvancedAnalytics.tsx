@@ -4,14 +4,20 @@ import { StatsCard } from '@/components/admin/StatsCard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp, Users, DollarSign, Target, UserMinus, MapPin, Calendar, CalendarClock, BarChart3 } from 'lucide-react';
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, Area, ComposedChart } from 'recharts';
+import { TrendingUp, Users, DollarSign, Target, UserMinus, MapPin, Calendar, CalendarClock, BarChart3, Percent, Wallet, Calculator, Clock, Settings } from 'lucide-react';
 import { calculateAdvancedMetrics, getMonthlyComparison, getDemographicData, AdvancedMetrics, MonthlyComparison, DemographicData } from '@/lib/advancedAnalytics';
 import { Skeleton } from '@/components/ui/skeleton';
-import { startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { startOfMonth, endOfMonth, subMonths, addMonths, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { MarketingInsights } from '@/components/admin/MarketingInsights';
 import { RenewalForecast } from '@/components/admin/RenewalForecast';
 import { SalesTrend } from '@/components/admin/SalesTrend';
+import { useFinancialSettings } from '@/hooks/useFinancialSettings';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))', 'hsl(var(--muted))', 'hsl(var(--chart-1))', 'hsl(var(--chart-2))'];
 
@@ -39,10 +45,28 @@ export default function AdminAdvancedAnalytics() {
   const [currentMetrics, setCurrentMetrics] = useState<AdvancedMetrics | null>(null);
   const [monthlyData, setMonthlyData] = useState<MonthlyComparison[]>([]);
   const [demographicData, setDemographicData] = useState<DemographicData[]>([]);
+  const [showSettings, setShowSettings] = useState(false);
+  
+  // Financial settings
+  const { settings: financialSettings, loading: loadingSettings, saving, updateSettings } = useFinancialSettings();
+  const [localCommission, setLocalCommission] = useState('');
+  const [localMrrTarget, setLocalMrrTarget] = useState('');
+  const [localArrTarget, setLocalArrTarget] = useState('');
+
+  // Initialize local values when settings load
+  useEffect(() => {
+    if (!loadingSettings) {
+      setLocalCommission((financialSettings.commissionPercent * 100).toString());
+      setLocalMrrTarget(financialSettings.mrrTarget.toString());
+      setLocalArrTarget(financialSettings.arrTarget.toString());
+    }
+  }, [financialSettings, loadingSettings]);
 
   useEffect(() => {
-    loadAnalytics();
-  }, [period]);
+    if (!loadingSettings) {
+      loadAnalytics();
+    }
+  }, [period, loadingSettings, financialSettings]);
 
   async function loadAnalytics() {
     setLoading(true);
@@ -61,7 +85,7 @@ export default function AdminAdvancedAnalytics() {
       }
 
       const [metrics, monthly, demographics] = await Promise.all([
-        calculateAdvancedMetrics(startDate, endDate),
+        calculateAdvancedMetrics(startDate, endDate, financialSettings),
         getMonthlyComparison(period === '3months' ? 3 : 6),
         getDemographicData()
       ]);
@@ -74,6 +98,24 @@ export default function AdminAdvancedAnalytics() {
     } finally {
       setLoading(false);
     }
+  }
+
+  // Generate projection data for chart
+  function generateProjectionData(currentMrr: number, target: number, monthsToTarget: number) {
+    const data = [];
+    const today = new Date();
+    const growthRate = 0.10; // 10% monthly growth assumption
+
+    for (let i = 0; i <= 12; i++) {
+      const monthDate = addMonths(today, i);
+      const projectedMrr = currentMrr * Math.pow(1 + growthRate, i);
+      data.push({
+        month: format(monthDate, 'MMM', { locale: ptBR }),
+        projection: Math.round(projectedMrr * 100) / 100,
+        target: target
+      });
+    }
+    return data;
   }
 
   // Aggregate demographic data
@@ -173,17 +215,237 @@ export default function AdminAdvancedAnalytics() {
       <div className="grid gap-4 md:grid-cols-2">
         <StatsCard
           title="MRR (Monthly Recurring Revenue)"
-          value={`R$ ${currentMetrics?.mrr || 0}`}
-          description="Receita mensal recorrente"
+          value={`R$ ${currentMetrics?.mrr?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}`}
+          description="Receita mensal recorrente bruta"
           icon={DollarSign}
         />
         <StatsCard
           title="ARR (Annual Recurring Revenue)"
-          value={`R$ ${currentMetrics?.arr || 0}`}
-          description="Receita anual recorrente"
+          value={`R$ ${currentMetrics?.arr?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}`}
+          description="Receita anual recorrente bruta"
           icon={TrendingUp}
         />
       </div>
+
+      {/* Financial Planning Section */}
+      <Card className="border-primary/20 bg-gradient-to-br from-background to-primary/5">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Calculator className="h-5 w-5 text-primary" />
+              <CardTitle>Planejamento Financeiro</CardTitle>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowSettings(!showSettings)}
+              className="gap-2"
+            >
+              <Settings className="h-4 w-4" />
+              {showSettings ? 'Ocultar' : 'Configurar'}
+            </Button>
+          </div>
+          <CardDescription>
+            MRR/ARR líquido após comissões e progresso em relação às metas
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Settings Panel */}
+          {showSettings && (
+            <div className="p-4 border rounded-lg bg-muted/50 space-y-4">
+              <h4 className="font-medium text-sm flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Configurações de Meta
+              </h4>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="commission">Comissão do Gateway (%)</Label>
+                  <Input
+                    id="commission"
+                    type="number"
+                    step="0.1"
+                    value={localCommission}
+                    onChange={(e) => setLocalCommission(e.target.value)}
+                    placeholder="10"
+                  />
+                  <p className="text-xs text-muted-foreground">Ex: 10 para 10%</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="mrrTarget">Meta MRR Mensal (R$)</Label>
+                  <Input
+                    id="mrrTarget"
+                    type="number"
+                    value={localMrrTarget}
+                    onChange={(e) => setLocalMrrTarget(e.target.value)}
+                    placeholder="10000"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="arrTarget">Meta ARR Anual (R$)</Label>
+                  <Input
+                    id="arrTarget"
+                    type="number"
+                    value={localArrTarget}
+                    onChange={(e) => setLocalArrTarget(e.target.value)}
+                    placeholder="120000"
+                  />
+                </div>
+              </div>
+              <Button
+                onClick={() => {
+                  updateSettings({
+                    commissionPercent: parseFloat(localCommission) / 100,
+                    mrrTarget: parseFloat(localMrrTarget),
+                    arrTarget: parseFloat(localArrTarget),
+                  });
+                }}
+                disabled={saving}
+                className="w-full md:w-auto"
+              >
+                {saving ? 'Salvando...' : 'Salvar Configurações'}
+              </Button>
+            </div>
+          )}
+
+          {/* Financial Metrics Cards */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <div className="p-4 rounded-lg bg-card border">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                <Wallet className="h-4 w-4" />
+                MRR Líquido
+              </div>
+              <p className="text-2xl font-bold text-primary">
+                R$ {currentMetrics?.mrrNet?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                -{(financialSettings.commissionPercent * 100).toFixed(0)}% comissão (R$ {currentMetrics?.commissionAmount?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'})
+              </p>
+            </div>
+
+            <div className="p-4 rounded-lg bg-card border">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                <Target className="h-4 w-4" />
+                Meta MRR
+              </div>
+              <p className="text-2xl font-bold">
+                R$ {financialSettings.mrrTarget.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {currentMetrics?.targetProgress?.toFixed(1) || 0}% atingido
+              </p>
+            </div>
+
+            <div className="p-4 rounded-lg bg-card border">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                <TrendingUp className="h-4 w-4" />
+                Gap para Meta
+              </div>
+              <p className="text-2xl font-bold text-amber-500">
+                R$ {currentMetrics?.gapToTarget?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {currentMetrics?.customersNeeded || 0} clientes necessários
+              </p>
+            </div>
+
+            <div className="p-4 rounded-lg bg-card border">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                <Clock className="h-4 w-4" />
+                Previsão
+              </div>
+              <p className="text-2xl font-bold">
+                {currentMetrics?.monthsToTarget === 0 
+                  ? '🎉 Meta atingida!' 
+                  : currentMetrics?.monthsToTarget === 999 
+                    ? 'N/A' 
+                    : `${currentMetrics?.monthsToTarget || 0} meses`}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Para atingir a meta
+              </p>
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Progresso da Meta Mensal</span>
+              <span className="font-medium">{currentMetrics?.targetProgress?.toFixed(1) || 0}%</span>
+            </div>
+            <Progress 
+              value={Math.min(100, currentMetrics?.targetProgress || 0)} 
+              className="h-3"
+            />
+            <p className="text-sm text-muted-foreground">
+              {(currentMetrics?.targetProgress || 0) >= 100 
+                ? '🎉 Parabéns! Você atingiu sua meta mensal!' 
+                : `Você está a R$ ${currentMetrics?.gapToTarget?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'} da sua meta mensal`}
+            </p>
+          </div>
+
+          {/* Projection Chart */}
+          <div className="space-y-4">
+            <h4 className="font-medium text-sm flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Projeção de Crescimento (próximos 12 meses)
+            </h4>
+            <ResponsiveContainer width="100%" height={250}>
+              <ComposedChart 
+                data={generateProjectionData(
+                  currentMetrics?.mrrNet || 0, 
+                  financialSettings.mrrTarget,
+                  currentMetrics?.monthsToTarget || 12
+                )}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--card))', 
+                    border: '1px solid hsl(var(--border))' 
+                  }}
+                  formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, '']}
+                />
+                <Legend />
+                <ReferenceLine 
+                  y={financialSettings.mrrTarget} 
+                  stroke="hsl(var(--primary))" 
+                  strokeDasharray="5 5" 
+                  label={{ value: 'Meta', position: 'right', fill: 'hsl(var(--primary))' }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="projection" 
+                  fill="hsl(var(--primary) / 0.1)" 
+                  stroke="hsl(var(--primary))" 
+                  name="Projeção MRR"
+                  strokeWidth={2}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+            <p className="text-xs text-muted-foreground text-center">
+              * Projeção baseada em crescimento estimado de 10% ao mês
+            </p>
+          </div>
+
+          {/* ARR Summary */}
+          <div className="grid gap-4 md:grid-cols-2 p-4 rounded-lg bg-muted/30 border">
+            <div>
+              <p className="text-sm text-muted-foreground">ARR Líquido (Atual)</p>
+              <p className="text-xl font-bold">
+                R$ {currentMetrics?.arrNet?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Meta ARR</p>
+              <p className="text-xl font-bold">
+                R$ {financialSettings.arrTarget.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Renewal Forecast & Sales Trend */}
       <div className="grid gap-6 lg:grid-cols-1">
