@@ -8,21 +8,31 @@ export interface AdvancedMetrics {
   churnRate: number;
   ltv: number;
   cac: number;
-  mrr: number;
-  arr: number;
+  mrr: number;              // MRR Bruto (o que o cliente paga)
+  arr: number;              // ARR Bruto
   activeUsers: number;
   totalUsers: number;
-  // Financial planning metrics
-  mrrNet: number;           // MRR after commission
-  arrNet: number;           // ARR after commission
-  commissionAmount: number; // Commission value
-  mrrTarget: number;        // Configured target
-  arrTarget: number;        // Configured target
-  gapToTarget: number;      // How much is left
-  targetProgress: number;   // % achieved (0-100)
-  customersNeeded: number;  // Customers needed to reach target
-  monthsToTarget: number;   // Estimated months to reach target
-  averageTicket: number;    // Average ticket value
+  
+  // Financial metrics - 3 níveis de receita
+  mrrAfterGateway: number;  // MRR após taxas do gateway
+  mrrNet: number;           // MRR líquido real (após todas as taxas)
+  arrAfterGateway: number;  // ARR após taxas do gateway
+  arrNet: number;           // ARR líquido real
+  
+  // Breakdown das taxas
+  gatewayFeeAmount: number;    // Valor das taxas do gateway
+  operationalTaxAmount: number; // Valor de outras taxas
+  totalFeesAmount: number;     // Total de taxas
+  
+  // Planejamento
+  commissionAmount: number; // Deprecated: mantido para compatibilidade
+  mrrTarget: number;        // Meta configurada
+  arrTarget: number;        // Meta configurada
+  gapToTarget: number;      // Gap para meta (baseado em mrrNet)
+  targetProgress: number;   // % atingido (0-100)
+  customersNeeded: number;  // Clientes necessários para meta
+  monthsToTarget: number;   // Meses estimados para meta
+  averageTicket: number;    // Ticket médio líquido
 }
 
 export interface MonthlyComparison {
@@ -131,17 +141,30 @@ async function getPlanPrices(): Promise<Record<string, { price: number; interval
 }
 
 export interface FinancialConfig {
-  commissionPercent: number;
+  // Taxas do Gateway
+  gatewayFeePercent: number;      // Ex: 0.0399 para 3.99%
+  gatewayFeeFixed: number;        // Ex: 0.39 para R$ 0,39
+  
+  // Outras taxas
+  operationalTaxPercent: number;  // Ex: 0.10 para 10%
+  
+  // Metas
   mrrTarget: number;
   arrTarget: number;
   expectedChurnRate: number;
+  
+  // Legacy
+  commissionPercent: number;
 }
 
 const DEFAULT_FINANCIAL_CONFIG: FinancialConfig = {
-  commissionPercent: 0.10,
+  gatewayFeePercent: 0.0399,
+  gatewayFeeFixed: 0.39,
+  operationalTaxPercent: 0,
   mrrTarget: 10000,
   arrTarget: 120000,
   expectedChurnRate: 0.05,
+  commissionPercent: 0.10,
 };
 
 export async function calculateAdvancedMetrics(
@@ -225,27 +248,53 @@ export async function calculateAdvancedMetrics(
     // For now, using a placeholder calculation
     const cac = 0; // This should be calculated from marketing spend data
 
-    // Financial planning calculations
-    const { commissionPercent, mrrTarget, arrTarget } = financialConfig;
-    const commissionAmount = mrr * commissionPercent;
-    const mrrNet = mrr - commissionAmount;
+    // Financial calculations - 3 níveis de receita
+    const { 
+      gatewayFeePercent = 0.0399, 
+      gatewayFeeFixed = 0.39,
+      operationalTaxPercent = 0,
+      mrrTarget, 
+      arrTarget,
+      commissionPercent = 0.10 // Legacy fallback
+    } = financialConfig;
+    
+    // 1. MRR Bruto (o que o cliente paga) - já calculado acima
+    
+    // 2. Taxas do Gateway (Pagar.me/Guru)
+    // Taxa percentual + taxa fixa por transação
+    const gatewayPercentFee = mrr * gatewayFeePercent;
+    const gatewayFixedFee = activeUsersCount * gatewayFeeFixed;
+    const gatewayFeeAmount = gatewayPercentFee + gatewayFixedFee;
+    const mrrAfterGateway = mrr - gatewayFeeAmount;
+    
+    // 3. Outras taxas operacionais/impostos
+    const operationalTaxAmount = mrrAfterGateway * operationalTaxPercent;
+    const mrrNet = mrrAfterGateway - operationalTaxAmount;
+    
+    // Total de taxas
+    const totalFeesAmount = gatewayFeeAmount + operationalTaxAmount;
+    
+    // ARR nos 3 níveis
+    const arrAfterGateway = mrrAfterGateway * 12;
     const arrNet = mrrNet * 12;
+    
+    // Legacy: commissionAmount para compatibilidade
+    const commissionAmount = totalFeesAmount;
 
-    // Target progress calculations
+    // Target progress calculations (baseado no MRR líquido real)
     const gapToTarget = Math.max(0, mrrTarget - mrrNet);
     const targetProgress = mrrTarget > 0 ? Math.min(100, (mrrNet / mrrTarget) * 100) : 0;
 
-    // Average ticket and customers needed
-    const averageTicket = activeUsersCount > 0 ? mrrNet / activeUsersCount : mrr / Math.max(1, activeUsersCount);
+    // Average ticket líquido e customers needed
+    const averageTicket = activeUsersCount > 0 ? mrrNet / activeUsersCount : 0;
     const customersNeeded = averageTicket > 0 ? Math.ceil(gapToTarget / averageTicket) : 0;
 
     // Estimate months to target using expected churn rate
-    // Net growth = gross growth - expected churn
     const grossGrowthRate = 0.10; // 10% monthly growth assumption
     const { expectedChurnRate = 0.05 } = financialConfig;
     const netGrowthRate = grossGrowthRate - expectedChurnRate;
-    const estimatedMonthlyGrowth = mrrNet * Math.max(0.01, netGrowthRate); // Min 1% growth
-    const monthsToTarget = estimatedMonthlyGrowth > 0 && gapToTarget > 0 
+    const estimatedMonthlyGrowth = mrrNet * Math.max(0.01, netGrowthRate);
+    const monthsToTarget = estimatedMonthlyGrowth > 0 && gapToTarget > 0 && mrrNet > 0
       ? Math.ceil(Math.log(mrrTarget / mrrNet) / Math.log(1 + netGrowthRate)) 
       : gapToTarget > 0 ? 999 : 0;
 
@@ -259,10 +308,18 @@ export async function calculateAdvancedMetrics(
       arr: Number(arr.toFixed(2)),
       activeUsers: activeUsersCount,
       totalUsers: totalUsers || 0,
-      // Financial planning metrics
+      // Financial metrics - 3 níveis
+      mrrAfterGateway: Number(mrrAfterGateway.toFixed(2)),
       mrrNet: Number(mrrNet.toFixed(2)),
+      arrAfterGateway: Number(arrAfterGateway.toFixed(2)),
       arrNet: Number(arrNet.toFixed(2)),
+      // Breakdown das taxas
+      gatewayFeeAmount: Number(gatewayFeeAmount.toFixed(2)),
+      operationalTaxAmount: Number(operationalTaxAmount.toFixed(2)),
+      totalFeesAmount: Number(totalFeesAmount.toFixed(2)),
+      // Legacy
       commissionAmount: Number(commissionAmount.toFixed(2)),
+      // Metas
       mrrTarget,
       arrTarget,
       gapToTarget: Number(gapToTarget.toFixed(2)),
@@ -283,8 +340,13 @@ export async function calculateAdvancedMetrics(
       arr: 0,
       activeUsers: 0,
       totalUsers: 0,
+      mrrAfterGateway: 0,
       mrrNet: 0,
+      arrAfterGateway: 0,
       arrNet: 0,
+      gatewayFeeAmount: 0,
+      operationalTaxAmount: 0,
+      totalFeesAmount: 0,
       commissionAmount: 0,
       mrrTarget: 0,
       arrTarget: 0,

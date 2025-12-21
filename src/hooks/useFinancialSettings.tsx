@@ -3,17 +3,30 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export interface FinancialSettings {
-  commissionPercent: number;
+  // Taxas do Gateway
+  gatewayFeePercent: number;      // Ex: 3.99%
+  gatewayFeeFixed: number;        // Ex: R$ 0,39 por transação
+  
+  // Outras taxas (impostos, operacional)
+  operationalTaxPercent: number;  // Ex: 10%
+  
+  // Metas
   mrrTarget: number;
   arrTarget: number;
   expectedChurnRate: number;
+  
+  // Deprecated: substituído por gatewayFeePercent + operationalTaxPercent
+  commissionPercent: number;
 }
 
 const DEFAULT_SETTINGS: FinancialSettings = {
-  commissionPercent: 0.10,
+  gatewayFeePercent: 0.0399,    // 3.99%
+  gatewayFeeFixed: 0.39,        // R$ 0,39
+  operationalTaxPercent: 0,     // 0%
   mrrTarget: 10000,
   arrTarget: 120000,
   expectedChurnRate: 0.05,
+  commissionPercent: 0.10,      // Legacy, será calculado automaticamente
 };
 
 export function useFinancialSettings() {
@@ -26,13 +39,28 @@ export function useFinancialSettings() {
       const { data, error } = await supabase
         .from('app_settings')
         .select('key, value')
-        .in('key', ['gateway_commission_percent', 'mrr_target', 'arr_target', 'expected_churn_rate']);
+        .in('key', [
+          'gateway_commission_percent',
+          'gateway_fee_percent',
+          'gateway_fee_fixed',
+          'operational_tax_percent',
+          'mrr_target',
+          'arr_target',
+          'expected_churn_rate'
+        ]);
 
       if (error) throw error;
 
       const newSettings = { ...DEFAULT_SETTINGS };
       data?.forEach((item) => {
-        if (item.key === 'gateway_commission_percent' && item.value) {
+        if (item.key === 'gateway_fee_percent' && item.value) {
+          newSettings.gatewayFeePercent = parseFloat(item.value) / 100;
+        } else if (item.key === 'gateway_fee_fixed' && item.value) {
+          newSettings.gatewayFeeFixed = parseFloat(item.value);
+        } else if (item.key === 'operational_tax_percent' && item.value) {
+          newSettings.operationalTaxPercent = parseFloat(item.value) / 100;
+        } else if (item.key === 'gateway_commission_percent' && item.value) {
+          // Legacy: ainda usado para compatibilidade
           newSettings.commissionPercent = parseFloat(item.value);
         } else if (item.key === 'mrr_target' && item.value) {
           newSettings.mrrTarget = parseFloat(item.value);
@@ -60,6 +88,24 @@ export function useFinancialSettings() {
     try {
       const updates: { key: string; value: string }[] = [];
 
+      if (newSettings.gatewayFeePercent !== undefined) {
+        updates.push({
+          key: 'gateway_fee_percent',
+          value: (newSettings.gatewayFeePercent * 100).toString(),
+        });
+      }
+      if (newSettings.gatewayFeeFixed !== undefined) {
+        updates.push({
+          key: 'gateway_fee_fixed',
+          value: newSettings.gatewayFeeFixed.toString(),
+        });
+      }
+      if (newSettings.operationalTaxPercent !== undefined) {
+        updates.push({
+          key: 'operational_tax_percent',
+          value: (newSettings.operationalTaxPercent * 100).toString(),
+        });
+      }
       if (newSettings.commissionPercent !== undefined) {
         updates.push({
           key: 'gateway_commission_percent',
@@ -88,8 +134,12 @@ export function useFinancialSettings() {
       for (const update of updates) {
         const { error } = await supabase
           .from('app_settings')
-          .update({ value: update.value, updated_at: new Date().toISOString() })
-          .eq('key', update.key);
+          .upsert({ 
+            key: update.key, 
+            value: update.value, 
+            updated_at: new Date().toISOString(),
+            category: 'financial'
+          }, { onConflict: 'key' });
 
         if (error) throw error;
       }
