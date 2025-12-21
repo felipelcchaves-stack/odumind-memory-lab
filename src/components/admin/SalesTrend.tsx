@@ -7,7 +7,7 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, R
 import { TrendingUp, TrendingDown, Minus, ShoppingCart, DollarSign, BarChart3, ArrowUpRight, ArrowDownRight, Calendar, AlertTriangle } from 'lucide-react';
 import { getSalesTrend, calculateGrowthMetrics, SalesTrendData, GrowthMetrics } from '@/lib/advancedAnalytics';
 import { toast } from 'sonner';
-import { useFinancialSettings } from '@/hooks/useFinancialSettings';
+import { useFinancialSettingsContext } from '@/contexts/FinancialSettingsContext';
 
 interface SalesTrendProps {
   months?: number;
@@ -145,7 +145,7 @@ export function SalesTrend({ months = 12 }: SalesTrendProps) {
   const [loading, setLoading] = useState(true);
   const [salesData, setSalesData] = useState<SalesTrendData[]>([]);
   const [metrics, setMetrics] = useState<GrowthMetrics | null>(null);
-  const { settings: financialSettings } = useFinancialSettings();
+  const { settings: financialSettings } = useFinancialSettingsContext();
 
   useEffect(() => {
     loadData();

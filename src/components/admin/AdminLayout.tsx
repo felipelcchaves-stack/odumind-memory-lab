@@ -6,6 +6,7 @@ import { AdminSidebar } from "./AdminSidebar";
 import DashboardHeader from "@/components/DashboardHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { FinancialSettingsProvider } from "@/contexts/FinancialSettingsContext";
 
 export function AdminLayout() {
   const navigate = useNavigate();
@@ -102,18 +103,20 @@ export function AdminLayout() {
   }
 
   return (
-    <SidebarProvider defaultOpen={true}>
-      <div className="min-h-screen flex w-full bg-background">
-        <AdminSidebar isAdmin={isAdmin} />
-        
-        <div className="flex-1 flex flex-col min-w-0">
-          <DashboardHeader />
+    <FinancialSettingsProvider>
+      <SidebarProvider defaultOpen={true}>
+        <div className="min-h-screen flex w-full bg-background">
+          <AdminSidebar isAdmin={isAdmin} />
           
-          <main className="flex-1 overflow-auto">
-            <Outlet />
-          </main>
+          <div className="flex-1 flex flex-col min-w-0">
+            <DashboardHeader />
+            
+            <main className="flex-1 overflow-auto">
+              <Outlet />
+            </main>
+          </div>
         </div>
-      </div>
-    </SidebarProvider>
+      </SidebarProvider>
+    </FinancialSettingsProvider>
   );
 }
