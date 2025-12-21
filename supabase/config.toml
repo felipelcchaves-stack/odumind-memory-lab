@@ -71,3 +71,6 @@ verify_jwt = false
 
 [functions.send-auth-email]
 verify_jwt = false
+
+[functions.sync-pagarme-revenue]
+verify_jwt = true
