@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { BookOpen, Menu } from "lucide-react";
+import { BookOpen, Menu, Play } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useFreePlanSettings } from "@/hooks/useFreePlanSettings";
@@ -53,7 +53,11 @@ const Header = () => {
             <button onClick={() => scrollToSection('features')} className="text-sm font-medium hover:text-primary transition-smooth">
               Funcionalidades
             </button>
-            <Link to="/demonstracao" className="text-sm font-medium hover:text-primary transition-smooth">
+            <Link 
+              to="/demonstracao" 
+              className="text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-full transition-all flex items-center gap-1.5"
+            >
+              <Play className="w-3 h-3 fill-current" />
               Demonstração
             </Link>
             <Link to="/biblioteca-yoruba" className="text-sm font-medium hover:text-primary transition-smooth">
@@ -90,7 +94,11 @@ const Header = () => {
               <button onClick={() => scrollToSection('features')} className="text-sm font-medium hover:text-primary transition-smooth text-left">
                 Funcionalidades
               </button>
-              <Link to="/demonstracao" className="text-sm font-medium hover:text-primary transition-smooth">
+              <Link 
+                to="/demonstracao" 
+                className="text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-full transition-all inline-flex items-center gap-1.5 w-fit"
+              >
+                <Play className="w-3 h-3 fill-current" />
                 Demonstração
               </Link>
               <Link to="/biblioteca-yoruba" className="text-sm font-medium hover:text-primary transition-smooth">
