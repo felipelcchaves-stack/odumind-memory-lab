@@ -1,9 +1,9 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { GripVertical, Check, X, RotateCcw, Lightbulb, Volume2 } from 'lucide-react';
-import { motion, AnimatePresence, Reorder } from 'framer-motion';
+import { GripVertical, Check, X, RotateCcw, Lightbulb, Pointer } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 interface DragDropWordsProps {
@@ -28,6 +28,16 @@ const DragDropWords: React.FC<DragDropWordsProps> = ({
   onComplete,
   onSkip
 }) => {
+  // Detect if device is touch-based (mobile/tablet)
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  
+  useEffect(() => {
+    const checkTouch = () => {
+      setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    };
+    checkTouch();
+  }, []);
+
   // Parse the verse and create word slots
   const { slots, shuffledWords, correctOrder } = useMemo(() => {
     if (!versoResumido) {
@@ -66,9 +76,12 @@ const DragDropWords: React.FC<DragDropWordsProps> = ({
   const [isChecked, setIsChecked] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [showHint, setShowHint] = useState(false);
+  
+  // Mobile tap-to-select state
+  const [selectedWord, setSelectedWord] = useState<WordSlot | null>(null);
 
-  // Handle dropping a word into a slot
-  const handleDrop = useCallback((slotIndex: number, word: WordSlot) => {
+  // Handle placing a word into a slot (works for both drag-drop and tap)
+  const handlePlaceWord = useCallback((slotIndex: number, word: WordSlot) => {
     // Check if there's already a word in the target slot
     const existingWord = placedWords.get(slotIndex);
     
@@ -100,25 +113,58 @@ const DragDropWords: React.FC<DragDropWordsProps> = ({
       
       return updated;
     });
+    
+    // Clear selection after placing
+    setSelectedWord(null);
   }, [placedWords]);
 
-  // Handle removing a word from a slot
-  const handleRemove = useCallback((slotIndex: number) => {
-    const word = placedWords.get(slotIndex);
-    if (word) {
-      setPlacedWords(prev => {
-        const newMap = new Map(prev);
-        newMap.delete(slotIndex);
-        return newMap;
-      });
-      setAvailableWords(prev => [...prev, word]);
+  // Handle clicking on an available word (mobile: select, desktop: no action needed for drag)
+  const handleWordClick = useCallback((word: WordSlot) => {
+    if (isChecked) return;
+    
+    if (isTouchDevice) {
+      // Toggle selection on mobile
+      setSelectedWord(prev => prev?.id === word.id ? null : word);
     }
-  }, [placedWords]);
+  }, [isTouchDevice, isChecked]);
+
+  // Handle clicking on a slot
+  const handleSlotClick = useCallback((slotIndex: number, hasPlacedWord: boolean) => {
+    if (isChecked) return;
+    
+    if (isTouchDevice && selectedWord) {
+      // Mobile: place selected word into slot
+      handlePlaceWord(slotIndex, selectedWord);
+    } else if (hasPlacedWord) {
+      // Both: remove word from slot if clicking on filled slot
+      const word = placedWords.get(slotIndex);
+      if (word) {
+        setPlacedWords(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(slotIndex);
+          return newMap;
+        });
+        setAvailableWords(prev => [...prev, word]);
+        setSelectedWord(null);
+      }
+    }
+  }, [isTouchDevice, selectedWord, isChecked, placedWords, handlePlaceWord]);
+
+  // Handle drag-drop (desktop only)
+  const handleDrop = useCallback((slotIndex: number, e: React.DragEvent) => {
+    e.preventDefault();
+    const wordId = e.dataTransfer.getData('text/plain');
+    const word = [...availableWords, ...Array.from(placedWords.values())].find(w => w.id === wordId);
+    if (word) {
+      handlePlaceWord(slotIndex, word);
+    }
+  }, [availableWords, placedWords, handlePlaceWord]);
 
   // Check answers
   const checkAnswers = useCallback(() => {
     setIsChecked(true);
     setAttempts(prev => prev + 1);
+    setSelectedWord(null);
 
     const gapSlots = slots.filter(s => s.isGap);
     let correct = 0;
@@ -135,7 +181,6 @@ const DragDropWords: React.FC<DragDropWordsProps> = ({
 
     if (isFullyCorrect || attempts >= 2) {
       setTimeout(() => {
-        // Score 0-100 passed to onComplete (same signature as ClozeExercise)
         onComplete(isFullyCorrect, score);
       }, 1500);
     }
@@ -147,6 +192,7 @@ const DragDropWords: React.FC<DragDropWordsProps> = ({
     setPlacedWords(new Map());
     setIsChecked(false);
     setShowHint(false);
+    setSelectedWord(null);
   }, [shuffledWords]);
 
   // Get hint - show first letter of next empty gap
@@ -181,7 +227,9 @@ const DragDropWords: React.FC<DragDropWordsProps> = ({
       <CardHeader className="bg-gradient-to-r from-primary/10 to-secondary/10 border-b border-border">
         <div className="flex items-center justify-between">
           <div>
-            <Badge variant="outline" className="mb-2">Arraste e Solte</Badge>
+            <Badge variant="outline" className="mb-2">
+              {isTouchDevice ? 'Toque para Selecionar' : 'Arraste e Solte'}
+            </Badge>
             <CardTitle className="text-xl">
               {oduNumber}. {oduName}
             </CardTitle>
@@ -211,13 +259,38 @@ const DragDropWords: React.FC<DragDropWordsProps> = ({
       <CardContent className="p-6 space-y-6">
         {/* Instructions */}
         <p className="text-sm text-muted-foreground text-center">
-          Arraste as palavras para as posições corretas no verso
+          {isTouchDevice 
+            ? 'Toque em uma palavra e depois no espaço onde ela deve ir'
+            : 'Arraste as palavras para as posições corretas no verso'
+          }
         </p>
+
+        {/* Selected word indicator for mobile */}
+        {isTouchDevice && selectedWord && !isChecked && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center justify-center gap-2 p-3 bg-primary/10 border border-primary/30 rounded-lg"
+          >
+            <Pointer className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium">
+              Palavra selecionada: <span className="text-primary">{selectedWord.word}</span>
+            </span>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setSelectedWord(null)}
+              className="h-6 px-2 text-xs"
+            >
+              Cancelar
+            </Button>
+          </motion.div>
+        )}
 
         {/* Verse with gaps */}
         <div className="p-4 bg-muted/30 rounded-lg border border-border">
           <div className="flex flex-wrap gap-2 items-center justify-center leading-relaxed">
-            {slots.map((slot, index) => {
+            {slots.map((slot) => {
               if (!slot.isGap) {
                 return (
                   <span key={slot.id} className="text-foreground">
@@ -228,32 +301,29 @@ const DragDropWords: React.FC<DragDropWordsProps> = ({
 
               const placed = placedWords.get(slot.originalIndex);
               const correctStatus = isWordCorrect(slot.originalIndex);
+              const isSlotHighlighted = isTouchDevice && selectedWord && !placed && !isChecked;
 
               return (
                 <motion.div
                   key={slot.id}
                   className={cn(
-                    "min-w-[80px] h-10 rounded-lg border-2 border-dashed flex items-center justify-center transition-all",
+                    "min-w-[80px] h-10 rounded-lg border-2 border-dashed flex items-center justify-center transition-all cursor-pointer",
                     placed 
                       ? correctStatus === true
                         ? "border-green-500 bg-green-500/10"
                         : correctStatus === false
                           ? "border-destructive bg-destructive/10"
                           : "border-primary bg-primary/10"
-                      : "border-muted-foreground/30 bg-muted/50",
+                      : isSlotHighlighted
+                        ? "border-primary bg-primary/20 animate-pulse"
+                        : "border-muted-foreground/30 bg-muted/50",
                     !placed && !isChecked && "hover:border-primary hover:bg-primary/5"
                   )}
                   onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    const wordId = e.dataTransfer.getData('text/plain');
-                    const word = [...availableWords, ...Array.from(placedWords.values())].find(w => w.id === wordId);
-                    if (word) {
-                      handleDrop(slot.originalIndex, word);
-                    }
-                  }}
-                  onClick={() => !isChecked && placed && handleRemove(slot.originalIndex)}
-                  whileHover={{ scale: placed ? 1.02 : 1 }}
+                  onDrop={(e) => handleDrop(slot.originalIndex, e)}
+                  onClick={() => handleSlotClick(slot.originalIndex, !!placed)}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                 >
                   {placed ? (
                     <div className="flex items-center gap-1 px-3">
@@ -272,34 +342,48 @@ const DragDropWords: React.FC<DragDropWordsProps> = ({
           </div>
         </div>
 
-        {/* Available words to drag */}
+        {/* Available words */}
         <div className="space-y-2">
           <p className="text-sm font-medium text-muted-foreground">Palavras disponíveis:</p>
           <div className="flex flex-wrap gap-2 justify-center min-h-[50px] p-4 bg-muted/20 rounded-lg border border-dashed border-border">
             <AnimatePresence mode="popLayout">
-              {availableWords.map((word) => (
-                <motion.div
-                  key={word.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  draggable
-                  onDragStart={(e: any) => {
-                    e.dataTransfer.setData('text/plain', word.id);
-                  }}
-                  className={cn(
-                    "px-4 py-2 bg-primary text-primary-foreground rounded-lg cursor-grab active:cursor-grabbing",
-                    "flex items-center gap-2 shadow-sm hover:shadow-md transition-shadow",
-                    "select-none"
-                  )}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <GripVertical className="h-4 w-4 opacity-50" />
-                  <span className="font-medium">{word.word}</span>
-                </motion.div>
-              ))}
+              {availableWords.map((word) => {
+                const isSelected = selectedWord?.id === word.id;
+                
+                return (
+                  <motion.div
+                    key={word.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ 
+                      opacity: 1, 
+                      scale: 1,
+                      boxShadow: isSelected ? '0 0 0 3px hsl(var(--primary))' : 'none'
+                    }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    draggable={!isTouchDevice}
+                    onDragStart={(e: any) => {
+                      if (!isTouchDevice) {
+                        e.dataTransfer.setData('text/plain', word.id);
+                      }
+                    }}
+                    onClick={() => handleWordClick(word)}
+                    className={cn(
+                      "px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm transition-all select-none",
+                      isSelected 
+                        ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2 ring-offset-background"
+                        : "bg-primary text-primary-foreground hover:shadow-md",
+                      isTouchDevice ? "cursor-pointer active:scale-95" : "cursor-grab active:cursor-grabbing"
+                    )}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    {!isTouchDevice && <GripVertical className="h-4 w-4 opacity-50" />}
+                    <span className="font-medium">{word.word}</span>
+                    {isSelected && <Check className="h-4 w-4" />}
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
             {availableWords.length === 0 && (
               <p className="text-muted-foreground text-sm">
