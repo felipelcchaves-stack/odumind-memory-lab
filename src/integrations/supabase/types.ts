@@ -1336,6 +1336,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          dashboard_preferences: Json | null
           data_nascimento: string | null
           estado: string | null
           id: string
@@ -1355,6 +1356,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          dashboard_preferences?: Json | null
           data_nascimento?: string | null
           estado?: string | null
           id?: string
@@ -1374,6 +1376,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          dashboard_preferences?: Json | null
           data_nascimento?: string | null
           estado?: string | null
           id?: string
