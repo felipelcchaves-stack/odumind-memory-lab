@@ -12,6 +12,7 @@ import { TestimonialsSection } from "@/components/TestimonialsSection";
 import { TechniqueShowcase } from "@/components/TechniqueShowcase";
 import { PromoBanner } from "@/components/PromoBanner";
 import { UrgencySection } from "@/components/UrgencySection";
+import { FloatingOluwoButton } from "@/components/FloatingOluwoButton";
 import { useScrollTracking } from "@/hooks/useScrollTracking";
 import { useTimeTracking } from "@/hooks/useTimeTracking";
 import { useSectionTracking } from "@/hooks/useSectionTracking";
@@ -81,6 +82,7 @@ const Index = () => {
         </div>
       </main>
       <Footer />
+      <FloatingOluwoButton />
     </div>
   );
 };
