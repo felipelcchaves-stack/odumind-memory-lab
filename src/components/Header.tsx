@@ -39,9 +39,9 @@ const Header = () => {
             <button onClick={() => scrollToSection('features')} className="text-sm font-medium hover:text-primary transition-smooth">
               Funcionalidades
             </button>
-            <button onClick={() => scrollToSection('learning')} className="text-sm font-medium hover:text-primary transition-smooth">
-              Aprendizado
-            </button>
+            <Link to="/demonstracao" className="text-sm font-medium hover:text-primary transition-smooth">
+              Demonstração
+            </Link>
             <Link to="/biblioteca-yoruba" className="text-sm font-medium hover:text-primary transition-smooth">
               Biblioteca
             </Link>
@@ -76,9 +76,9 @@ const Header = () => {
               <button onClick={() => scrollToSection('features')} className="text-sm font-medium hover:text-primary transition-smooth text-left">
                 Funcionalidades
               </button>
-              <button onClick={() => scrollToSection('learning')} className="text-sm font-medium hover:text-primary transition-smooth text-left">
-                Aprendizado
-              </button>
+              <Link to="/demonstracao" className="text-sm font-medium hover:text-primary transition-smooth">
+                Demonstração
+              </Link>
               <Link to="/biblioteca-yoruba" className="text-sm font-medium hover:text-primary transition-smooth">
                 Biblioteca
               </Link>
