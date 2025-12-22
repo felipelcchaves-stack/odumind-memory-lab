@@ -57,14 +57,34 @@ serve(async (req) => {
       
       console.log(`[VALIDATE-SESSION] Extracted user ID: ${userId}, exp: ${tokenExp}`);
       
-      // Check if token is expired by more than 1 hour
       const now = Math.floor(Date.now() / 1000);
       const oneHourAgo = now - 3600;
+      const fiveMinutesAgo = now - 300;
       
-      if (tokenExp < oneHourAgo) {
-        console.log("[VALIDATE-SESSION] Token expired by more than 1 hour, returning invalid session");
+      // Check if token is expired
+      if (tokenExp < now) {
+        // If expired less than 5 minutes ago, suggest retry (client should refresh)
+        if (tokenExp > fiveMinutesAgo) {
+          console.log("[VALIDATE-SESSION] Token recently expired, suggesting retry for refresh");
+          return new Response(
+            JSON.stringify({ valid: false, reason: "token_expired", retry_suggested: true }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+          );
+        }
+        
+        // If expired more than 1 hour ago, invalid session
+        if (tokenExp < oneHourAgo) {
+          console.log("[VALIDATE-SESSION] Token expired by more than 1 hour, returning invalid session");
+          return new Response(
+            JSON.stringify({ valid: false, reason: "token_expired" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+          );
+        }
+        
+        // Between 5 minutes and 1 hour - suggest retry
+        console.log("[VALIDATE-SESSION] Token expired within the last hour, suggesting retry");
         return new Response(
-          JSON.stringify({ valid: false, reason: "token_expired" }),
+          JSON.stringify({ valid: false, reason: "token_expired", retry_suggested: true }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
         );
       }
