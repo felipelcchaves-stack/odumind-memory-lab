@@ -19,16 +19,29 @@ import {
   ListOrdered,
   Volume2,
   CheckCircle2,
-  X
+  X,
+  BookOpen,
+  Lock,
+  ScrollText,
+  Users
 } from 'lucide-react';
 
-// Demo data - exemplo fictício baseado em estrutura real
+// Dados REAIS do Odu Ejiogbe (Odu #1) do banco de dados
 const DEMO_ODU = {
   numero: 1,
-  nome: "Ogbè Méjì",
-  versoResumido: "Ogbè Méjì é o primeiro Odu de Ifá, representa a luz primordial e o início de todas as coisas. Simboliza clareza, sucesso e bênçãos divinas.",
-  significado: "Representa o início, a criação, a luz e a pureza. É considerado o pai de todos os Odu.",
-  texto: "Ogbè Méjì é o primeiro e mais importante dos 256 Odu de Ifá. Representa a luz divina, a clareza de pensamento e o sucesso em empreendimentos."
+  nome: "Ejiogbe",
+  // Verso curto mas profundo - extraído do conteúdo real
+  versoResumido: "A vida longa e a paz interior se firmam com èbó, disciplina e gratidão constante a Ifá.",
+  // Significado real do Odu
+  significado: "Ifá revela iré de vida longa, de casa e de vitória. Mas esse iré precisa ser sustentado com èbó, disciplina e gratidão constante.",
+  // Texto para quiz
+  textoQuiz: "Qual Odu ensina que a vida longa se firma com èbó, disciplina e gratidão?",
+  // Preview do conteúdo completo para mostrar profundidade
+  narrativaPreview: "Em Ilé-Ifẹ̀, o ancião Bàbá Òjó vivia inquieto: de dia trabalhava e parecia firme, mas as noites eram pesadas, cheias de pensamentos e preocupações sobre o futuro de sua família. Ifá foi consultado e Èjì Ògbè apareceu, revelando que havia iré de vida longa aguardando, mas que dependia de sua postura diante do destino...",
+  // Indicadores de profundidade
+  palavrasCompletas: 847,
+  ensinamentos: 12,
+  personagens: "Bàbá Òjó, Ifá, Òrúnmìlà"
 };
 
 const EXERCISES = [
@@ -107,7 +120,7 @@ function FlashcardDemo() {
             className={`absolute inset-0 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border-2 border-primary/20 flex flex-col items-center justify-center p-6 ${isFlipped ? 'invisible' : ''}`}
             style={{ backfaceVisibility: 'hidden' }}
           >
-            <Badge className="mb-4 bg-primary/20 text-primary">Odu #1</Badge>
+            <Badge className="mb-4 bg-primary/20 text-primary">Odu #{DEMO_ODU.numero}</Badge>
             <h3 className="text-2xl font-bold text-center mb-2">{DEMO_ODU.nome}</h3>
             <p className="text-muted-foreground text-sm">Clique para ver o significado</p>
           </div>
@@ -163,7 +176,7 @@ function QuizDemo() {
   const correctAnswer = 0;
 
   const options = [
-    "Ogbè Méjì",
+    "Ejiogbe",
     "Oyeku Méjì", 
     "Iwori Méjì",
     "Odi Méjì"
@@ -182,8 +195,8 @@ function QuizDemo() {
   return (
     <div className="space-y-4">
       <div className="bg-secondary/50 rounded-lg p-4 text-center">
-        <p className="text-sm text-muted-foreground mb-2">Qual é o primeiro Odu de Ifá?</p>
-        <p className="text-xs text-muted-foreground/70">Representa a luz primordial</p>
+        <p className="text-sm text-muted-foreground mb-2">{DEMO_ODU.textoQuiz}</p>
+        <p className="text-xs text-muted-foreground/70">Primeiro Odu de Ifá</p>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -214,7 +227,7 @@ function QuizDemo() {
           ) : (
             <Badge className="bg-red-500/20 text-red-500">
               <X className="w-4 h-4 mr-1" />
-              A resposta correta era Ogbè Méjì
+              A resposta correta era Ejiogbe
             </Badge>
           )}
           <Button size="sm" variant="ghost" onClick={reset}>
@@ -232,11 +245,9 @@ function ClozeDemo() {
   const [showResult, setShowResult] = useState(false);
   
   const gaps = [
-    { id: 0, word: 'primeiro', placeholder: '________' },
-    { id: 1, word: 'luz', placeholder: '________' },
+    { id: 0, word: 'èbó' },
+    { id: 1, word: 'gratidão' },
   ];
-  
-  const text = "Ogbè Méjì é o [0] Odu de Ifá, representa a [1] primordial.";
 
   const handleInput = (id: number, value: string) => {
     setAnswers(prev => ({ ...prev, [id]: value }));
@@ -252,50 +263,53 @@ function ClozeDemo() {
   };
 
   const renderText = () => {
-    let result = text;
-    gaps.forEach(gap => {
-      const userAnswer = answers[gap.id] || '';
-      const isCorrect = userAnswer.toLowerCase().trim() === gap.word.toLowerCase();
-      
-      if (showResult) {
-        result = result.replace(
-          `[${gap.id}]`,
-          `<span class="${isCorrect ? 'text-green-500 font-bold' : 'text-red-500 font-bold'}">${userAnswer || '___'}</span>`
-        );
-      } else {
-        result = result.replace(`[${gap.id}]`, `<input data-id="${gap.id}" class="w-20 px-2 py-0.5 text-center border rounded bg-background" placeholder="..." />`);
-      }
-    });
-    return result;
+    const userAnswer0 = answers[0] || '';
+    const userAnswer1 = answers[1] || '';
+    const isCorrect0 = userAnswer0.toLowerCase().trim() === gaps[0].word.toLowerCase();
+    const isCorrect1 = userAnswer1.toLowerCase().trim() === gaps[1].word.toLowerCase();
+    
+    return (
+      <p className="text-sm leading-relaxed">
+        A vida longa e a paz interior se firmam com{' '}
+        <span className={isCorrect0 ? 'text-green-500 font-bold' : 'text-red-500 font-bold'}>
+          {userAnswer0 || '___'}
+        </span>
+        , disciplina e{' '}
+        <span className={isCorrect1 ? 'text-green-500 font-bold' : 'text-red-500 font-bold'}>
+          {userAnswer1 || '___'}
+        </span>
+        {' '}constante a Ifá.
+      </p>
+    );
   };
 
   return (
     <div className="space-y-4">
       <div className="bg-secondary/50 rounded-lg p-4">
         {showResult ? (
-          <p className="text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: renderText() }} />
+          renderText()
         ) : (
           <div className="text-sm leading-relaxed space-y-2">
-            <p>Ogbè Méjì é o <input 
-              className="w-20 px-2 py-0.5 text-center border rounded bg-background text-xs"
+            <p>A vida longa e a paz interior se firmam com <input 
+              className="w-16 px-2 py-0.5 text-center border rounded bg-background text-xs"
               placeholder="..."
               value={answers[0] || ''}
               onChange={(e) => handleInput(0, e.target.value)}
-            /> Odu de Ifá, representa a <input 
-              className="w-16 px-2 py-0.5 text-center border rounded bg-background text-xs"
+            />, disciplina e <input 
+              className="w-20 px-2 py-0.5 text-center border rounded bg-background text-xs"
               placeholder="..."
               value={answers[1] || ''}
               onChange={(e) => handleInput(1, e.target.value)}
-            /> primordial.</p>
+            /> constante a Ifá.</p>
           </div>
         )}
       </div>
 
       <div className="flex flex-wrap gap-2 justify-center">
-        <Badge variant="outline" className="cursor-help">primeiro</Badge>
-        <Badge variant="outline" className="cursor-help">segundo</Badge>
-        <Badge variant="outline" className="cursor-help">luz</Badge>
-        <Badge variant="outline" className="cursor-help">sombra</Badge>
+        <Badge variant="outline" className="cursor-help">èbó</Badge>
+        <Badge variant="outline" className="cursor-help">oferenda</Badge>
+        <Badge variant="outline" className="cursor-help">gratidão</Badge>
+        <Badge variant="outline" className="cursor-help">paciência</Badge>
       </div>
 
       {!showResult ? (
@@ -320,7 +334,7 @@ function ClozeDemo() {
 // Mini-exercício de Drag & Drop
 function DragDropDemo() {
   const [placed, setPlaced] = useState<Record<number, string>>({});
-  const [available, setAvailable] = useState(['primeiro', 'luz', 'Ifá']);
+  const [available, setAvailable] = useState(['èbó', 'gratidão', 'Ifá']);
   const [showResult, setShowResult] = useState(false);
 
   const handlePlace = (word: string, slot: number) => {
@@ -330,7 +344,7 @@ function DragDropDemo() {
 
   const reset = () => {
     setPlaced({});
-    setAvailable(['primeiro', 'luz', 'Ifá']);
+    setAvailable(['èbó', 'gratidão', 'Ifá']);
     setShowResult(false);
   };
 
@@ -352,25 +366,25 @@ function DragDropDemo() {
 
       <div className="bg-secondary/50 rounded-lg p-4 text-sm leading-relaxed">
         <p>
-          Ogbè Méjì é o{' '}
+          A vida longa se firma com{' '}
           <span 
-            className={`inline-block min-w-[60px] px-2 py-0.5 border-2 border-dashed rounded text-center ${placed[0] ? 'border-primary bg-primary/10' : 'border-muted-foreground/30'}`}
+            className={`inline-block min-w-[50px] px-2 py-0.5 border-2 border-dashed rounded text-center ${placed[0] ? 'border-primary bg-primary/10' : 'border-muted-foreground/30'}`}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => handlePlace(e.dataTransfer.getData('word'), 0)}
             onClick={() => !placed[0] && available[0] && handlePlace(available[0], 0)}
           >
             {placed[0] || '___'}
           </span>
-          {' '}Odu de{' '}
+          {', disciplina e '}
           <span 
-            className={`inline-block min-w-[40px] px-2 py-0.5 border-2 border-dashed rounded text-center ${placed[1] ? 'border-primary bg-primary/10' : 'border-muted-foreground/30'}`}
+            className={`inline-block min-w-[60px] px-2 py-0.5 border-2 border-dashed rounded text-center ${placed[1] ? 'border-primary bg-primary/10' : 'border-muted-foreground/30'}`}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => handlePlace(e.dataTransfer.getData('word'), 1)}
             onClick={() => !placed[1] && available[0] && handlePlace(available[0], 1)}
           >
             {placed[1] || '___'}
           </span>
-          {', representa a '}
+          {' '}constante a{' '}
           <span 
             className={`inline-block min-w-[40px] px-2 py-0.5 border-2 border-dashed rounded text-center ${placed[2] ? 'border-primary bg-primary/10' : 'border-muted-foreground/30'}`}
             onDragOver={(e) => e.preventDefault()}
@@ -379,7 +393,7 @@ function DragDropDemo() {
           >
             {placed[2] || '___'}
           </span>
-          {' '}primordial.
+          .
         </p>
       </div>
 
@@ -407,9 +421,9 @@ function DragDropDemo() {
 // Mini-exercício de ordenação
 function OrderDemo() {
   const [sentences, setSentences] = useState([
-    { id: 2, text: 'Simboliza clareza e sucesso.' },
-    { id: 0, text: 'Ogbè Méjì é o primeiro Odu.' },
-    { id: 1, text: 'Representa a luz primordial.' },
+    { id: 2, text: 'E gratidão constante a Ifá.' },
+    { id: 0, text: 'A vida longa e a paz interior' },
+    { id: 1, text: 'se firmam com èbó e disciplina' },
   ]);
   const [showResult, setShowResult] = useState(false);
 
@@ -431,9 +445,9 @@ function OrderDemo() {
 
   const reset = () => {
     setSentences([
-      { id: 2, text: 'Simboliza clareza e sucesso.' },
-      { id: 0, text: 'Ogbè Méjì é o primeiro Odu.' },
-      { id: 1, text: 'Representa a luz primordial.' },
+      { id: 2, text: 'E gratidão constante a Ifá.' },
+      { id: 0, text: 'A vida longa e a paz interior' },
+      { id: 1, text: 'se firmam com èbó e disciplina' },
     ]);
     setShowResult(false);
   };
@@ -502,7 +516,7 @@ function AudioDemo() {
   const [progress, setProgress] = useState(0);
   const [highlightIndex, setHighlightIndex] = useState(-1);
 
-  const words = DEMO_ODU.versoResumido.split(' ').slice(0, 12);
+  const words = DEMO_ODU.versoResumido.split(' ');
 
   const togglePlay = () => {
     if (isPlaying) {
@@ -541,7 +555,6 @@ function AudioDemo() {
               {word}{' '}
             </span>
           ))}
-          ...
         </p>
       </div>
 
@@ -559,6 +572,70 @@ function AudioDemo() {
         Acompanhe o texto enquanto ouve a pronúncia correta
       </p>
     </div>
+  );
+}
+
+// Prévia do conteúdo completo
+function ContentPreview() {
+  const navigate = useNavigate();
+
+  return (
+    <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent overflow-hidden">
+      <CardContent className="p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <BookOpen className="w-5 h-5 text-primary" />
+          <h3 className="font-bold text-lg">Prévia do Conteúdo Completo</h3>
+        </div>
+        
+        {/* Narrativa preview */}
+        <div className="relative">
+          <p className="text-sm text-muted-foreground leading-relaxed italic">
+            "{DEMO_ODU.narrativaPreview}"
+          </p>
+          <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent" />
+        </div>
+
+        {/* Indicadores de profundidade */}
+        <div className="grid grid-cols-3 gap-3 pt-2">
+          <div className="text-center p-3 rounded-lg bg-secondary/50">
+            <ScrollText className="w-5 h-5 mx-auto mb-1 text-primary" />
+            <p className="text-lg font-bold">{DEMO_ODU.palavrasCompletas}</p>
+            <p className="text-xs text-muted-foreground">palavras</p>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-secondary/50">
+            <Sparkles className="w-5 h-5 mx-auto mb-1 text-primary" />
+            <p className="text-lg font-bold">{DEMO_ODU.ensinamentos}</p>
+            <p className="text-xs text-muted-foreground">ensinamentos</p>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-secondary/50">
+            <Users className="w-5 h-5 mx-auto mb-1 text-primary" />
+            <p className="text-lg font-bold">3</p>
+            <p className="text-xs text-muted-foreground">personagens</p>
+          </div>
+        </div>
+
+        {/* Badge de quantidade total */}
+        <div className="flex items-center justify-center gap-2 pt-2">
+          <Badge className="bg-primary/20 text-primary">
+            <Lock className="w-3 h-3 mr-1" />
+            256 Odus completos disponíveis
+          </Badge>
+        </div>
+
+        <p className="text-xs text-center text-muted-foreground">
+          Cada Odu contém histórias ancestrais, significados profundos e orientações práticas para a vida
+        </p>
+
+        <Button 
+          variant="outline" 
+          className="w-full border-primary/30 hover:bg-primary/10"
+          onClick={() => navigate('/auth')}
+        >
+          Ver conteúdo completo
+          <ChevronRight className="w-4 h-4 ml-1" />
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -600,7 +677,7 @@ export default function Demonstracao() {
               Experimente Nossas <span className="text-primary">Técnicas de Memorização</span>
             </h1>
             <p className="text-muted-foreground text-lg">
-              Teste cada exercício abaixo e descubra como é fácil memorizar os 256 Odu de Ifá
+              Teste cada exercício com o Odu <strong>Ejiogbe</strong> e descubra como é fácil memorizar os 256 Odu de Ifá
             </p>
           </motion.div>
         </section>
@@ -676,6 +753,13 @@ export default function Demonstracao() {
               Próximo
               <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
+          </div>
+        </section>
+
+        {/* Content Preview Section */}
+        <section className="container mx-auto px-4 pb-12">
+          <div className="max-w-xl mx-auto">
+            <ContentPreview />
           </div>
         </section>
 
