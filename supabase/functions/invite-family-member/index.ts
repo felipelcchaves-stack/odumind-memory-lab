@@ -15,9 +15,16 @@ serve(async (req) => {
   }
 
   try {
+    // Cliente com ANON_KEY para autenticação do usuário
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    );
+    
+    // Cliente com SERVICE_ROLE_KEY para bypass RLS em operações admin
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
     const authHeader = req.headers.get("Authorization")!;
@@ -34,14 +41,15 @@ serve(async (req) => {
       throw new Error("Email e family_group_id são obrigatórios");
     }
 
-    // Verificar se usuário é owner do grupo
-    const { data: group, error: groupError } = await supabaseClient
+    // Verificar se usuário é owner do grupo (usando admin para bypass RLS)
+    const { data: group, error: groupError } = await supabaseAdmin
       .from("family_groups")
       .select("owner_user_id, max_members")
       .eq("id", family_group_id)
       .single();
 
     if (groupError || !group) {
+      console.error("[INVITE-FAMILY] Erro ao buscar grupo:", groupError);
       throw new Error("Grupo não encontrado");
     }
 
@@ -49,8 +57,8 @@ serve(async (req) => {
       throw new Error("Apenas o proprietário pode convidar membros");
     }
 
-    // Verificar número de membros atuais
-    const { count: memberCount } = await supabaseClient
+    // Verificar número de membros atuais (usando admin para bypass RLS)
+    const { count: memberCount } = await supabaseAdmin
       .from("family_members")
       .select("*", { count: "exact", head: true })
       .eq("family_group_id", family_group_id)
@@ -60,14 +68,14 @@ serve(async (req) => {
       throw new Error(`Limite de ${group.max_members} membros atingido`);
     }
 
-    // Verificar se email já foi convidado ou já é membro
-    const { data: existingInvite } = await supabaseClient
+    // Verificar se email já foi convidado ou já é membro (usando admin para bypass RLS)
+    const { data: existingInvite } = await supabaseAdmin
       .from("family_invites")
       .select("id")
       .eq("family_group_id", family_group_id)
       .eq("email", email)
       .eq("status", "pending")
-      .single();
+      .maybeSingle();
 
     if (existingInvite) {
       throw new Error("Este email já possui um convite pendente");
@@ -78,8 +86,8 @@ serve(async (req) => {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // Expira em 7 dias
 
-    // Criar convite
-    const { data: invite, error: inviteError } = await supabaseClient
+    // Criar convite (usando admin para bypass RLS)
+    const { data: invite, error: inviteError } = await supabaseAdmin
       .from("family_invites")
       .insert({
         family_group_id,
@@ -93,6 +101,7 @@ serve(async (req) => {
       .single();
 
     if (inviteError) {
+      console.error("[INVITE-FAMILY] Erro ao criar convite:", inviteError);
       throw new Error(`Erro ao criar convite: ${inviteError.message}`);
     }
 
