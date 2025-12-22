@@ -624,8 +624,13 @@ export default function Demonstracao() {
   const navigate = useNavigate();
   const [activeExercise, setActiveExercise] = useState(0);
 
+  // Garantir que o índice está dentro dos limites
+  const safeActiveExercise = Math.min(activeExercise, EXERCISES.length - 1);
+  const exercise = EXERCISES[safeActiveExercise];
+
   const renderExercise = () => {
-    switch (EXERCISES[activeExercise].id) {
+    if (!exercise) return null;
+    switch (exercise.id) {
       case 'flashcard': return <FlashcardDemo />;
       case 'quiz': return <QuizDemo />;
       case 'cloze': return <ClozeDemo />;
@@ -634,8 +639,6 @@ export default function Demonstracao() {
       default: return null;
     }
   };
-
-  const exercise = EXERCISES[activeExercise];
 
   return (
     <div className="min-h-screen bg-background">
