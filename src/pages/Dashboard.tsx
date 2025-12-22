@@ -39,6 +39,7 @@ import { useContentFeatures } from '@/hooks/useContentFeatures';
 import { CaminhoIfaMiniMap } from '@/components/CaminhoIfaMiniMap';
 import { PWAInstallBanner } from '@/components/PWAInstallBanner';
 import { ReviewPrompt } from '@/components/ReviewPrompt';
+import { useDashboardPreferences } from '@/hooks/useDashboardPreferences';
 
 interface ProfileData {
   xp: number;
@@ -96,6 +97,7 @@ export default function Dashboard() {
   const [showGlossary, setShowGlossary] = useState(false);
   const { simplifiedMode } = useAccessibility();
   const { isFeatureEnabled } = useContentFeatures();
+  const { preferences: dashboardPreferences } = useDashboardPreferences();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -583,15 +585,17 @@ export default function Dashboard() {
         </Card>
 
         {/* FASE 5: Daily Guide Widget (Onboarding Permanente) */}
-        <div className="grid gap-6 md:grid-cols-2 mb-8">
-          <div data-tour="daily-guide">
-            <DailyGuideWidget
-              reviewCount={stats?.reviewTodayCount || 0}
-              hasStudiedToday={false}
-              hasExploredRitual={false}
-              hasPracticedPrayer={false}
-            />
-          </div>
+        <div className={`grid gap-6 ${dashboardPreferences.show_daily_guide ? 'md:grid-cols-2' : 'md:grid-cols-1'} mb-8`}>
+          {dashboardPreferences.show_daily_guide && (
+            <div data-tour="daily-guide">
+              <DailyGuideWidget
+                reviewCount={stats?.reviewTodayCount || 0}
+                hasStudiedToday={false}
+                hasExploredRitual={false}
+                hasPracticedPrayer={false}
+              />
+            </div>
+          )}
           
           {/* Caminho de Ifá Mini Map */}
           <CaminhoIfaMiniMap />

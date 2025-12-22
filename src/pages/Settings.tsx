@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, AlertTriangle, Type, Gift, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Type, Gift, CheckCircle2, LayoutDashboard } from 'lucide-react';
 import { toast } from 'sonner';
 import NotificationSettings from '@/components/NotificationSettings';
 import DashboardHeader from '@/components/DashboardHeader';
@@ -15,11 +15,14 @@ import StudyCalendar from '@/components/StudyCalendar';
 import StudyPlanGenerator from '@/components/StudyPlanGenerator';
 import { useAccessibility } from '@/contexts/AccessibilityContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { useDashboardPreferences } from '@/hooks/useDashboardPreferences';
 
 export default function Settings() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { fontSize, setFontSize } = useAccessibility();
+  const { preferences, updatePreference } = useDashboardPreferences();
   const [usedCode, setUsedCode] = useState<{ referral_code: string; used_at: string; status: string } | null>(null);
   const [applyCodeInput, setApplyCodeInput] = useState("");
   const [applyingCode, setApplyingCode] = useState(false);
@@ -179,6 +182,32 @@ export default function Settings() {
               <p className="text-sm text-muted-foreground mt-2">
                 💡 Textos maiores facilitam a leitura para todas as idades
               </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <LayoutDashboard className="h-5 w-5" />
+                Personalização do Dashboard
+              </CardTitle>
+              <CardDescription>
+                Escolha quais widgets aparecem no seu painel principal
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <label className="text-sm font-medium">Seu Guia de Hoje</label>
+                  <p className="text-sm text-muted-foreground">
+                    Mostra suas tarefas diárias e próximos passos
+                  </p>
+                </div>
+                <Switch
+                  checked={preferences.show_daily_guide}
+                  onCheckedChange={(checked) => updatePreference('show_daily_guide', checked)}
+                />
+              </div>
             </CardContent>
           </Card>
 
