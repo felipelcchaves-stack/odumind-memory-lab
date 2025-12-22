@@ -794,7 +794,7 @@ serve(async (req) => {
             .insert({
               owner_user_id: userId,
               stripe_subscription_id: null,
-              group_name: 'Minha Família',
+              group_name: `Família ${buyerName}`,
               max_members: 5,
             })
             .select('id')
