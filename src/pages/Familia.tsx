@@ -59,6 +59,9 @@ export default function Familia() {
   const [isSimulatedView, setIsSimulatedView] = useState(false);
   const [availableGroups, setAvailableGroups] = useState<FamilyGroup[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  
+  // Flag para evitar carregamentos duplicados
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -68,10 +71,12 @@ export default function Familia() {
 
   useEffect(() => {
     // Aguardar carregamento do admin status antes de carregar dados
-    if (user && !adminLoading) {
+    // Usar hasLoaded para evitar carregamentos duplicados
+    if (user && !adminLoading && !hasLoaded) {
+      setHasLoaded(true);
       loadFamilyData();
     }
-  }, [user, adminLoading, isAdmin]);
+  }, [user, adminLoading, hasLoaded]);
 
   const loadGroupDetails = async (groupId: string, isAdminView: boolean = false) => {
     const { data: groupData, error: groupError } = await supabase
