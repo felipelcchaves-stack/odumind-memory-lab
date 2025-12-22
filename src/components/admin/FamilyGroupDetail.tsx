@@ -157,7 +157,7 @@ export default function FamilyGroupDetail({
 
   const handleViewUserDetail = (userId: string) => {
     onOpenChange(false);
-    navigate(`/admin/users/${userId}`);
+    navigate(`/admin/user/${userId}`);
   };
 
   const getRoleBadge = (role: string) => {
