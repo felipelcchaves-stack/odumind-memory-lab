@@ -73,6 +73,11 @@ const PERMISSION_LABELS: Record<string, { label: string; description: string; ca
     description: "Moderar avaliações e depoimentos de usuários",
     category: 'operational',
   },
+  grupos_familiares: {
+    label: "Grupos Familiares",
+    description: "Visualizar e gerenciar grupos do plano Egbe",
+    category: 'operational',
+  },
   // Permissões exclusivas de admin
   settings: {
     label: "Configurações",

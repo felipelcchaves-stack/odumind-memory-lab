@@ -13,6 +13,7 @@ export type PermissionType =
   | 'caminhos'
   | 'anuncios'
   | 'avaliacoes'
+  | 'grupos_familiares'
   | 'settings' 
   | 'restore';
 
@@ -27,6 +28,7 @@ interface Permissions {
   caminhos: boolean;
   anuncios: boolean;
   avaliacoes: boolean;
+  grupos_familiares: boolean;
   settings: boolean;
   restore: boolean;
 }
@@ -44,6 +46,7 @@ export function usePermissions() {
     caminhos: false,
     anuncios: false,
     avaliacoes: false,
+    grupos_familiares: false,
     settings: false,
     restore: false,
   });
@@ -80,6 +83,7 @@ export function usePermissions() {
           caminhos: true,
           anuncios: true,
           avaliacoes: true,
+          grupos_familiares: true,
           settings: true,
           restore: true,
         });
@@ -105,6 +109,7 @@ export function usePermissions() {
           caminhos: false,
           anuncios: false,
           avaliacoes: false,
+          grupos_familiares: false,
           settings: false,
           restore: false,
         };
