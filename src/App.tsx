@@ -37,6 +37,7 @@ import RitualStudy from "./pages/RitualStudy";
 import CaminhoIfa from "./pages/CaminhoIfa";
 import Caminhos from "./pages/Caminhos";
 import Instalar from "./pages/Instalar";
+import Demonstracao from "./pages/Demonstracao";
 import { AdminLayout } from "./components/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminOduPage from "./pages/admin/AdminOduPage";
@@ -107,6 +108,7 @@ function AppContent() {
           <Route path="/caminho-ifa" element={<CaminhoIfa />} />
           <Route path="/caminhos" element={<Caminhos />} />
           <Route path="/instalar" element={<Instalar />} />
+          <Route path="/demonstracao" element={<Demonstracao />} />
           <Route path="/study" element={<StudySession />} />
           <Route path="/memory-palace" element={<MemoryPalace />} />
           <Route path="/tecnicas" element={<Tecnicas />} />
