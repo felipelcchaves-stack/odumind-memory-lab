@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSubscriptionPlans, SubscriptionPlan, PlanFeature } from '@/hooks/useSubscriptionPlans';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -72,10 +72,10 @@ export function PlansManager() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [featuresText, setFeaturesText] = useState('');
 
-  // Load all plans including inactive
-  useState(() => {
+  // Load all plans including inactive on mount
+  useEffect(() => {
     refresh();
-  });
+  }, []);
 
   const handleOpenCreate = () => {
     setEditingPlan({ ...emptyPlan });
