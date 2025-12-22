@@ -1,17 +1,26 @@
 import { Button } from "@/components/ui/button";
 import { BookOpen, Menu } from "lucide-react";
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useFreePlanSettings } from "@/hooks/useFreePlanSettings";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { isFreePlanEnabled } = useFreePlanSettings();
 
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
-    element?.scrollIntoView({ behavior: 'smooth' });
+    
+    if (element) {
+      // Se estamos na página que tem o elemento, faz scroll
+      element.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      // Se não existe, navega para Home com hash
+      navigate(`/#${sectionId}`);
+    }
+    
     setIsMenuOpen(false);
   };
 
@@ -19,7 +28,12 @@ const Header = () => {
     if (isFreePlanEnabled) {
       navigate('/auth');
     } else {
-      document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
+      const pricingElement = document.getElementById('pricing');
+      if (pricingElement) {
+        pricingElement.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        navigate('/#pricing');
+      }
     }
   };
 
@@ -27,13 +41,13 @@ const Header = () => {
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <div className="flex items-center gap-2">
+          {/* Logo - Clicável para Home */}
+          <Link to="/" className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
             <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center">
               <BookOpen className="w-6 h-6 text-primary-foreground" />
             </div>
             <span className="text-2xl font-bold">Isesemind</span>
-          </div>
+          </Link>
 
           <nav className="hidden md:flex items-center gap-8">
             <button onClick={() => scrollToSection('features')} className="text-sm font-medium hover:text-primary transition-smooth">
