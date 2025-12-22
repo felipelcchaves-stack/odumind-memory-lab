@@ -773,9 +773,62 @@ serve(async (req) => {
         durationDays,
         isNewUser
       });
+
+      // Se for plano Egbe/Família, criar grupo automaticamente
+      if (subscriptionStatus === 'active' && (planName === 'Egbe' || planName === 'Família' || planName.toLowerCase().includes('família') || planName.toLowerCase().includes('egbe'))) {
+        logStep("Detectado plano família, verificando grupo...", { userId, planName });
+        
+        // Verificar se já existe grupo
+        const { data: existingGroup } = await supabaseAdmin
+          .from('family_groups')
+          .select('id')
+          .eq('owner_user_id', userId)
+          .maybeSingle();
+        
+        if (!existingGroup) {
+          logStep("Criando grupo família...", { userId });
+          
+          // Criar grupo
+          const { data: newGroup, error: groupError } = await supabaseAdmin
+            .from('family_groups')
+            .insert({
+              owner_user_id: userId,
+              stripe_subscription_id: null,
+              group_name: 'Minha Família',
+              max_members: 5,
+            })
+            .select('id')
+            .single();
+          
+          if (groupError) {
+            logStep("Erro ao criar grupo família", { error: groupError.message });
+          } else {
+            logStep("Grupo família criado", { groupId: newGroup.id });
+            
+            // Adicionar o dono como membro owner
+            const { error: memberError } = await supabaseAdmin
+              .from('family_members')
+              .insert({
+                family_group_id: newGroup.id,
+                user_id: userId,
+                role: 'owner',
+                status: 'active',
+                joined_at: new Date().toISOString()
+              });
+            
+            if (memberError) {
+              logStep("Erro ao adicionar owner como membro", { error: memberError.message });
+            } else {
+              logStep("Owner adicionado ao grupo família com sucesso");
+            }
+          }
+        } else {
+          logStep("Grupo família já existe", { groupId: existingGroup.id });
+        }
+      }
     }
 
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       success: true,
       message: "Webhook processado com sucesso",
       user_id: userId,
