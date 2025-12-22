@@ -11,8 +11,8 @@ const logStep = (step: string, details?: any) => {
   console.log(`[GURU-WEBHOOK] ${step}${detailsStr}`);
 };
 
-// Mapeamento de produtos GURU para planos do sistema
-const GURU_PRODUCT_MAPPING: Record<string, string> = {
+// Mapeamento estático de fallback (usado quando não há match no banco)
+const GURU_PRODUCT_MAPPING_FALLBACK: Record<string, string> = {
   'profissional': 'Awo',
   'professional': 'Awo',
   'familia': 'Egbe',
@@ -23,6 +23,132 @@ const GURU_PRODUCT_MAPPING: Record<string, string> = {
   'premium': 'Awo',
 };
 
+// Interface para planos do banco
+interface PlanMapping {
+  plan_level: string;
+  guru_product_id: string | null;
+  guru_offer_id: string | null;
+  nome: string;
+}
+
+// Busca mapeamento de planos dinamicamente do banco de dados
+async function getPlansFromDatabase(supabaseAdmin: any): Promise<Map<string, string>> {
+  try {
+    const { data: plans, error } = await supabaseAdmin
+      .from('subscription_plans')
+      .select('plan_level, guru_product_id, guru_offer_id, nome')
+      .eq('ativo', true);
+      
+    if (error || !plans) {
+      logStep("Erro ao buscar planos do banco", { error: error?.message });
+      return new Map();
+    }
+    
+    const mapping = new Map<string, string>();
+    
+    for (const plan of plans) {
+      // Mapear por guru_product_id (exato)
+      if (plan.guru_product_id && plan.guru_product_id.trim() !== '') {
+        mapping.set(plan.guru_product_id.toLowerCase().trim(), plan.plan_level);
+        logStep("Mapeamento adicionado por guru_product_id", { 
+          guru_product_id: plan.guru_product_id, 
+          plan_level: plan.plan_level 
+        });
+      }
+      // Mapear por guru_offer_id (exato)
+      if (plan.guru_offer_id && plan.guru_offer_id.trim() !== '') {
+        mapping.set(plan.guru_offer_id.toLowerCase().trim(), plan.plan_level);
+        logStep("Mapeamento adicionado por guru_offer_id", { 
+          guru_offer_id: plan.guru_offer_id, 
+          plan_level: plan.plan_level 
+        });
+      }
+    }
+    
+    logStep("Mapeamento de planos carregado do banco", { 
+      totalPlanos: plans.length,
+      mappingSize: mapping.size,
+      mappings: Array.from(mapping.entries())
+    });
+    
+    return mapping;
+  } catch (err) {
+    logStep("Exceção ao buscar planos do banco", { error: String(err) });
+    return new Map();
+  }
+}
+
+// Converte plan_level para nome do plano
+const PLAN_LEVEL_TO_NAME: Record<string, string> = {
+  'gratuito': 'Gratuito',
+  'awo': 'Awo',
+  'egbe': 'Egbe',
+};
+
+function mapGuruProductToPlan(
+  productId: string, 
+  productName: string,
+  dbMapping: Map<string, string>
+): string | null {
+  const productIdLower = productId?.toLowerCase()?.trim() || '';
+  const productNameLower = productName?.toLowerCase()?.trim() || '';
+  
+  logStep("mapGuruProductToPlan - Iniciando busca", { 
+    productId: productIdLower, 
+    productName: productNameLower,
+    dbMappingSize: dbMapping.size
+  });
+  
+  // 1. Verificar pelo guru_product_id exato no banco
+  if (productIdLower && dbMapping.has(productIdLower)) {
+    const planLevel = dbMapping.get(productIdLower)!;
+    const planName = PLAN_LEVEL_TO_NAME[planLevel] || planLevel;
+    logStep("Match encontrado: guru_product_id exato no banco", { productId: productIdLower, planLevel, planName });
+    return planName;
+  }
+  
+  // 2. Verificar pelo productName exato no banco (pode ser guru_offer_id)
+  if (productNameLower && dbMapping.has(productNameLower)) {
+    const planLevel = dbMapping.get(productNameLower)!;
+    const planName = PLAN_LEVEL_TO_NAME[planLevel] || planLevel;
+    logStep("Match encontrado: productName exato no banco", { productName: productNameLower, planLevel, planName });
+    return planName;
+  }
+  
+  // 3. Verificar se productId ou productName contém algum ID do banco
+  for (const [key, planLevel] of dbMapping.entries()) {
+    if ((productIdLower && productIdLower.includes(key)) || 
+        (productNameLower && productNameLower.includes(key))) {
+      const planName = PLAN_LEVEL_TO_NAME[planLevel] || planLevel;
+      logStep("Match encontrado: produto contém ID do banco", { key, planLevel, planName });
+      return planName;
+    }
+    // Também verificar se o key contém o productId (caso o ID seja parcial)
+    if (productIdLower && key.includes(productIdLower) && productIdLower.length > 3) {
+      const planName = PLAN_LEVEL_TO_NAME[planLevel] || planLevel;
+      logStep("Match encontrado: ID do banco contém productId", { key, productId: productIdLower, planLevel, planName });
+      return planName;
+    }
+  }
+  
+  // 4. Fallback: mapeamento estático por palavras-chave
+  if (GURU_PRODUCT_MAPPING_FALLBACK[productIdLower]) {
+    logStep("Match encontrado: mapeamento estático por productId", { productId: productIdLower });
+    return GURU_PRODUCT_MAPPING_FALLBACK[productIdLower];
+  }
+  
+  // 5. Verificar se productName contém palavras-chave do mapeamento estático
+  for (const [key, plan] of Object.entries(GURU_PRODUCT_MAPPING_FALLBACK)) {
+    if (productNameLower.includes(key)) {
+      logStep("Match encontrado: productName contém palavra-chave", { key, plan });
+      return plan;
+    }
+  }
+  
+  logStep("Nenhum match encontrado para produto", { productId, productName });
+  return null; // Return null if not recognized
+}
+
 function generateRandomPassword(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%';
   let password = '';
@@ -30,21 +156,6 @@ function generateRandomPassword(): string {
     password += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return password;
-}
-
-function mapGuruProductToPlan(productId: string, productName: string): string | null {
-  if (GURU_PRODUCT_MAPPING[productId?.toLowerCase()]) {
-    return GURU_PRODUCT_MAPPING[productId.toLowerCase()];
-  }
-  
-  const nameLower = productName?.toLowerCase() || '';
-  for (const [key, plan] of Object.entries(GURU_PRODUCT_MAPPING)) {
-    if (nameLower.includes(key)) {
-      return plan;
-    }
-  }
-  
-  return null; // Return null if not recognized
 }
 
 function isCancellationEvent(payload: any): boolean {
@@ -266,6 +377,10 @@ serve(async (req) => {
     const promoSettings = await getPromoSettings(supabaseAdmin);
     logStep("Configurações de promoção carregadas", promoSettings);
 
+    // Carregar mapeamento dinâmico de planos do banco
+    const dbPlanMapping = await getPlansFromDatabase(supabaseAdmin);
+    logStep("Mapeamento dinâmico de planos carregado", { size: dbPlanMapping.size });
+
     const eventType = payload.webhook_type || payload.event || payload.type || payload.webhook_event;
     const buyerEmail = payload.contact?.email || payload.buyer?.email || payload.customer?.email || payload.email || payload.subscriber?.email;
     const buyerName = payload.contact?.name || payload.buyer?.name || payload.customer?.name || payload.name || payload.subscriber?.name || 'Usuário';
@@ -343,7 +458,7 @@ serve(async (req) => {
         .eq('user_id', userId);
 
       // Determine plan name for welcome email
-      let emailPlanName = mapGuruProductToPlan(productId, productName);
+      let emailPlanName = mapGuruProductToPlan(productId, productName, dbPlanMapping);
       let emailIsPromo = false;
       let emailPromoDuration = promoSettings.durationDays;
       
@@ -396,7 +511,7 @@ serve(async (req) => {
     }
 
     // Determine plan and duration
-    let planName = mapGuruProductToPlan(productId, productName);
+    let planName = mapGuruProductToPlan(productId, productName, dbPlanMapping);
     let durationDays = 30; // Default monthly
     let isPromo = false;
 
