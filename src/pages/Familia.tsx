@@ -226,6 +226,45 @@ export default function Familia() {
     }
   };
 
+  const handleCreateTestGroup = async () => {
+    if (!user || !isAdmin) return;
+
+    try {
+      // 1. Criar o grupo família de teste
+      const { data: newGroup, error: groupError } = await supabase
+        .from('family_groups')
+        .insert({
+          group_name: 'Grupo de Teste Admin',
+          owner_user_id: user.id,
+          max_members: 5
+        })
+        .select()
+        .single();
+
+      if (groupError) throw groupError;
+
+      // 2. Adicionar o admin como membro owner
+      const { error: memberError } = await supabase
+        .from('family_members')
+        .insert({
+          family_group_id: newGroup.id,
+          user_id: user.id,
+          role: 'owner',
+          status: 'active',
+          joined_at: new Date().toISOString()
+        });
+
+      if (memberError) throw memberError;
+
+      toast.success('Grupo de teste criado com sucesso!');
+      loadFamilyData(); // Recarregar dados
+      
+    } catch (error) {
+      console.error('Erro ao criar grupo de teste:', error);
+      toast.error('Erro ao criar grupo de teste');
+    }
+  };
+
   if (authLoading || adminLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -251,12 +290,18 @@ export default function Familia() {
               </CardDescription>
             </CardHeader>
             <CardContent className="text-center space-y-4">
-              <Button onClick={() => navigate('/subscription')}>
-                Ver Planos
-              </Button>
-              <Button variant="outline" onClick={() => navigate('/admin')}>
-                Voltar ao Admin
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button onClick={handleCreateTestGroup} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Criar Grupo de Teste
+                </Button>
+                <Button variant="outline" onClick={() => navigate('/subscription')}>
+                  Ver Planos
+                </Button>
+                <Button variant="ghost" onClick={() => navigate('/admin')}>
+                  Voltar ao Admin
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
