@@ -36,27 +36,14 @@ export const OluwoExplanationModal = ({ open, onOpenChange }: OluwoExplanationMo
         </DialogHeader>
         
         {/* Área do vídeo */}
-        <div className="aspect-video bg-muted rounded-lg overflow-hidden relative">
-          {/* Placeholder - substituir pelo embed real do vídeo */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-gradient-to-br from-primary/10 to-secondary/10">
-            <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center">
-              <Play className="w-10 h-10 text-primary" />
-            </div>
-            <p className="text-muted-foreground text-sm text-center px-4">
-              Vídeo do Oluwo será adicionado aqui
-            </p>
-          </div>
-          
-          {/* Quando tiver a URL do vídeo, descomentar e usar: */}
-          {/* 
+        <div className="aspect-video bg-muted rounded-lg overflow-hidden">
           <iframe 
-            src="https://www.youtube.com/embed/VIDEO_ID"
+            src="https://www.youtube.com/embed/MKI62vSrTLQ"
             className="w-full h-full"
+            title="Isesemind: Explicação do Oluwo"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
-            onPlay={() => trackVideoInteraction('play')}
           />
-          */}
         </div>
         
         {/* Texto de apoio */}
