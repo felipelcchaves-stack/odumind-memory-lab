@@ -67,7 +67,7 @@ export default function AdminFamilyGroupsPage() {
     try {
       setLoading(true);
 
-      // Load all family groups with owner profile
+      // Load all family groups (without relying on FK join)
       const { data: groupsData, error: groupsError } = await supabase
         .from('family_groups')
         .select(`
@@ -76,18 +76,21 @@ export default function AdminFamilyGroupsPage() {
           owner_user_id,
           max_members,
           created_at,
-          stripe_subscription_id,
-          owner_profile:profiles!family_groups_owner_user_id_fkey (
-            nome,
-            user_id
-          )
+          stripe_subscription_id
         `)
         .order('created_at', { ascending: false });
 
       if (groupsError) throw groupsError;
 
-      // For each group, get active members count and subscription
+      // For each group, get owner profile, active members count and subscription
       const groupsWithDetails = await Promise.all((groupsData || []).map(async (group) => {
+        // Get owner profile separately (not relying on FK)
+        const { data: ownerProfile } = await supabase
+          .from('profiles')
+          .select('nome, user_id')
+          .eq('user_id', group.owner_user_id)
+          .single();
+
         // Get active members count
         const { count: membersCount } = await supabase
           .from('family_members')
@@ -106,6 +109,7 @@ export default function AdminFamilyGroupsPage() {
 
         return {
           ...group,
+          owner_profile: ownerProfile || { nome: null, user_id: group.owner_user_id },
           active_members_count: membersCount || 0,
           subscription: subscriptionData || undefined,
         };
