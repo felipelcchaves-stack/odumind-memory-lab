@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Brain, BookOpen, Zap } from "lucide-react";
+import { Brain, BookOpen, Zap, Play } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useLandingTracking } from "@/hooks/useLandingTracking";
 import { useFreePlanSettings } from "@/hooks/useFreePlanSettings";
@@ -40,9 +40,9 @@ const HeroVariantB = ({
     navigate('/auth');
   };
 
-  const handleVideoClick = () => {
-    trackVideoInteraction('click');
-    console.log('Video demo clicked - Variant B');
+  const handleDemoClick = () => {
+    trackCTAClick('ver_demonstracao', 'hero_variant_b');
+    navigate('/demonstracao');
   };
 
   const finalCtaText = ctaText || (isFreePlanEnabled ? 'Conhecer o Método' : 'Ver Planos');
@@ -109,29 +109,22 @@ const HeroVariantB = ({
             >
               {finalCtaText}
             </Button>
+            
+            <Button
+              size="lg"
+              variant="outline"
+              className="text-lg px-8 gap-2"
+              onClick={handleDemoClick}
+            >
+              <Play className="w-5 h-5" />
+              Ver Demonstração Grátis
+            </Button>
           </div>
 
           {/* Trust statement */}
           <p className="text-sm text-muted-foreground/80 max-w-xl mx-auto">
             Baseado nas mesmas técnicas de memorização usadas por poliglotas, médicos e estudantes de alto desempenho
           </p>
-
-          {/* Video Demo Section */}
-          <div className="mt-12 max-w-3xl mx-auto">
-            <div
-              className="aspect-video bg-muted rounded-xl flex items-center justify-center border-2 border-border hover:border-primary transition-colors cursor-pointer group"
-              onClick={handleVideoClick}
-            >
-              <div className="text-center">
-                <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors mb-3">
-                  <svg className="h-8 w-8 text-primary" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                </div>
-                <p className="text-sm text-muted-foreground">Veja como funciona o método científico</p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
