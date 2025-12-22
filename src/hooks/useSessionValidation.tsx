@@ -12,12 +12,17 @@ export function useSessionValidation() {
   const isValidatingRef = useRef(false);
   const isLoggingOutRef = useRef(false);
   const hasShownErrorRef = useRef(false);
+  const isRecoveringRef = useRef(false);
+  const retryCountRef = useRef(0);
+  const maxRetries = 3;
 
   useEffect(() => {
     // Reset flags and clear timers when user changes to null
     if (!user) {
       isLoggingOutRef.current = false;
       hasShownErrorRef.current = false;
+      isRecoveringRef.current = false;
+      retryCountRef.current = 0;
       
       // Clear all timers
       if (intervalRef.current) {
@@ -76,10 +81,51 @@ export function useSessionValidation() {
       navigate('/', { replace: true });
     };
 
+    // Try to refresh the session before giving up
+    const tryRefreshSession = async (): Promise<boolean> => {
+      if (isRecoveringRef.current) {
+        console.log('[SESSION-VALIDATION] Recovery already in progress, skipping');
+        return false;
+      }
+      
+      isRecoveringRef.current = true;
+      console.log('[SESSION-VALIDATION] Attempting to refresh session...');
+      
+      try {
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        
+        if (refreshError) {
+          console.error('[SESSION-VALIDATION] Refresh failed:', refreshError.message);
+          isRecoveringRef.current = false;
+          return false;
+        }
+        
+        if (refreshData.session) {
+          console.log('[SESSION-VALIDATION] Session refreshed successfully');
+          retryCountRef.current = 0; // Reset retry count on success
+          isRecoveringRef.current = false;
+          return true;
+        }
+        
+        isRecoveringRef.current = false;
+        return false;
+      } catch (err) {
+        console.error('[SESSION-VALIDATION] Refresh exception:', err);
+        isRecoveringRef.current = false;
+        return false;
+      }
+    };
+
+    // Wait for any ongoing token refresh to complete
+    const waitForTokenRefresh = async (): Promise<void> => {
+      // Give Supabase auto-refresh time to complete (if it's running)
+      await new Promise(resolve => setTimeout(resolve, 500));
+    };
+
     const validateSession = async () => {
-      // Skip if already logging out
-      if (isLoggingOutRef.current) {
-        console.log('[SESSION-VALIDATION] Logout in progress, skipping validation');
+      // Skip if already logging out or recovering
+      if (isLoggingOutRef.current || isRecoveringRef.current) {
+        console.log('[SESSION-VALIDATION] Logout/recovery in progress, skipping validation');
         return;
       }
       
@@ -113,11 +159,43 @@ export function useSessionValidation() {
       isValidatingRef.current = true;
 
       try {
+        // Wait for any ongoing token refresh
+        await waitForTokenRefresh();
+        
         // Get the current session (this will auto-refresh the token if needed)
-        const { data: sessionData } = await supabase.auth.getSession();
+        let { data: sessionData } = await supabase.auth.getSession();
         
         if (!sessionData.session) {
-          console.log('[SESSION-VALIDATION] No active session, clearing and navigating');
+          console.log('[SESSION-VALIDATION] No active session, attempting refresh...');
+          
+          // Try to refresh before giving up
+          const refreshed = await tryRefreshSession();
+          if (refreshed) {
+            // Get the new session after refresh
+            const { data: newSessionData } = await supabase.auth.getSession();
+            if (newSessionData.session) {
+              console.log('[SESSION-VALIDATION] Session recovered after refresh');
+              isValidatingRef.current = false;
+              return;
+            }
+          }
+          
+          // Check retry count with exponential backoff
+          if (retryCountRef.current < maxRetries) {
+            retryCountRef.current++;
+            const backoffDelay = Math.pow(2, retryCountRef.current) * 1000; // 2s, 4s, 8s
+            console.log(`[SESSION-VALIDATION] Retry ${retryCountRef.current}/${maxRetries}, waiting ${backoffDelay}ms`);
+            
+            isValidatingRef.current = false;
+            
+            // Schedule retry with backoff
+            setTimeout(() => {
+              validateSession();
+            }, backoffDelay);
+            return;
+          }
+          
+          console.log('[SESSION-VALIDATION] Max retries reached, clearing and navigating');
           isValidatingRef.current = false;
           
           // Clear timers and local storage, navigate without calling signOut
@@ -133,6 +211,9 @@ export function useSessionValidation() {
           navigate('/', { replace: true });
           return;
         }
+
+        // Reset retry count on successful session check
+        retryCountRef.current = 0;
 
         // Get session_id from localStorage (created by enforce-single-session)
         const storedSessionId = localStorage.getItem('session_id');
@@ -176,9 +257,18 @@ export function useSessionValidation() {
         if (error) {
           console.error('[SESSION-VALIDATION] Error calling function:', error);
           
-          // If it's an auth error or invalid token, perform logout
+          // If it's an auth error, try to refresh first
           if (error.message?.includes('autenticado') || error.message?.includes('inválido') || error.message?.includes('expirado')) {
-            console.log('[SESSION-VALIDATION] Authentication error, forcing logout');
+            console.log('[SESSION-VALIDATION] Authentication error, attempting refresh...');
+            
+            const refreshed = await tryRefreshSession();
+            if (refreshed) {
+              console.log('[SESSION-VALIDATION] Session refreshed after auth error, will retry on next interval');
+              isValidatingRef.current = false;
+              return;
+            }
+            
+            console.log('[SESSION-VALIDATION] Refresh failed, forcing logout');
             isValidatingRef.current = false;
             await performLogout();
             return;
@@ -188,18 +278,46 @@ export function useSessionValidation() {
           return;
         }
 
+        // If the response suggests retrying (token was expired but might be refreshable)
+        if (data && data.retry_suggested) {
+          console.log('[SESSION-VALIDATION] Server suggests retry, attempting refresh...');
+          const refreshed = await tryRefreshSession();
+          if (refreshed) {
+            console.log('[SESSION-VALIDATION] Session refreshed, will validate on next interval');
+            isValidatingRef.current = false;
+            return;
+          }
+        }
+
         // If the response indicates the session is invalid
         if (data && !data.valid) {
-          console.log('[SESSION-VALIDATION] Session invalid, forcing logout');
+          console.log('[SESSION-VALIDATION] Session invalid, reason:', data.reason);
+          
+          // If it's a token expiration issue, try refresh first
+          if (data.reason === 'token_expired') {
+            const refreshed = await tryRefreshSession();
+            if (refreshed) {
+              console.log('[SESSION-VALIDATION] Session refreshed after token_expired');
+              isValidatingRef.current = false;
+              return;
+            }
+          }
+          
           isValidatingRef.current = false;
-          await performLogout(true); // Show toast for this case
+          await performLogout(data.reason === 'session_mismatch'); // Show toast only for session mismatch
           return;
         }
       } catch (err) {
         console.error('[SESSION-VALIDATION] Exception:', err);
         isValidatingRef.current = false;
         
-        // On exception, perform logout silently
+        // On exception, try refresh before logout
+        const refreshed = await tryRefreshSession();
+        if (refreshed) {
+          console.log('[SESSION-VALIDATION] Session refreshed after exception');
+          return;
+        }
+        
         await performLogout();
         return;
       }
@@ -207,10 +325,10 @@ export function useSessionValidation() {
       isValidatingRef.current = false;
     };
 
-    // Validate after a short delay to allow session_id to be saved
+    // Validate after a longer delay (5 seconds) to allow session_id to be saved and token refresh to complete
     timeoutRef.current = setTimeout(() => {
       validateSession();
-    }, 1000);
+    }, 5000);
 
     // Then validate every 60 seconds (reduced frequency)
     intervalRef.current = setInterval(validateSession, 60000);
