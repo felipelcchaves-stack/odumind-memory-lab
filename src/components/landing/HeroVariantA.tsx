@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Play } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useLandingTracking } from "@/hooks/useLandingTracking";
 import { useFreePlanSettings } from "@/hooks/useFreePlanSettings";
@@ -40,9 +40,9 @@ const HeroVariantA = ({
     navigate('/auth');
   };
 
-  const handleVideoClick = () => {
-    trackVideoInteraction('click');
-    console.log('Video demo clicked - Variant A');
+  const handleDemoClick = () => {
+    trackCTAClick('ver_demonstracao', 'hero_variant_a');
+    navigate('/demonstracao');
   };
 
   const finalCtaText = ctaText || (isFreePlanEnabled ? 'Começar Minha Jornada' : 'Ver Planos');
@@ -94,23 +94,16 @@ const HeroVariantA = ({
             >
               {finalCtaText}
             </Button>
-          </div>
-
-          {/* Video Demo Section */}
-          <div className="mt-12 max-w-3xl mx-auto">
-            <div
-              className="aspect-video bg-muted rounded-xl flex items-center justify-center border-2 border-border hover:border-primary transition-colors cursor-pointer group"
-              onClick={handleVideoClick}
+            
+            <Button
+              size="lg"
+              variant="outline"
+              className="text-lg px-8 gap-2"
+              onClick={handleDemoClick}
             >
-              <div className="text-center">
-                <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors mb-3">
-                  <svg className="h-8 w-8 text-primary" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                </div>
-                <p className="text-sm text-muted-foreground">Clique para assistir a demonstração</p>
-              </div>
-            </div>
+              <Play className="w-5 h-5" />
+              Ver Demonstração Grátis
+            </Button>
           </div>
         </div>
       </div>
