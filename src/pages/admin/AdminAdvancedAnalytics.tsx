@@ -13,6 +13,7 @@ import { ptBR } from 'date-fns/locale';
 import { MarketingInsights } from '@/components/admin/MarketingInsights';
 import { RenewalForecast } from '@/components/admin/RenewalForecast';
 import { SalesTrend } from '@/components/admin/SalesTrend';
+import { GoalCalculator } from '@/components/admin/GoalCalculator';
 import { useFinancialSettingsContext } from '@/contexts/FinancialSettingsContext';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -766,6 +767,19 @@ export default function AdminAdvancedAnalytics() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Goal Calculator - Simulador de Vendas */}
+      {displayMetrics && (
+        <GoalCalculator
+          currentMrr={displayMetrics.mrrNet}
+          mrrTarget={displayMetrics.targetMrr}
+          currentSubscribers={currentSnapshot?.paid_charges_count || currentMetrics?.activeUsers || 0}
+          churnRate={displayMetrics.churnRate}
+          gatewayFeePercent={financialSettings.gatewayFeePercent}
+          gatewayFeeFixed={financialSettings.gatewayFeeFixed}
+          salesCommissionPercent={financialSettings.salesCommissionPercent}
+        />
       )}
 
       {/* Renewal Forecast & Sales Trend */}
