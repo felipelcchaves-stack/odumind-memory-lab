@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, Award, BookOpen, Flame, Star, Trophy } from 'lucide-react';
+import { ArrowLeft, Award, BookOpen, Flame, Star, Trophy, Users, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -63,6 +63,14 @@ interface ActivityLog {
   detalhes?: any;
 }
 
+interface FamilyGroupInfo {
+  id: string;
+  group_name: string | null;
+  role: string;
+  members_count: number;
+  max_members: number;
+}
+
 export default function UserDetail() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
@@ -72,6 +80,7 @@ export default function UserDetail() {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [badges, setBadges] = useState<UserBadge[]>([]);
   const [activities, setActivities] = useState<ActivityLog[]>([]);
+  const [familyGroup, setFamilyGroup] = useState<FamilyGroupInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -153,6 +162,40 @@ export default function UserDetail() {
 
       if (actError) throw actError;
       setActivities(actData || []);
+
+      // Load family group info
+      const { data: familyMember } = await supabase
+        .from('family_members')
+        .select(`
+          role,
+          family_group:family_groups!family_members_family_group_id_fkey (
+            id,
+            group_name,
+            max_members
+          )
+        `)
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .single();
+
+      if (familyMember && familyMember.family_group) {
+        // Get member count
+        const { count: membersCount } = await supabase
+          .from('family_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('family_group_id', (familyMember.family_group as any).id)
+          .eq('status', 'active');
+
+        setFamilyGroup({
+          id: (familyMember.family_group as any).id,
+          group_name: (familyMember.family_group as any).group_name,
+          role: familyMember.role,
+          members_count: membersCount || 0,
+          max_members: (familyMember.family_group as any).max_members,
+        });
+      } else {
+        setFamilyGroup(null);
+      }
 
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -275,6 +318,35 @@ export default function UserDetail() {
                 <p className="text-sm text-muted-foreground">Progresso Total</p>
               </div>
             </div>
+
+            {/* Family Group Info */}
+            {familyGroup && (
+              <div className="mt-6 p-4 border rounded-lg bg-muted/30">
+                <div className="flex items-center gap-3">
+                  <Users className="h-5 w-5 text-primary" />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">{familyGroup.group_name || 'Minha Família'}</span>
+                      <Badge className={familyGroup.role === 'owner' ? 'bg-amber-500' : ''}>
+                        {familyGroup.role === 'owner' ? (
+                          <span className="flex items-center gap-1"><Crown className="h-3 w-3" /> Dono</span>
+                        ) : 'Membro'}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {familyGroup.members_count} de {familyGroup.max_members} membros
+                    </p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => navigate('/admin/family-groups')}
+                  >
+                    Ver Grupo
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
