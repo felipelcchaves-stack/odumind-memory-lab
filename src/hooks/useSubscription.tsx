@@ -464,8 +464,10 @@ export const useSubscription = () => {
     return hasActiveSubscription() && (
       subscription?.plan_name === 'Família' || 
       subscription?.plan_name === 'Family' ||
+      subscription?.plan_name === 'Egbe' ||
       subscription?.plan_name?.toLowerCase().includes('familia') ||
-      subscription?.plan_name?.toLowerCase().includes('family')
+      subscription?.plan_name?.toLowerCase().includes('family') ||
+      subscription?.plan_name?.toLowerCase().includes('egbe')
     );
   };
 
