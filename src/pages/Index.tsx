@@ -46,6 +46,16 @@ const Index = () => {
     }
   }, [user, navigate]);
 
+  // Suporte a navegação por hash (ex: /#features, /#pricing)
+  useEffect(() => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash) {
+      setTimeout(() => {
+        document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen">
       <PromoBanner />
