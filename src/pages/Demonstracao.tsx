@@ -17,13 +17,19 @@ import {
   Puzzle,
   GripVertical,
   ListOrdered,
-  Volume2,
   CheckCircle2,
   X,
   BookOpen,
   Lock,
   ScrollText,
-  Users
+  Users,
+  Zap,
+  Trophy,
+  BarChart3,
+  Smartphone,
+  RefreshCw,
+  Palette,
+  Info
 } from 'lucide-react';
 
 // Dados REAIS do Odu Ejiogbe (Odu #1) do banco de dados
@@ -79,13 +85,6 @@ const EXERCISES = [
     icon: ListOrdered,
     description: 'Organize frases na ordem correta',
     color: 'from-rose-500 to-red-600'
-  },
-  {
-    id: 'audio',
-    name: 'Estudo com Áudio',
-    icon: Volume2,
-    description: 'Ouça e acompanhe o texto sincronizado',
-    color: 'from-cyan-500 to-blue-600'
   }
 ];
 
@@ -510,68 +509,50 @@ function OrderDemo() {
   );
 }
 
-// Mini-exercício de áudio
-function AudioDemo() {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [highlightIndex, setHighlightIndex] = useState(-1);
+// Seção "Na Plataforma Completa"
+function FullPlatformFeatures() {
+  const navigate = useNavigate();
 
-  const words = DEMO_ODU.versoResumido.split(' ');
-
-  const togglePlay = () => {
-    if (isPlaying) {
-      setIsPlaying(false);
-      return;
-    }
-
-    setIsPlaying(true);
-    setProgress(0);
-    setHighlightIndex(0);
-
-    // Simular progresso
-    const interval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsPlaying(false);
-          setHighlightIndex(-1);
-          return 0;
-        }
-        return prev + 2;
-      });
-      setHighlightIndex(prev => (prev + 1) % words.length);
-    }, 300);
-  };
+  const features = [
+    { icon: Zap, text: 'Sistema de XP, níveis e badges' },
+    { icon: Trophy, text: 'Ranking semanal e conquistas' },
+    { icon: RefreshCw, text: 'Repetição espaçada com algoritmo SM-2' },
+    { icon: BarChart3, text: 'Gráficos de progresso e estatísticas' },
+    { icon: Palette, text: 'Tema claro/escuro personalizável' },
+    { icon: Smartphone, text: 'PWA para acesso offline' },
+  ];
 
   return (
-    <div className="space-y-4">
-      <div className="bg-secondary/50 rounded-lg p-4">
-        <p className="text-sm leading-relaxed">
-          {words.map((word, i) => (
-            <span 
-              key={i}
-              className={`transition-colors ${highlightIndex === i ? 'bg-primary/30 text-primary font-medium rounded px-0.5' : ''}`}
-            >
-              {word}{' '}
-            </span>
-          ))}
+    <Card className="border-primary/20 bg-gradient-to-br from-secondary/50 to-transparent">
+      <CardContent className="p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-primary" />
+          <h3 className="font-bold text-lg">Na Plataforma Completa</h3>
+        </div>
+        
+        <p className="text-sm text-muted-foreground">
+          Além dos exercícios que você experimentou, o Isesemind oferece:
         </p>
-      </div>
 
-      <Progress value={progress} className="h-2" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {features.map((feature, index) => (
+            <div key={index} className="flex items-center gap-2 text-sm">
+              <feature.icon className="w-4 h-4 text-primary shrink-0" />
+              <span>{feature.text}</span>
+            </div>
+          ))}
+        </div>
 
-      <div className="flex items-center justify-center gap-4">
-        <Button size="sm" variant="outline" onClick={togglePlay}>
-          {isPlaying ? 'Pausar' : 'Reproduzir'}
-          <Volume2 className="w-4 h-4 ml-2" />
+        <Button 
+          variant="default" 
+          className="w-full"
+          onClick={() => navigate('/auth')}
+        >
+          Acessar Plataforma Completa
+          <ChevronRight className="w-4 h-4 ml-1" />
         </Button>
-        <Badge variant="secondary">1.0x</Badge>
-      </div>
-
-      <p className="text-xs text-muted-foreground text-center">
-        Acompanhe o texto enquanto ouve a pronúncia correta
-      </p>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -650,7 +631,6 @@ export default function Demonstracao() {
       case 'cloze': return <ClozeDemo />;
       case 'dragdrop': return <DragDropDemo />;
       case 'order': return <OrderDemo />;
-      case 'audio': return <AudioDemo />;
       default: return null;
     }
   };
@@ -669,6 +649,12 @@ export default function Demonstracao() {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-4 max-w-3xl mx-auto"
           >
+            {/* Banner de contexto */}
+            <div className="inline-flex items-center gap-2 text-sm text-muted-foreground bg-secondary/50 px-4 py-2 rounded-lg border border-border/50">
+              <Info className="w-4 h-4 text-primary" />
+              <span>Versão demonstração simplificada — a plataforma real é ainda mais completa</span>
+            </div>
+            
             <Badge className="bg-primary/20 text-primary">
               <Sparkles className="w-3 h-3 mr-1" />
               Demonstração Interativa
@@ -757,9 +743,16 @@ export default function Demonstracao() {
         </section>
 
         {/* Content Preview Section */}
-        <section className="container mx-auto px-4 pb-12">
+        <section className="container mx-auto px-4 pb-8">
           <div className="max-w-xl mx-auto">
             <ContentPreview />
+          </div>
+        </section>
+
+        {/* Full Platform Features Section */}
+        <section className="container mx-auto px-4 pb-12">
+          <div className="max-w-xl mx-auto">
+            <FullPlatformFeatures />
           </div>
         </section>
 
