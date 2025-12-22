@@ -68,47 +68,73 @@ serve(async (req) => {
       throw new Error(`Limite de ${group.max_members} membros atingido`);
     }
 
-    // Verificar se email já foi convidado ou já é membro (usando admin para bypass RLS)
+    // 1. Deletar convites expirados para este email/grupo
+    const { error: deleteError } = await supabaseAdmin
+      .from("family_invites")
+      .delete()
+      .eq("family_group_id", family_group_id)
+      .eq("email", email)
+      .lt("expires_at", new Date().toISOString());
+
+    if (deleteError) {
+      console.log("[INVITE-FAMILY] Aviso ao limpar convites expirados:", deleteError);
+    } else {
+      console.log("[INVITE-FAMILY] Convites expirados limpos para:", email);
+    }
+
+    // 2. Verificar se existe convite pendente válido (não expirado)
     const { data: existingInvite } = await supabaseAdmin
       .from("family_invites")
-      .select("id")
+      .select("id, token, expires_at")
       .eq("family_group_id", family_group_id)
       .eq("email", email)
       .eq("status", "pending")
+      .gt("expires_at", new Date().toISOString())
       .maybeSingle();
 
+    let invite;
+    let inviteToken;
+    let expiresAt;
+    let isResend = false;
+
     if (existingInvite) {
-      throw new Error("Este email já possui um convite pendente");
-    }
+      // 3. Se existe convite válido, reutilizar (permitir reenvio)
+      console.log(`[INVITE-FAMILY] Convite existente encontrado para ${email}, reenviando...`);
+      invite = existingInvite;
+      inviteToken = existingInvite.token;
+      expiresAt = new Date(existingInvite.expires_at);
+      isResend = true;
+    } else {
+      // 4. Se não existe, criar novo convite
+      inviteToken = crypto.randomUUID();
+      expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // Expira em 7 dias
 
-    // Gerar token único
-    const inviteToken = crypto.randomUUID();
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7); // Expira em 7 dias
+      const { data: newInvite, error: inviteError } = await supabaseAdmin
+        .from("family_invites")
+        .insert({
+          family_group_id,
+          email,
+          token: inviteToken,
+          invited_by: user.id,
+          expires_at: expiresAt.toISOString(),
+          status: "pending",
+        })
+        .select()
+        .single();
 
-    // Criar convite (usando admin para bypass RLS)
-    const { data: invite, error: inviteError } = await supabaseAdmin
-      .from("family_invites")
-      .insert({
-        family_group_id,
-        email,
-        token: inviteToken,
-        invited_by: user.id,
-        expires_at: expiresAt.toISOString(),
-        status: "pending",
-      })
-      .select()
-      .single();
-
-    if (inviteError) {
-      console.error("[INVITE-FAMILY] Erro ao criar convite:", inviteError);
-      throw new Error(`Erro ao criar convite: ${inviteError.message}`);
+      if (inviteError) {
+        console.error("[INVITE-FAMILY] Erro ao criar convite:", inviteError);
+        throw new Error(`Erro ao criar convite: ${inviteError.message}`);
+      }
+      
+      invite = newInvite;
     }
 
     // Usar URL de produção fixa em vez de origin do request
     const inviteLink = `${PRODUCTION_URL}/familia/aceitar/${inviteToken}`;
 
-    console.log(`[INVITE-FAMILY] Convite criado: ${invite.id} para ${email}`);
+    console.log(`[INVITE-FAMILY] ${isResend ? 'Reenviando' : 'Novo'} convite: ${invite.id} para ${email}`);
 
     // Enviar email com o convite usando Resend
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -190,6 +216,7 @@ serve(async (req) => {
         invite_link: inviteLink,
         expires_at: expiresAt.toISOString(),
         email_sent: emailSent,
+        resent: isResend,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

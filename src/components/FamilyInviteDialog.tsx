@@ -39,11 +39,33 @@ export function FamilyInviteDialog({ open, onOpenChange, familyGroupId, onInvite
 
       if (data.invite_link) {
         setInviteLink(data.invite_link);
-        toast.success('Convite criado com sucesso!');
+        if (data.resent) {
+          toast.success('Link de convite reenviado com sucesso!');
+        } else {
+          toast.success('Convite criado com sucesso!');
+        }
       }
     } catch (error: any) {
       console.error('Erro ao enviar convite:', error);
-      toast.error(error.message || 'Erro ao enviar convite');
+      
+      // Extrair mensagem de erro do corpo da resposta da Edge Function
+      let errorMessage = 'Erro ao enviar convite';
+      
+      try {
+        // O Supabase retorna o body da resposta em error.context.body quando há erro
+        if (error?.context?.body) {
+          const body = JSON.parse(error.context.body);
+          if (body.error) {
+            errorMessage = body.error;
+          }
+        } else if (error?.message && !error.message.includes('non-2xx')) {
+          errorMessage = error.message;
+        }
+      } catch (parseError) {
+        console.error('Erro ao parsear resposta de erro:', parseError);
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
