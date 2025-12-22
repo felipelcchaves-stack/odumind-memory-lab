@@ -110,12 +110,86 @@ serve(async (req) => {
 
     console.log(`[INVITE-FAMILY] Convite criado: ${invite.id} para ${email}`);
 
+    // Enviar email com o convite usando Resend
+    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+    let emailSent = false;
+    
+    if (RESEND_API_KEY) {
+      try {
+        const emailHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 30px; border-radius: 12px; text-align: center; margin-bottom: 24px;">
+              <h1 style="color: #ffd700; margin: 0; font-size: 24px;">🏠 Convite para Plano Família</h1>
+              <p style="color: #fff; margin: 10px 0 0 0; opacity: 0.9;">Isesemind - Memorização dos 256 Odu Ifá</p>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 24px; border-radius: 12px; margin-bottom: 24px;">
+              <p style="margin: 0 0 16px 0; font-size: 16px;">Olá!</p>
+              <p style="margin: 0 0 16px 0;">Você foi convidado(a) para fazer parte de um <strong>Plano Família</strong> no Isesemind.</p>
+              <p style="margin: 0 0 24px 0;">Com o plano família, você terá acesso completo à plataforma de memorização dos 256 Odu Ifá.</p>
+              
+              <div style="text-align: center; margin: 24px 0;">
+                <a href="${inviteLink}" style="display: inline-block; background: linear-gradient(135deg, #ffd700 0%, #ffb700 100%); color: #1a1a2e; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: bold; font-size: 16px;">Aceitar Convite</a>
+              </div>
+              
+              <p style="margin: 24px 0 0 0; font-size: 14px; color: #666;">Ou copie e cole este link no seu navegador:</p>
+              <p style="margin: 8px 0 0 0; font-size: 12px; word-break: break-all; color: #888;">${inviteLink}</p>
+            </div>
+            
+            <p style="font-size: 14px; color: #888; text-align: center;">
+              ⏰ Este convite expira em <strong>7 dias</strong>.
+            </p>
+            
+            <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
+            
+            <p style="font-size: 12px; color: #aaa; text-align: center;">
+              Se você não esperava este convite, pode ignorar este email.
+            </p>
+          </body>
+          </html>
+        `;
+
+        const emailRes = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${RESEND_API_KEY}`,
+          },
+          body: JSON.stringify({
+            from: "Isesemind <contato@ileaseifatokun.com.br>",
+            to: [email],
+            subject: "🏠 Você foi convidado para o Plano Família Isesemind!",
+            html: emailHtml,
+          }),
+        });
+
+        if (emailRes.ok) {
+          emailSent = true;
+          console.log(`[INVITE-FAMILY] Email enviado com sucesso para ${email}`);
+        } else {
+          const errorData = await emailRes.text();
+          console.error(`[INVITE-FAMILY] Erro ao enviar email: ${errorData}`);
+        }
+      } catch (emailError) {
+        console.error(`[INVITE-FAMILY] Erro ao enviar email:`, emailError);
+      }
+    } else {
+      console.warn("[INVITE-FAMILY] RESEND_API_KEY não configurada, email não enviado");
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         invite_id: invite.id,
         invite_link: inviteLink,
         expires_at: expiresAt.toISOString(),
+        email_sent: emailSent,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
