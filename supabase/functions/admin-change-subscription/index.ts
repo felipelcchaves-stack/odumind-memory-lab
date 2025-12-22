@@ -234,8 +234,8 @@ serve(async (req) => {
           reason: grantComplimentary ? 'Acesso administrativo concedido' : 'Customer sem método de pagamento - acesso temporário'
         };
 
-        // Se for plano Família/Egbe, criar grupo automaticamente
-        if (normalizedPlan === 'Família') {
+        // Se for plano Egbe (Família), criar grupo automaticamente
+        if (normalizedPlan === 'Egbe') {
           logStep("Detected family plan, creating family group...", { userId });
           
           // Verificar se já existe grupo
