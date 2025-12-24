@@ -33,25 +33,56 @@ export const OluwoExplanationModal = ({ open, onOpenChange }: OluwoExplanationMo
     }
 
     const container = scriptContainerRef.current;
-    container.innerHTML = videoScript;
-
-    // Execute any scripts in the injected HTML
-    const scripts = container.querySelectorAll('script');
-    scripts.forEach(script => {
-      const newScript = document.createElement('script');
-      if (script.src) {
-        newScript.src = script.src;
-      } else {
-        newScript.textContent = script.textContent;
-      }
-      document.body.appendChild(newScript);
-    });
+    const injectedScripts: HTMLScriptElement[] = [];
+    
+    // Criar um elemento temporário para parsear o HTML
+    const temp = document.createElement('div');
+    temp.innerHTML = videoScript;
+    
+    // Separar elementos HTML dos scripts
+    const scripts = temp.querySelectorAll('script');
+    
+    // Remover scripts do temp para adicionar apenas HTML ao container
+    scripts.forEach(script => script.remove());
+    
+    // Primeiro: inserir apenas o HTML (vturb-smartplayer element, etc)
+    container.innerHTML = temp.innerHTML;
+    
+    // Depois: executar scripts (com pequeno delay para garantir que o DOM está pronto)
+    const timeoutId = setTimeout(() => {
+      scripts.forEach(originalScript => {
+        const newScript = document.createElement('script');
+        
+        // Copiar todos os atributos
+        Array.from(originalScript.attributes).forEach(attr => {
+          newScript.setAttribute(attr.name, attr.value);
+        });
+        
+        // Se for inline (sem src), copiar o conteúdo
+        if (!originalScript.src && originalScript.textContent) {
+          newScript.textContent = originalScript.textContent;
+        }
+        
+        // Adicionar ao head (onde Vturb/Panda esperam)
+        document.head.appendChild(newScript);
+        injectedScripts.push(newScript);
+      });
+    }, 100);
 
     return () => {
-      // Cleanup scripts when modal closes
-      if (container) {
-        container.innerHTML = '';
-      }
+      // Cleanup quando modal fecha
+      clearTimeout(timeoutId);
+      container.innerHTML = '';
+      
+      // Remover scripts injetados
+      injectedScripts.forEach(script => {
+        if (script.parentNode) {
+          script.parentNode.removeChild(script);
+        }
+      });
+      
+      // Remover scripts do Vturb/Panda que podem ter sido criados dinamicamente
+      document.querySelectorAll('script[src*="converteai.net"], script[src*="panda"]').forEach(s => s.remove());
     };
   }, [open, videoType, videoScript]);
 
