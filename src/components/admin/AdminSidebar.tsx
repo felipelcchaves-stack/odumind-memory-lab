@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, Scroll, Users, BarChart3, Settings, Wrench, History, Megaphone, TrendingUp, CreditCard, ToggleRight, Bell, Ticket, Route, Star, Users2, Home } from "lucide-react";
+import { LayoutDashboard, FileText, Scroll, Users, BarChart3, Settings, Wrench, History, Megaphone, TrendingUp, CreditCard, ToggleRight, Bell, Ticket, Route, Star, Users2, Home, MousePointer2 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
   Sidebar,
@@ -56,6 +56,7 @@ export function AdminSidebar({ isAdmin }: AdminSidebarProps) {
         { title: "Página Família", url: "/familia", icon: Home, adminOnly: true },
         { title: "Analytics", url: "/admin/analytics", icon: BarChart3, permission: "analytics" as const },
         { title: "Analytics Avançadas", url: "/admin/advanced-analytics", icon: TrendingUp, permission: "analytics_avancadas" as const },
+        { title: "Mapa de Calor", url: "/admin/heatmap", icon: MousePointer2, adminOnly: true },
       ],
     },
     {
