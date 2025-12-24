@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface ContentProtectionOptions {
@@ -10,11 +11,16 @@ interface ContentProtectionOptions {
 
 export const useContentProtection = (options: ContentProtectionOptions = {}) => {
   const { user } = useAuth();
+  const location = useLocation();
+  
+  // Disable protection on admin routes
+  const isAdminRoute = location.pathname.startsWith('/admin');
+  
   const {
-    disableContextMenu = true,
-    disableTextSelection = true,
-    disableCopyPaste = true,
-    enablePrintOverlay = true,
+    disableContextMenu = !isAdminRoute,
+    disableTextSelection = !isAdminRoute,
+    disableCopyPaste = !isAdminRoute,
+    enablePrintOverlay = !isAdminRoute,
   } = options;
 
   useEffect(() => {
@@ -34,9 +40,18 @@ export const useContentProtection = (options: ContentProtectionOptions = {}) => 
       }
     };
 
-    // Disable copy/paste/cut
+    // Helper to check if target is an input element
+    const isInputElement = (target: EventTarget | null): boolean => {
+      if (!target) return false;
+      const el = target as HTMLElement;
+      return el.tagName === 'INPUT' || 
+             el.tagName === 'TEXTAREA' ||
+             el.isContentEditable;
+    };
+
+    // Disable copy/paste/cut (except in input elements)
     const handleCopyPaste = (e: ClipboardEvent) => {
-      if (disableCopyPaste) {
+      if (disableCopyPaste && !isInputElement(e.target)) {
         e.preventDefault();
         return false;
       }
@@ -44,8 +59,17 @@ export const useContentProtection = (options: ContentProtectionOptions = {}) => 
 
     // Disable keyboard shortcuts for copy/paste/print/screenshot
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl/Cmd + C, X, V, P (copy, cut, paste, print)
-      if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'v', 'p'].includes(e.key.toLowerCase())) {
+      // Allow copy/paste/cut in input elements
+      if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'v'].includes(e.key.toLowerCase())) {
+        if (isInputElement(e.target)) return; // Allow action in inputs
+        if (disableCopyPaste) {
+          e.preventDefault();
+          return false;
+        }
+      }
+      
+      // Block print (Ctrl+P) unless in admin
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
         e.preventDefault();
         return false;
       }
