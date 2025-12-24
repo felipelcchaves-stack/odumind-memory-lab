@@ -54,6 +54,7 @@ export function SettingsManager() {
   const [oluwoVideoUrl, setOluwoVideoUrl] = useState('https://www.youtube.com/embed/MKI62vSrTLQ');
   const [oluwoVideoScript, setOluwoVideoScript] = useState('');
   const [savingOluwoVideo, setSavingOluwoVideo] = useState(false);
+  const [oluwoVideoLoaded, setOluwoVideoLoaded] = useState(false);
 
   // Estados para Banner de Promoções
   const [bannerEnabled, setBannerEnabled] = useState(false);
@@ -117,9 +118,9 @@ export function SettingsManager() {
     }
   }, [marketingSettings]);
 
-  // Carregar valores de landing
+  // Carregar valores de landing (apenas uma vez para evitar sobrescrita durante edição)
   useEffect(() => {
-    if (landingSettings.length > 0) {
+    if (landingSettings.length > 0 && !oluwoVideoLoaded) {
       landingSettings.forEach(setting => {
         switch (setting.key) {
           case 'show_technique_screenshots':
@@ -136,8 +137,9 @@ export function SettingsManager() {
             break;
         }
       });
+      setOluwoVideoLoaded(true);
     }
-  }, [landingSettings]);
+  }, [landingSettings, oluwoVideoLoaded]);
 
   // Carregar valores do banner
   useEffect(() => {
