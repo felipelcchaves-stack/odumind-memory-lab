@@ -5,6 +5,7 @@ import { Play, Sparkles, Loader2 } from "lucide-react";
 import { useLandingTracking } from "@/hooks/useLandingTracking";
 import { usePublicSettings } from "@/hooks/usePublicSettings";
 import { useEffect, useRef } from "react";
+import { convertToYouTubeEmbed } from "@/lib/youtubeUtils";
 
 interface OluwoExplanationModalProps {
   open: boolean;
@@ -153,7 +154,7 @@ export const OluwoExplanationModal = ({ open, onOpenChange }: OluwoExplanationMo
         return (
           <div className="aspect-video bg-muted rounded-lg overflow-hidden">
             <iframe 
-              src={videoUrl}
+              src={convertToYouTubeEmbed(videoUrl)}
               className="w-full h-full"
               title="Isesemind: Explicação do Oluwo"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
