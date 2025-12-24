@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { usePlanVisibilityAdmin } from '@/hooks/usePlanVisibility';
 import { PLANS } from '@/config/plans';
-import { Loader2, Save, Eye, EyeOff, ExternalLink, CheckCircle, AlertCircle, Code, CreditCard, Megaphone, Gift, CalendarClock, Play, Layout, FlaskConical, Tag, Timer, X, ArrowRight } from 'lucide-react';
+import { Loader2, Save, Eye, EyeOff, ExternalLink, CheckCircle, AlertCircle, Code, CreditCard, Megaphone, Gift, CalendarClock, Play, Layout, FlaskConical, Tag, Timer, X, ArrowRight, Video } from 'lucide-react';
 import { toast } from 'sonner';
 import { CustomScriptsManager } from './CustomScriptsManager';
 import { ABTestManager } from './ABTestManager';
@@ -48,6 +48,12 @@ export function SettingsManager() {
 
   // Estados para seção de técnicas na landing
   const [showTechniqueScreenshots, setShowTechniqueScreenshots] = useState(false);
+
+  // Estados para Vídeo do Oluwo
+  const [oluwoVideoType, setOluwoVideoType] = useState('youtube');
+  const [oluwoVideoUrl, setOluwoVideoUrl] = useState('https://www.youtube.com/embed/MKI62vSrTLQ');
+  const [oluwoVideoScript, setOluwoVideoScript] = useState('');
+  const [savingOluwoVideo, setSavingOluwoVideo] = useState(false);
 
   // Estados para Banner de Promoções
   const [bannerEnabled, setBannerEnabled] = useState(false);
@@ -115,8 +121,19 @@ export function SettingsManager() {
   useEffect(() => {
     if (landingSettings.length > 0) {
       landingSettings.forEach(setting => {
-        if (setting.key === 'show_technique_screenshots') {
-          setShowTechniqueScreenshots(setting.value === 'true');
+        switch (setting.key) {
+          case 'show_technique_screenshots':
+            setShowTechniqueScreenshots(setting.value === 'true');
+            break;
+          case 'oluwo_video_type':
+            setOluwoVideoType(setting.value || 'youtube');
+            break;
+          case 'oluwo_video_url':
+            setOluwoVideoUrl(setting.value || 'https://www.youtube.com/embed/MKI62vSrTLQ');
+            break;
+          case 'oluwo_video_script':
+            setOluwoVideoScript(setting.value || '');
+            break;
         }
       });
     }
@@ -539,6 +556,146 @@ export function SettingsManager() {
                     }}
                   />
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Vídeo do Oluwo */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Video className="w-5 h-5 text-primary" />
+                  Vídeo do Oluwo (Modal Explicativo)
+                </CardTitle>
+                <CardDescription>
+                  Configure o vídeo exibido no modal "Entenda o Método" na landing page. Suporta YouTube, Vturb e outros players.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Tipo de Player */}
+                <div className="space-y-2">
+                  <Label>Tipo de Player</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { value: 'youtube', label: 'YouTube' },
+                      { value: 'vturb', label: 'Vturb (URL)' },
+                      { value: 'iframe', label: 'Outro (iframe URL)' },
+                      { value: 'script', label: 'Script (Vturb/Panda)' }
+                    ].map((option) => (
+                      <Button
+                        key={option.value}
+                        type="button"
+                        variant={oluwoVideoType === option.value ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setOluwoVideoType(option.value)}
+                      >
+                        {option.label}
+                      </Button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {oluwoVideoType === 'youtube' && 'Cole a URL de embed do YouTube (ex: https://www.youtube.com/embed/VIDEO_ID)'}
+                    {oluwoVideoType === 'vturb' && 'Cole a URL de embed do Vturb (ex: https://scripts.converteai.net/...)'}
+                    {oluwoVideoType === 'iframe' && 'Cole a URL de embed de qualquer player com suporte a iframe'}
+                    {oluwoVideoType === 'script' && 'Cole o código HTML/JavaScript completo do player (para Vturb, Panda Video, etc.)'}
+                  </p>
+                </div>
+
+                {/* URL do Vídeo (para youtube, vturb, iframe) */}
+                {oluwoVideoType !== 'script' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="oluwoVideoUrl">URL do Embed</Label>
+                    <Input
+                      id="oluwoVideoUrl"
+                      value={oluwoVideoUrl}
+                      onChange={(e) => setOluwoVideoUrl(e.target.value)}
+                      placeholder={
+                        oluwoVideoType === 'youtube' 
+                          ? 'https://www.youtube.com/embed/VIDEO_ID'
+                          : oluwoVideoType === 'vturb'
+                          ? 'https://scripts.converteai.net/...'
+                          : 'https://...'
+                      }
+                    />
+                  </div>
+                )}
+
+                {/* Script do Vídeo (para script) */}
+                {oluwoVideoType === 'script' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="oluwoVideoScript">Código do Player (HTML/JavaScript)</Label>
+                    <Textarea
+                      id="oluwoVideoScript"
+                      value={oluwoVideoScript}
+                      onChange={(e) => setOluwoVideoScript(e.target.value)}
+                      placeholder='<div id="vid_..."></div><script src="https://scripts.converteai.net/..."></script>'
+                      rows={6}
+                      className="font-mono text-xs"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Cole o código completo fornecido pelo Vturb, Panda Video ou outro player. O script será executado dentro do modal.
+                    </p>
+                  </div>
+                )}
+
+                {/* Preview */}
+                <div className="space-y-3">
+                  <Label className="text-base font-medium">Preview</Label>
+                  <div className="border rounded-lg overflow-hidden bg-muted aspect-video flex items-center justify-center">
+                    {oluwoVideoType === 'script' ? (
+                      <div className="text-center text-muted-foreground p-4">
+                        <Code className="w-8 h-8 mx-auto mb-2" />
+                        <p className="text-sm">Preview não disponível para scripts</p>
+                        <p className="text-xs">O vídeo será renderizado no modal</p>
+                      </div>
+                    ) : oluwoVideoUrl ? (
+                      <iframe
+                        src={oluwoVideoUrl}
+                        className="w-full h-full"
+                        title="Preview do Vídeo do Oluwo"
+                        allow="accelerometer; autoplay; encrypted-media"
+                      />
+                    ) : (
+                      <div className="text-center text-muted-foreground">
+                        <Play className="w-8 h-8 mx-auto mb-2" />
+                        <p className="text-sm">Nenhuma URL configurada</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Botão Salvar */}
+                <Button
+                  onClick={async () => {
+                    setSavingOluwoVideo(true);
+                    try {
+                      await Promise.all([
+                        updateSetting('oluwo_video_type', oluwoVideoType),
+                        updateSetting('oluwo_video_url', oluwoVideoUrl),
+                        updateSetting('oluwo_video_script', oluwoVideoScript),
+                      ]);
+                      toast.success('Configurações do vídeo salvas!');
+                    } catch (error) {
+                      toast.error('Erro ao salvar configurações do vídeo');
+                    } finally {
+                      setSavingOluwoVideo(false);
+                    }
+                  }}
+                  disabled={savingOluwoVideo}
+                  className="w-full"
+                  size="lg"
+                >
+                  {savingOluwoVideo ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Salvar Configurações do Vídeo
+                    </>
+                  )}
+                </Button>
               </CardContent>
             </Card>
           </div>
