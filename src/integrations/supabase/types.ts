@@ -220,6 +220,66 @@ export type Database = {
         }
         Relationships: []
       }
+      click_coordinates: {
+        Row: {
+          ab_variant: string | null
+          created_at: string
+          device_type: string | null
+          element_class: string | null
+          element_id: string | null
+          element_tag: string | null
+          element_text: string | null
+          id: string
+          page_url: string
+          session_id: string
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          viewport_height: number
+          viewport_width: number
+          x_percent: number
+          y_percent: number
+        }
+        Insert: {
+          ab_variant?: string | null
+          created_at?: string
+          device_type?: string | null
+          element_class?: string | null
+          element_id?: string | null
+          element_tag?: string | null
+          element_text?: string | null
+          id?: string
+          page_url: string
+          session_id: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          viewport_height: number
+          viewport_width: number
+          x_percent: number
+          y_percent: number
+        }
+        Update: {
+          ab_variant?: string | null
+          created_at?: string
+          device_type?: string | null
+          element_class?: string | null
+          element_id?: string | null
+          element_tag?: string | null
+          element_text?: string | null
+          id?: string
+          page_url?: string
+          session_id?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          viewport_height?: number
+          viewport_width?: number
+          x_percent?: number
+          y_percent?: number
+        }
+        Relationships: []
+      }
       collaborator_permissions: {
         Row: {
           can_access: boolean

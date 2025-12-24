@@ -19,6 +19,7 @@ import { useSectionTracking } from "@/hooks/useSectionTracking";
 import { useUtmTracking } from "@/hooks/useUtmTracking";
 import { useCustomScripts } from "@/hooks/useCustomScripts";
 import { useTechniqueScreenshotsSettings } from "@/hooks/useTechniqueScreenshotsSettings";
+import { useClickTracking } from "@/hooks/useClickTracking";
 
 // Define sections to track visibility
 const TRACKED_SECTIONS = [
@@ -40,6 +41,7 @@ const Index = () => {
   useSectionTracking(TRACKED_SECTIONS);
   useUtmTracking(); // Capture UTM parameters
   useCustomScripts(); // Load tracking scripts ONLY on landing page
+  useClickTracking(); // Heatmap tracking
 
   useEffect(() => {
     if (user) {
