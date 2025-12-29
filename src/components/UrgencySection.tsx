@@ -172,3 +172,5 @@ export const UrgencySection = () => {
     </section>
   );
 };
+
+export default UrgencySection;

@@ -239,6 +239,41 @@
     <!-- Preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Preconnect to Supabase API for faster data fetching -->
+    <link rel="preconnect" href="https://wmwuirqdluzjdqtmfzsm.supabase.co" />
+    <link rel="dns-prefetch" href="https://wmwuirqdluzjdqtmfzsm.supabase.co" />
+    
+    <!-- Preconnect to tracking services (loaded lazily but DNS prefetch helps) -->
+    <link rel="dns-prefetch" href="https://connect.facebook.net" />
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+    <link rel="dns-prefetch" href="https://analytics.tiktok.com" />
+    
+    <!-- Preload critical font (if using custom) -->
+    <link rel="preload" href="/src/main.tsx" as="script" type="module" crossorigin />
+    
+    <!-- Critical CSS for initial skeleton -->
+    <style>
+      /* Critical CSS for first paint */
+      #root {
+        min-height: 100vh;
+      }
+      .skeleton-pulse {
+        animation: skeleton-pulse 1.5s ease-in-out infinite;
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+      }
+      @keyframes skeleton-pulse {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+      }
+      @media (prefers-color-scheme: dark) {
+        .skeleton-pulse {
+          background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%);
+          background-size: 200% 100%;
+        }
+      }
+    </style>
   </head>
 
   <body>

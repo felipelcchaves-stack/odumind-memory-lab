@@ -294,3 +294,5 @@ export function TechniqueShowcase() {
     </section>
   );
 }
+
+export default TechniqueShowcase;
