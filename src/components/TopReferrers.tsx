@@ -161,3 +161,5 @@ export const TopReferrers = () => {
     </section>
   );
 };
+
+export default TopReferrers;

@@ -16,14 +16,13 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log('Fetching public settings...');
+    console.log('Fetching all public settings in one batch...');
 
-    // Get all public settings (tracking pixels)
+    // Fetch all public settings in a single query
     const { data: settings, error } = await supabase
       .from('app_settings')
-      .select('key, value, category')
-      .eq('is_public', true)
-      .order('key');
+      .select('key, value')
+      .eq('is_public', true);
 
     if (error) {
       console.error('Error fetching settings:', error);
@@ -32,19 +31,21 @@ Deno.serve(async (req) => {
 
     console.log(`Successfully fetched ${settings?.length || 0} public settings`);
 
-    // Transform to key-value object
-    const settingsObject = settings?.reduce((acc, setting) => {
-      acc[setting.key] = setting.value;
-      return acc;
-    }, {} as Record<string, string>) || {};
+    // Transform to key-value object for efficient client-side access
+    const settingsObject: Record<string, string | null> = {};
+    settings?.forEach((setting) => {
+      settingsObject[setting.key] = setting.value;
+    });
 
+    // Return with cache headers for 5 minutes (client can cache)
     return new Response(
       JSON.stringify(settingsObject),
       {
         headers: {
           ...corsHeaders,
           'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          // Allow client-side caching for 5 minutes, revalidate after
+          'Cache-Control': 'public, max-age=300, stale-while-revalidate=60',
         },
       }
     );
