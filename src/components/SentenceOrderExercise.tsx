@@ -14,6 +14,8 @@ import {
   SkipForward
 } from "lucide-react";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
+import { ProtectedContent } from "@/components/ProtectedContent";
+import { useContentProtection } from "@/hooks/useContentProtection";
 
 interface SentenceOrderExerciseProps {
   numero: number;
@@ -76,6 +78,8 @@ export const SentenceOrderExercise = memo(function SentenceOrderExercise({
   onComplete,
   onSkip
 }: SentenceOrderExerciseProps) {
+  // Use centralized content protection
+  useContentProtection();
   const [sentences, setSentences] = useState<Sentence[]>([]);
   const [originalOrder, setOriginalOrder] = useState<string[]>([]);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -189,7 +193,8 @@ export const SentenceOrderExercise = memo(function SentenceOrderExercise({
   }
 
   return (
-    <Card className="w-full max-w-2xl mx-auto border-primary/20">
+    <ProtectedContent>
+      <Card className="w-full max-w-2xl mx-auto border-primary/20">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
@@ -375,6 +380,7 @@ export const SentenceOrderExercise = memo(function SentenceOrderExercise({
           Tentativas: {attempts} | Dicas usadas: {hintsUsed}/2
         </div>
       </CardContent>
-    </Card>
+      </Card>
+    </ProtectedContent>
   );
 });

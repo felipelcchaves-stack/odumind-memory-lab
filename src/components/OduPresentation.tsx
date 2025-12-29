@@ -11,6 +11,8 @@ import { OduAudioPlayer } from "@/components/OduAudioPlayer";
 import { OduAudioPlayerWithSync } from "@/components/OduAudioPlayerWithSync";
 import { SyncedTextHighlighter } from "@/components/SyncedTextHighlighter";
 import { useAudioSettings } from "@/hooks/useAudioSettings";
+import { ProtectedContent } from "@/components/ProtectedContent";
+import { useContentProtection } from "@/hooks/useContentProtection";
 
 interface OduPresentationProps {
   oduId: string;
@@ -37,6 +39,9 @@ export default function OduPresentation({
   onComplete,
   minReadingTime = 30
 }: OduPresentationProps) {
+  // Use centralized content protection
+  useContentProtection();
+
   const [timeRemaining, setTimeRemaining] = useState(minReadingTime);
   const [canProceed, setCanProceed] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
@@ -80,7 +85,8 @@ export default function OduPresentation({
   }, [onComplete]);
 
   return (
-    <AnimatePresence mode="wait">
+    <ProtectedContent>
+      <AnimatePresence mode="wait">
       {!isExiting && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -323,6 +329,7 @@ export default function OduPresentation({
           </div>
         </motion.div>
       )}
-    </AnimatePresence>
+      </AnimatePresence>
+    </ProtectedContent>
   );
 }
