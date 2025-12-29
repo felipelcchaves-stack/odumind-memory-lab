@@ -7,6 +7,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { CheckCircle2, XCircle, Sparkles, HelpCircle, RotateCcw, Eye, SkipForward } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useExerciseMonitoring } from "@/hooks/useExerciseMonitoring";
+import { ProtectedContent } from "@/components/ProtectedContent";
+import { useContentProtection } from "@/hooks/useContentProtection";
 interface ClozeExerciseProps {
   numero: number;
   nome: string;
@@ -99,6 +101,9 @@ const ClozeExercise = memo(function ClozeExercise({
   onSkip,
   hideNumber = false
 }: ClozeExerciseProps) {
+  // Use centralized content protection
+  useContentProtection();
+
   const { logClozeSkip } = useExerciseMonitoring();
   const [gaps, setGaps] = useState<Gap[]>([]);
   const [displayText, setDisplayText] = useState('');
@@ -349,7 +354,8 @@ const ClozeExercise = memo(function ClozeExercise({
   }
   
   return (
-    <div className="w-full max-w-2xl mx-auto">
+    <ProtectedContent>
+      <div className="w-full max-w-2xl mx-auto">
       <Card className="min-h-[400px]">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between mb-2">
@@ -518,7 +524,8 @@ const ClozeExercise = memo(function ClozeExercise({
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </ProtectedContent>
   );
 });
 

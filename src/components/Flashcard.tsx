@@ -9,6 +9,8 @@ import MemorizationStatusBadge from "@/components/MemorizationStatusBadge";
 import MilestoneCelebration from "@/components/MilestoneCelebration";
 import useMilestoneDetection from "@/hooks/useMilestoneDetection";
 import { SafeHtmlRenderer } from "@/components/SafeHtmlRenderer";
+import { ProtectedContent } from "@/components/ProtectedContent";
+import { useContentProtection } from "@/hooks/useContentProtection";
 
 interface FlashcardProps {
   numero: number;
@@ -37,6 +39,9 @@ const Flashcard = memo(function Flashcard({
   status = "nao_estudado",
   hideNumber = false
 }: FlashcardProps) {
+  // Use centralized content protection
+  useContentProtection();
+
   const [isFlipped, setIsFlipped] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
 
@@ -73,7 +78,8 @@ const Flashcard = memo(function Flashcard({
   }, [isMemorized, isFlipped]);
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
+    <ProtectedContent>
+      <div className="w-full max-w-2xl mx-auto">
       {/* Milestone Celebration */}
       {currentMilestone && (
         <MilestoneCelebration 
@@ -241,7 +247,8 @@ const Flashcard = memo(function Flashcard({
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </ProtectedContent>
   );
 });
 

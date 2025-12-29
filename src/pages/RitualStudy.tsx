@@ -9,6 +9,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { ArrowLeft, Clock, Package, Check } from "lucide-react";
 import { toast } from "sonner";
 import { ProtectedContent } from "@/components/ProtectedContent";
+import { useContentProtection } from "@/hooks/useContentProtection";
 import { useTrackingEvents } from "@/hooks/useTrackingEvents";
 import DashboardHeader from "@/components/DashboardHeader";
 
@@ -38,6 +39,9 @@ export default function RitualStudy() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { trackOduMemorized } = useTrackingEvents();
+  
+  // Use centralized content protection
+  useContentProtection();
   
   const [ritual, setRitual] = useState<RitualContent | null>(null);
   const [progress, setProgress] = useState<UserProgress | null>(null);
