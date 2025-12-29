@@ -11,6 +11,8 @@ import { BookOpen, Flame, Heart, Sparkles, Search, Filter } from "lucide-react";
 import { toast } from "sonner";
 import MemorizationStatusBadge from "@/components/MemorizationStatusBadge";
 import DashboardHeader from "@/components/DashboardHeader";
+import { ProtectedContent } from "@/components/ProtectedContent";
+import { useContentProtection } from "@/hooks/useContentProtection";
 
 interface ContentType {
   id: string;
@@ -53,6 +55,9 @@ export default function BibliotecaYoruba() {
   const [content, setContent] = useState<Content[]>([]);
   const [progress, setProgress] = useState<Record<string, Progress>>({});
   const [loading, setLoading] = useState(true);
+  
+  // Ativar proteção anti-cópia
+  useContentProtection();
   
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -214,15 +219,16 @@ export default function BibliotecaYoruba() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardHeader />
-      <div className="container mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Biblioteca Yorubá</h1>
-        <p className="text-muted-foreground">
-          Explore os 256 Odu Ifá, rituais, rezas e invocações sagradas
-        </p>
-      </div>
+    <ProtectedContent>
+      <div className="min-h-screen bg-background">
+        <DashboardHeader />
+        <div className="container mx-auto py-8 px-4">
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold mb-2">Biblioteca Yorubá</h1>
+            <p className="text-muted-foreground">
+              Explore os 256 Odu Ifá, rituais, rezas e invocações sagradas
+            </p>
+          </div>
 
       <Tabs value={selectedType} onValueChange={setSelectedType} className="mb-6">
         <TabsList className="grid w-full grid-cols-4 max-w-2xl">
@@ -315,7 +321,7 @@ export default function BibliotecaYoruba() {
                               #{item.numero}
                             </Badge>
                           )}
-                          <h3 className="font-semibold text-lg">{item.nome}</h3>
+                          <h3 className="font-semibold text-lg select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>{item.nome}</h3>
                         </div>
                         {user && (
                           <MemorizationStatusBadge 
@@ -352,9 +358,10 @@ export default function BibliotecaYoruba() {
               )}
             </div>
           </TabsContent>
-        ))}
-      </Tabs>
+          ))}
+        </Tabs>
+        </div>
       </div>
-    </div>
+    </ProtectedContent>
   );
 }

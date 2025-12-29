@@ -12,6 +12,8 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { useAdmin } from "@/hooks/useAdmin";
 import UpgradeBanner from "@/components/UpgradeBanner";
 import { SafeHtmlRenderer } from "@/components/SafeHtmlRenderer";
+import { ProtectedContent } from "@/components/ProtectedContent";
+import { useContentProtection } from "@/hooks/useContentProtection";
 
 interface Odu {
   id: string;
@@ -34,6 +36,9 @@ export default function OduLibrary() {
   const [loading, setLoading] = useState(true);
   const { subscription, loading: subLoading, hasActiveSubscription } = useSubscription();
   const { isAdmin, isColaborador, loading: adminLoading } = useAdmin();
+  
+  // Ativar proteção anti-cópia
+  useContentProtection();
 
   const FREE_LIMIT = 5; // Primeiros 5 Odu são gratuitos (por quantidade, não pelo campo numero)
   
@@ -101,9 +106,10 @@ export default function OduLibrary() {
   }
 
   return (
-    <div className="min-h-screen bg-background" data-tour="odu-library">
-      <DashboardHeader />
-      <div className="container mx-auto px-4 py-8">
+    <ProtectedContent>
+      <div className="min-h-screen bg-background" data-tour="odu-library">
+        <DashboardHeader />
+        <div className="container mx-auto px-4 py-8">
         {/* Upgrade Banner */}
         {!hasFullAccess && (
           <UpgradeBanner message={`Você está no plano gratuito com acesso aos primeiros ${FREE_LIMIT} Odu. Faça upgrade para desbloquear todos os ${odus.length} Odu Ifá!`} />
@@ -205,7 +211,7 @@ export default function OduLibrary() {
                     {isLocked && <Lock className="h-5 w-5 text-muted-foreground" />}
                   </CardTitle>
                   {odu.verso_resumido && !isLocked && (
-                    <CardDescription className="italic text-sm mb-2">
+                    <CardDescription className="italic text-sm mb-2 select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
                       💬 "{odu.verso_resumido}"
                     </CardDescription>
                   )}
@@ -214,10 +220,12 @@ export default function OduLibrary() {
                       Conteúdo bloqueado. Faça upgrade para acessar.
                     </CardDescription>
                   ) : (
-                    <SafeHtmlRenderer
-                      html={odu.texto_principal}
-                      className="text-sm text-muted-foreground line-clamp-2 prose prose-sm dark:prose-invert max-w-none"
-                    />
+                    <div className="select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
+                      <SafeHtmlRenderer
+                        html={odu.texto_principal}
+                        className="text-sm text-muted-foreground line-clamp-2 prose prose-sm dark:prose-invert max-w-none"
+                      />
+                    </div>
                   )}
                 </CardHeader>
                 <CardContent>
@@ -233,10 +241,12 @@ export default function OduLibrary() {
                         </div>
                       )}
                       {odu.verso && (
-                        <SafeHtmlRenderer
-                          html={odu.verso}
-                          className="border-l-4 border-primary pl-4 italic text-sm text-muted-foreground mb-4 prose prose-sm dark:prose-invert max-w-none"
-                        />
+                        <div className="select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
+                          <SafeHtmlRenderer
+                            html={odu.verso}
+                            className="border-l-4 border-primary pl-4 italic text-sm text-muted-foreground mb-4 prose prose-sm dark:prose-invert max-w-none"
+                          />
+                        </div>
                       )}
                     </>
                   )}
@@ -267,7 +277,8 @@ export default function OduLibrary() {
             </p>
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </ProtectedContent>
   );
 }
