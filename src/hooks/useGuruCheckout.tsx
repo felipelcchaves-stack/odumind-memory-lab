@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { appendUtmToUrl } from '@/lib/utmUtils';
 
 interface GuruCheckoutUrls {
   awoMonthly: string;
@@ -103,8 +104,9 @@ export const useGuruCheckout = () => {
     console.log('[GURU] URL obtida para checkout:', url);
     
     if (url && url.trim() !== '') {
-      console.log('[GURU] Abrindo URL em nova aba:', url);
-      window.open(url, '_blank');
+      const urlWithUtm = appendUtmToUrl(url);
+      console.log('[GURU] Abrindo URL com UTMs:', urlWithUtm);
+      window.open(urlWithUtm, '_blank');
       return true;
     }
     
