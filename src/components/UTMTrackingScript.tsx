@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 // Domínios de checkout suportados
 const CHECKOUT_DOMAINS = [
@@ -52,143 +52,160 @@ const setCookie = (name: string, value: string, days: number): void => {
 };
 
 export const UTMTrackingScript = () => {
+  const isInitialized = useRef(false);
+  
   useEffect(() => {
-    // 1. CAPTURA DE UTMs
-    const urlParams = new URLSearchParams(window.location.search);
-    const utmParams: Record<string, string> = {};
+    // Evitar múltiplas inicializações
+    if (isInitialized.current) return;
     
-    ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid'].forEach((param) => {
-      const value = urlParams.get(param);
-      if (value) utmParams[param] = value;
-    });
-    
-    console.log('[UTMTracking] UTMs capturados:', utmParams);
-
-    // 2. COOKIES DE META
-    const fbclid = utmParams['fbclid'];
-    
-    // Gerar _fbc se tiver fbclid e não existir cookie
-    if (fbclid && !getCookie('_fbc')) {
-      const fbc = generateFbc(fbclid);
-      setCookie('_fbc', fbc, 90);
-      console.log('[UTMTracking] Cookie _fbc criado:', fbc);
-    }
-    
-    // Gerar _fbp se não existir
-    if (!getCookie('_fbp')) {
-      const fbp = generateFbp();
-      setCookie('_fbp', fbp, 90);
-      console.log('[UTMTracking] Cookie _fbp criado:', fbp);
-    }
-
-    // 3. MODIFICAR LINKS DE CHECKOUT
-    const modifyCheckoutLinks = () => {
-      // Se não há UTMs, não faz nada
-      if (Object.keys(utmParams).length === 0) return;
+    const init = () => {
+      // Verificar se document.body existe
+      if (typeof document === 'undefined' || !document.body) {
+        requestAnimationFrame(init);
+        return;
+      }
       
-      // Criar seletor para todos os domínios
-      const selector = CHECKOUT_DOMAINS.map(d => `a[href*="${d}"]`).join(', ');
-      const checkoutLinks = document.querySelectorAll<HTMLAnchorElement>(selector);
+      isInitialized.current = true;
       
-      checkoutLinks.forEach((link) => {
-        // Evitar processar o mesmo link duas vezes
-        if (link.dataset.utmProcessed === 'true') return;
-        
-        try {
-          const url = new URL(link.href);
-          
-          // a) Adicionar todos os UTMs como query params
-          Object.entries(utmParams).forEach(([key, value]) => {
-            url.searchParams.set(key, value);
-          });
-          
-          // b) Adicionar parâmetro de tracking codificado
-          const trackingParam = getTrackingParam(link.href);
-          const trackingValue = [
-            utmParams['utm_source'] || '',
-            utmParams['utm_medium'] || '',
-            utmParams['utm_campaign'] || '',
-            utmParams['utm_content'] || '',
-            getCookie('_fbc') || utmParams['fbclid'] || ''
-          ].filter(Boolean).join('__');
-          
-          if (trackingValue) {
-            url.searchParams.set(trackingParam, trackingValue);
-          }
-          
-          link.href = url.toString();
-          link.dataset.utmProcessed = 'true';
-          
-          console.log('[UTMTracking] Link modificado:', link.href);
-          
-          // 4. EVENTO INITIATE CHECKOUT ao clicar
-          link.addEventListener('click', () => {
-            const fbp = getCookie('_fbp');
-            const fbc = getCookie('_fbc');
-            
-            // Disparar evento fbq
-            if (typeof window !== 'undefined' && (window as any).fbq) {
-              (window as any).fbq('track', 'InitiateCheckout', {
-                content_name: url.hostname,
-                utm_source: utmParams['utm_source'],
-                utm_campaign: utmParams['utm_campaign']
-              });
-              console.log('[UTMTracking] fbq InitiateCheckout disparado');
-            }
-            
-            // Enviar beacon para tracking
-            const payload = {
-              event_name: 'InitiateCheckout',
-              page_url: window.location.href,
-              fbp,
-              fbc,
-              utm_source: utmParams['utm_source'] || null,
-              utm_medium: utmParams['utm_medium'] || null,
-              utm_campaign: utmParams['utm_campaign'] || null,
-              utm_content: utmParams['utm_content'] || null
-            };
-            
-            if (navigator.sendBeacon) {
-              navigator.sendBeacon(
-                'https://kmvcrnrpdcnjegrkaeci.supabase.co/functions/v1/track-pixel-events',
-                JSON.stringify(payload)
-              );
-              console.log('[UTMTracking] Beacon enviado:', payload);
-            }
-          });
-        } catch (e) {
-          console.error('[UTMTracking] Erro ao processar link:', e);
-        }
+      // 1. CAPTURA DE UTMs
+      const urlParams = new URLSearchParams(window.location.search);
+      const utmParams: Record<string, string> = {};
+      
+      ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid'].forEach((param) => {
+        const value = urlParams.get(param);
+        if (value) utmParams[param] = value;
       });
+      
+      console.log('[UTMTracking] UTMs capturados:', utmParams);
+
+      // 2. COOKIES DE META
+      const fbclid = utmParams['fbclid'];
+      
+      // Gerar _fbc se tiver fbclid e não existir cookie
+      if (fbclid && !getCookie('_fbc')) {
+        const fbc = generateFbc(fbclid);
+        setCookie('_fbc', fbc, 90);
+        console.log('[UTMTracking] Cookie _fbc criado:', fbc);
+      }
+      
+      // Gerar _fbp se não existir
+      if (!getCookie('_fbp')) {
+        const fbp = generateFbp();
+        setCookie('_fbp', fbp, 90);
+        console.log('[UTMTracking] Cookie _fbp criado:', fbp);
+      }
+
+      // 3. MODIFICAR LINKS DE CHECKOUT
+      const modifyCheckoutLinks = () => {
+        // Se não há UTMs, não faz nada
+        if (Object.keys(utmParams).length === 0) return;
+        
+        // Criar seletor para todos os domínios
+        const selector = CHECKOUT_DOMAINS.map(d => `a[href*="${d}"]`).join(', ');
+        const checkoutLinks = document.querySelectorAll<HTMLAnchorElement>(selector);
+        
+        checkoutLinks.forEach((link) => {
+          // Evitar processar o mesmo link duas vezes
+          if (link.dataset.utmProcessed === 'true') return;
+          
+          try {
+            const url = new URL(link.href);
+            
+            // a) Adicionar todos os UTMs como query params
+            Object.entries(utmParams).forEach(([key, value]) => {
+              url.searchParams.set(key, value);
+            });
+            
+            // b) Adicionar parâmetro de tracking codificado
+            const trackingParam = getTrackingParam(link.href);
+            const trackingValue = [
+              utmParams['utm_source'] || '',
+              utmParams['utm_medium'] || '',
+              utmParams['utm_campaign'] || '',
+              utmParams['utm_content'] || '',
+              getCookie('_fbc') || utmParams['fbclid'] || ''
+            ].filter(Boolean).join('__');
+            
+            if (trackingValue) {
+              url.searchParams.set(trackingParam, trackingValue);
+            }
+            
+            link.href = url.toString();
+            link.dataset.utmProcessed = 'true';
+            
+            console.log('[UTMTracking] Link modificado:', link.href);
+            
+            // 4. EVENTO INITIATE CHECKOUT ao clicar
+            link.addEventListener('click', () => {
+              const fbp = getCookie('_fbp');
+              const fbc = getCookie('_fbc');
+              
+              // Disparar evento fbq
+              if (typeof window !== 'undefined' && (window as any).fbq) {
+                (window as any).fbq('track', 'InitiateCheckout', {
+                  content_name: url.hostname,
+                  utm_source: utmParams['utm_source'],
+                  utm_campaign: utmParams['utm_campaign']
+                });
+                console.log('[UTMTracking] fbq InitiateCheckout disparado');
+              }
+              
+              // Enviar beacon para tracking
+              const payload = {
+                event_name: 'InitiateCheckout',
+                page_url: window.location.href,
+                fbp,
+                fbc,
+                utm_source: utmParams['utm_source'] || null,
+                utm_medium: utmParams['utm_medium'] || null,
+                utm_campaign: utmParams['utm_campaign'] || null,
+                utm_content: utmParams['utm_content'] || null
+              };
+              
+              if (navigator.sendBeacon) {
+                navigator.sendBeacon(
+                  'https://kmvcrnrpdcnjegrkaeci.supabase.co/functions/v1/track-pixel-events',
+                  JSON.stringify(payload)
+                );
+                console.log('[UTMTracking] Beacon enviado:', payload);
+              }
+            });
+          } catch (e) {
+            console.error('[UTMTracking] Erro ao processar link:', e);
+          }
+        });
+      };
+      
+      // Executar imediatamente
+      modifyCheckoutLinks();
+      
+      // 5. MUTATION OBSERVER para links dinâmicos com debounce
+      let debounceTimeout: ReturnType<typeof setTimeout>;
+      const observer = new MutationObserver(() => {
+        clearTimeout(debounceTimeout);
+        debounceTimeout = setTimeout(modifyCheckoutLinks, 100);
+      });
+      
+      try {
+        observer.observe(document.body, { 
+          childList: true, 
+          subtree: true 
+        });
+        console.log('[UTMTracking] Inicializado com sucesso');
+      } catch (e) {
+        console.error('[UTMTracking] Erro ao iniciar observer:', e);
+      }
+      
+      return () => {
+        clearTimeout(debounceTimeout);
+        observer.disconnect();
+      };
     };
     
-    // Executar imediatamente
-    modifyCheckoutLinks();
+    // Aguardar o DOM estar pronto
+    const timeoutId = setTimeout(init, 50);
     
-    // 5. MUTATION OBSERVER para links dinâmicos
-    const observer = new MutationObserver((mutations) => {
-      let shouldProcess = false;
-      
-      for (const mutation of mutations) {
-        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-          shouldProcess = true;
-          break;
-        }
-      }
-      
-      if (shouldProcess) {
-        modifyCheckoutLinks();
-      }
-    });
-    
-    observer.observe(document.body, { 
-      childList: true, 
-      subtree: true 
-    });
-    
-    console.log('[UTMTracking] Inicializado com sucesso');
-    
-    return () => observer.disconnect();
+    return () => clearTimeout(timeoutId);
   }, []);
   
   return null;
