@@ -159,12 +159,12 @@ function AppContent() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <AuthProvider>
-        <TooltipProvider>
-          <UTMTrackingScript />
+      <TooltipProvider>
+        <UTMTrackingScript />
+        <AuthProvider>
           <AppContent />
-        </TooltipProvider>
-      </AuthProvider>
+        </AuthProvider>
+      </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>
 );
