@@ -1,29 +1,28 @@
 import { useEffect } from 'react';
+import { getUtmParams } from '@/lib/utmUtils';
 
-export const useUTMPassthrough = (hotmartDomain = 'pay.hotmart.com') => {
+// Domínios de checkout suportados
+const DEFAULT_CHECKOUT_DOMAINS = [
+  'pay.hotmart.com',
+  'hotmart.com',
+  'clkdmg.site',
+  'pay.guru.com.br',
+  'digitalmanager.guru',
+];
+
+export const useUTMPassthrough = (domains: string[] = DEFAULT_CHECKOUT_DOMAINS) => {
   useEffect(() => {
-    // Captura UTMs da URL atual
-    const urlParams = new URLSearchParams(window.location.search);
-    const utmParams: Record<string, string> = {};
-    
-    ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach((param) => {
-      const value = urlParams.get(param);
-      if (value) utmParams[param] = value;
-    });
-    
-    // Captura fbclid para CAPI
-    const fbclid = urlParams.get('fbclid');
-    if (fbclid) utmParams['fbclid'] = fbclid;
+    const utmParams = getUtmParams();
     
     // Se não há UTMs, não faz nada
     if (Object.keys(utmParams).length === 0) return;
     
     const addUtmsToLinks = () => {
-      const hotmartLinks = document.querySelectorAll<HTMLAnchorElement>(
-        `a[href*="${hotmartDomain}"], a[href*="hotmart.com"]`
-      );
+      // Cria seletor para todos os domínios
+      const selector = domains.map(d => `a[href*="${d}"]`).join(', ');
+      const checkoutLinks = document.querySelectorAll<HTMLAnchorElement>(selector);
       
-      hotmartLinks.forEach((link) => {
+      checkoutLinks.forEach((link) => {
         try {
           const url = new URL(link.href);
           
@@ -32,14 +31,14 @@ export const useUTMPassthrough = (hotmartDomain = 'pay.hotmart.com') => {
             url.searchParams.set(key, value);
           });
           
-          // Adiciona sck para rastreamento nativo Hotmart
+          // Adiciona sck para rastreamento nativo (Hotmart/Guru)
           if (utmParams['utm_content']) {
             url.searchParams.set('sck', utmParams['utm_content']);
           }
           
           link.href = url.toString();
         } catch (e) {
-          console.error('Erro ao processar link Hotmart:', e);
+          console.error('[UTM] Erro ao processar link de checkout:', e);
         }
       });
     };
@@ -55,5 +54,5 @@ export const useUTMPassthrough = (hotmartDomain = 'pay.hotmart.com') => {
     });
     
     return () => observer.disconnect();
-  }, [hotmartDomain]);
+  }, [domains]);
 };

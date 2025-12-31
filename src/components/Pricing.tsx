@@ -7,6 +7,7 @@ import { useGuruCheckout } from "@/hooks/useGuruCheckout";
 import { useLandingTracking } from "@/hooks/useLandingTracking";
 import { useSubscriptionPlans } from "@/hooks/useSubscriptionPlans";
 import { Skeleton } from "@/components/ui/skeleton";
+import { appendUtmToUrl } from "@/lib/utmUtils";
 
 const Pricing = () => {
   const navigate = useNavigate();
@@ -41,9 +42,10 @@ const Pricing = () => {
       await new Promise(resolve => setTimeout(resolve, 500));
     }
 
-    // Se tem checkout_url direto, usa
+    // Se tem checkout_url direto, usa (com UTMs)
     if (plan.checkout_url) {
-      window.open(plan.checkout_url, '_blank');
+      const urlWithUtm = appendUtmToUrl(plan.checkout_url);
+      window.open(urlWithUtm, '_blank');
       return;
     }
 
