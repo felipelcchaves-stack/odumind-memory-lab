@@ -7,6 +7,7 @@ import { useLandingAnalytics } from "@/hooks/useLandingAnalytics";
 import { useLazyCustomScripts } from "@/hooks/useLazyCustomScripts";
 import { useDelayedClickTracking } from "@/hooks/useDelayedClickTracking";
 import { useUtmTracking } from "@/hooks/useUtmTracking";
+import { useUTMPassthrough } from "@/hooks/useUTMPassthrough";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Lazy loaded components for below-the-fold content
@@ -69,6 +70,9 @@ function IndexContent() {
 
   // Capture UTM parameters
   useUtmTracking();
+
+  // Pass UTMs to Hotmart links
+  useUTMPassthrough();
 
   useEffect(() => {
     if (user) {
