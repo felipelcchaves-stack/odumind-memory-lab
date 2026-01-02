@@ -2,10 +2,11 @@ import { useState } from "react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Upload } from "lucide-react";
+import { Plus, Upload, Download } from "lucide-react";
 import OduEditor from "@/components/admin/OduEditor";
 import OduList from "@/components/admin/OduList";
 import BulkUpload from "@/components/admin/BulkUpload";
+import OduExport from "@/components/admin/OduExport";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function AdminOduPage() {
@@ -57,6 +58,7 @@ export default function AdminOduPage() {
             <TabsTrigger value="list">Lista</TabsTrigger>
             <TabsTrigger value="editor">Editor</TabsTrigger>
             <TabsTrigger value="upload">Upload</TabsTrigger>
+            <TabsTrigger value="export">Exportar</TabsTrigger>
           </TabsList>
 
           <TabsContent value="list" className="mt-6">
@@ -109,6 +111,10 @@ export default function AdminOduPage() {
                 />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="export" className="mt-6">
+            <OduExport />
           </TabsContent>
         </Tabs>
       </div>
