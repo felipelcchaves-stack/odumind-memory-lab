@@ -1,4 +1,4 @@
-import { useState, useEffect, memo, useMemo, useCallback } from "react";
+import { useState, useEffect, memo, useMemo, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -112,23 +112,27 @@ const ClozeExercise = memo(function ClozeExercise({
   const [attempts, setAttempts] = useState(0);
   const [wasRevealed, setWasRevealed] = useState(false);
   
+  // Refs para callbacks - evita re-runs do useEffect quando o pai re-renderiza
+  const onAnswerRef = useRef(onAnswer);
+  const onSkipRef = useRef(onSkip);
+  onAnswerRef.current = onAnswer;
+  onSkipRef.current = onSkip;
+  
   // Memoiza oduInfo para evitar recriações
   const oduInfo = useMemo(() => ({ id: oduId, numero, nome }), [oduId, numero, nome]);
   
   // Memoiza logClozeSkip para estabilidade
   const stableLogClozeSkip = useCallback(logClozeSkip, [logClozeSkip]);
   
-  // Inicializa o exercício
+  // Inicializa o exercício - SÓ depende do conteúdo, não dos callbacks
   useEffect(() => {
     if (!versoResumido || versoResumido.trim().length === 0) {
-      // Verso vazio - pular imediatamente via onSkip (SEM contar como exercício completado)
       console.log('⚠️ [ClozeExercise] verso_resumido vazio, pulando via onSkip');
       stableLogClozeSkip('cloze_empty_verso', oduInfo, { versoLength: 0 });
-      // Chamar onSkip imediatamente para evitar cadeia de auto-skips
-      if (onSkip) {
-        onSkip();
+      if (onSkipRef.current) {
+        onSkipRef.current();
       } else {
-        onAnswer(false, 0);
+        onAnswerRef.current(false, 0);
       }
       return;
     }
@@ -138,18 +142,16 @@ const ClozeExercise = memo(function ClozeExercise({
     
     const { displayText: text, gaps: newGaps } = createClozeText(versoResumido, keywords);
     
-    // Se não conseguiu criar lacunas, pular imediatamente via onSkip
     if (newGaps.length === 0) {
       console.log('⚠️ [ClozeExercise] Não conseguiu criar lacunas, pulando via onSkip');
       stableLogClozeSkip('cloze_no_keywords', oduInfo, { 
         versoLength: versoResumido.length,
         keywordsFound: keywords.length 
       });
-      // Pular sem contar como exercício completado
-      if (onSkip) {
-        onSkip();
+      if (onSkipRef.current) {
+        onSkipRef.current();
       } else {
-        onAnswer(false, 0);
+        onAnswerRef.current(false, 0);
       }
       return;
     }
@@ -161,7 +163,7 @@ const ClozeExercise = memo(function ClozeExercise({
     setShowResult(false);
     setAttempts(0);
     setWasRevealed(false);
-  }, [versoResumido, onAnswer, onSkip, oduInfo, stableLogClozeSkip]);
+  }, [versoResumido, oduInfo, stableLogClozeSkip]);
   
   // Atualiza input de uma lacuna
   const handleInputChange = (index: number, value: string) => {
@@ -206,7 +208,7 @@ const ClozeExercise = memo(function ClozeExercise({
       
       // Delay para mostrar feedback visual
       setTimeout(() => {
-        onAnswer(allCorrect, finalScore);
+        onAnswerRef.current(allCorrect, finalScore);
       }, 2000);
     }
   };
@@ -235,16 +237,16 @@ const ClozeExercise = memo(function ClozeExercise({
     
     // Pontuação reduzida por revelar (30% do máximo = 30 XP)
     setTimeout(() => {
-      onAnswer(true, 30);
+      onAnswerRef.current(true, 30);
     }, 2000);
   };
   
   // Pula o exercício (0 XP)
   const handleSkip = () => {
-    if (onSkip) {
-      onSkip(); // Usar handler externo se disponível
+    if (onSkipRef.current) {
+      onSkipRef.current();
     } else {
-      onAnswer(false, 0);
+      onAnswerRef.current(false, 0);
     }
   };
   
