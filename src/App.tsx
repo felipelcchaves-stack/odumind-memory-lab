@@ -60,6 +60,7 @@ import AdminPlansPage from "./pages/admin/AdminPlansPage";
 import AdminReviewsPage from "./pages/admin/AdminReviewsPage";
 import AdminFamilyGroupsPage from "./pages/admin/AdminFamilyGroupsPage";
 import AdminHeatmapPage from "./pages/admin/AdminHeatmapPage";
+import AdminSubscriptionsPage from "./pages/admin/AdminSubscriptionsPage";
 const queryClient = new QueryClient();
 
 function SessionValidator() {
@@ -139,6 +140,7 @@ function AppContent() {
             <Route path="reviews" element={<AdminReviewsPage />} />
             <Route path="family-groups" element={<AdminFamilyGroupsPage />} />
             <Route path="heatmap" element={<AdminHeatmapPage />} />
+            <Route path="subscriptions" element={<AdminSubscriptionsPage />} />
             <Route path="restore" element={<AdminRestorePage />} />
           </Route>
           <Route path="/profile" element={<Profile />} />
