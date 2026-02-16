@@ -1,186 +1,86 @@
 
-## Plano: Sistema de Controle de Inadimplência para GURU/Pagar.me
+# Correção: Exercícios sendo pulados automaticamente na sessão de estudo
 
-### Solução em 3 Frentes
+## Problema Identificado
 
-#### **FRENTE 1: Correção Imediata - check-subscription**
-Modificar a Edge Function `check-subscription` para BLOQUEAR acesso quando `current_period_end` já passou:
+O aluno relata que ao clicar em "avançar" uma única vez, o sistema pula 2-3 exercícios de uma vez. Após análise detalhada do código, identifiquei a causa raiz:
 
-**Mudança no código:**
-```typescript
-// Verificar se o período expirou
-if (localSub.current_period_end) {
-  const periodEnd = new Date(localSub.current_period_end);
-  const now = new Date();
-  
-  if (periodEnd < now && localSub.status === 'active') {
-    // NOVA LÓGICA: Marcar como expirado automaticamente
-    await supabaseAdmin
-      .from('subscriptions')
-      .update({ 
-        status: 'expired',
-        plan_name: 'Gratuito',
-        updated_at: now.toISOString()
-      })
-      .eq('user_id', user.id);
-    
-    return {
-      subscribed: false,  // BLOQUEADO!
-      status: 'expired',
-      plan_name: 'Gratuito',
-      message: 'Período de assinatura expirado'
-    };
-  }
-}
+### Causa Raiz: Auto-skip em cadeia no ClozeExercise
+
+Quando o sistema seleciona o modo "cloze" (Complete a Frase) para um Odu, o componente `ClozeExercise` verifica se consegue criar lacunas no texto. Se o `verso_resumido` existir mas nao tiver palavras-chave viáveis, o componente **auto-pula silenciosamente** chamando `onAnswer(true, 50)` via `setTimeout` (2-2.5 segundos) -- sem qualquer interação do usuário.
+
+Fluxo do bug:
+
+```text
+1. Usuario clica "Facil" no Flashcard
+2. handleFlashcardRate() processa resposta, salva no banco
+3. Apos 1.2s, selectRandomOdu() escolhe proximo Odu com modo "cloze"
+4. ClozeExercise monta, descobre que verso nao tem keywords
+5. Auto-chama onAnswer(true, 50) apos 2s (SEM interacao do usuario)
+6. handleClozeAnswer() -> handleFlashcardRate() processa como se fosse resposta real
+7. selectRandomOdu() escolhe outro Odu, possivelmente "cloze" de novo
+8. Repete passos 4-7 -> pula 2-3 exercicios visivelmente
 ```
 
-#### **FRENTE 2: Job Agendado para Expirar Assinaturas**
-Criar nova Edge Function `expire-subscriptions` que roda periodicamente (cron job diário) para:
-1. Buscar todas assinaturas onde `current_period_end < NOW()` e `status = 'active'`
-2. Atualizar para `status = 'expired'` e `plan_name = 'Gratuito'`
-3. Enviar email notificando o usuário
+O contador de exercicios (`cardsStudied`) incrementa a cada auto-skip, entao o usuario ve o numero pular de ex: 3 para 6.
 
-**Configuração do cron no Supabase:**
-- Usar pg_cron ou invocar via serviço externo (Supabase não tem cron nativo)
-- Alternativa: usar Supabase Database Functions com pg_cron extension
+### Problemas secundarios encontrados
 
-#### **FRENTE 3: Período de Graça (Opcional)**
-Adicionar coluna `grace_period_days` na tabela `app_settings` para:
-- Dar X dias extras após expiração antes de bloquear
-- Útil para casos de atraso temporário no pagamento
+1. **Side effect dentro de `useMemo`**: Em `generateQuizQuestion` (linha 1334), há um `setMode("flashcard")` dentro de um `useMemo`, que é um anti-pattern do React e pode causar renders inesperados.
+
+2. **Flashcard fallback sem `key`**: O flashcard de fallback (linhas 2120-2131) não tem prop `key` unica, podendo manter estado de um exercício anterior.
+
+3. **Validação de conteúdo insuficiente**: A verificação `hasClozeContent = versoContent.length >= 20` na seleção de modo não é suficiente -- um texto de 20+ caracteres pode ser composto apenas de stopwords.
 
 ---
 
-### Arquivos a Criar/Modificar
+## Plano de Correção
 
-| Arquivo | Ação |
-|---------|------|
-| `supabase/functions/check-subscription/index.ts` | Modificar para expirar automaticamente |
-| `supabase/functions/expire-subscriptions/index.ts` | Criar nova função para job diário |
-| Migração SQL | Adicionar função de limpeza e configuração de período de graça |
+### 1. Eliminar auto-skip silencioso no ClozeExercise
 
----
+**Arquivo:** `src/components/ClozeExercise.tsx`
 
-### Migração SQL Necessária
+Quando o ClozeExercise não consegue criar lacunas, em vez de chamar `onAnswer()` automaticamente, vai chamar `onSkip()` imediatamente. Isso faz o sistema selecionar outro Odu/modo sem registrar como exercício completado (sem incrementar `cardsStudied`, sem dar XP).
 
-```sql
--- 1. Adicionar configuração de período de graça
-INSERT INTO app_settings (key, value, category)
-VALUES ('subscription_grace_period_days', '3', 'subscription')
-ON CONFLICT (key) DO NOTHING;
+Mudanças:
+- Remover os `setTimeout(() => onAnswer(true, 50), ...)` das linhas 132 e 153
+- Substituir por chamada direta a `onSkip?.()` ou `onAnswer(false, 0)` (sem delay)
+- Manter o feedback visual de fallback mas sem auto-avançar como "correto"
 
--- 2. Corrigir assinaturas já expiradas
-UPDATE subscriptions 
-SET status = 'expired', 
-    plan_name = 'Gratuito',
-    updated_at = NOW()
-WHERE status = 'active' 
-  AND current_period_end < NOW()
-  AND payment_gateway = 'guru';
+### 2. Adicionar validação de keywords ANTES de selecionar modo cloze
 
--- 3. Criar função para expirar assinaturas automaticamente
-CREATE OR REPLACE FUNCTION public.expire_overdue_subscriptions()
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  grace_days INTEGER;
-BEGIN
-  -- Buscar período de graça configurado
-  SELECT COALESCE((
-    SELECT value::INTEGER 
-    FROM app_settings 
-    WHERE key = 'subscription_grace_period_days'
-  ), 0) INTO grace_days;
-  
-  -- Expirar assinaturas que passaram do período + graça
-  UPDATE subscriptions
-  SET status = 'expired',
-      plan_name = 'Gratuito',
-      updated_at = NOW()
-  WHERE status = 'active'
-    AND current_period_end < (NOW() - (grace_days || ' days')::INTERVAL)
-    AND payment_gateway = 'guru';
-END;
-$$;
-```
+**Arquivo:** `src/pages/StudySession.tsx`
+
+Na função `selectRandomOdu`, melhorar a validação `hasClozeContent` para verificar se o texto realmente tem palavras-chave viáveis antes de selecionar cloze/dragdrop/sentence-order.
+
+Mudanças:
+- Criar função `hasViableKeywords(text)` que reproduz a logica de `extractKeywords` para verificação prévia
+- Usar essa validação na seleção de modo (linhas 795-845)
+- Se o texto não tiver keywords viáveis, forçar flashcard ou quiz
+
+### 3. Impedir que auto-skips contem como exercícios completados
+
+**Arquivo:** `src/pages/StudySession.tsx`
+
+Modificar `handleSkipExercise` para NÃO chamar `handleFlashcardRate` e NÃO incrementar `sessionStats.cardsStudied`. Skip deve apenas avançar para o próximo exercício sem registrar progresso.
+
+### 4. Corrigir side effect no useMemo
+
+**Arquivo:** `src/pages/StudySession.tsx`
+
+Remover o `setMode("flashcard")` de dentro do `generateQuizQuestion` useMemo. Em vez disso, tratar o caso de "poucas opções para quiz" na renderização ou no selectRandomOdu.
+
+### 5. Adicionar key ao Flashcard de fallback
+
+**Arquivo:** `src/pages/StudySession.tsx`
+
+Adicionar prop `key` ao flashcard de fallback (linhas 2120-2131) para garantir reset de estado.
 
 ---
 
-### Edge Function: expire-subscriptions
+## Resultado Esperado
 
-Nova função que pode ser chamada manualmente ou via cron:
-
-```typescript
-// Busca assinaturas expiradas e atualiza
-const { data: expiredSubs } = await supabase
-  .from('subscriptions')
-  .select('id, user_id, plan_name, current_period_end')
-  .eq('status', 'active')
-  .eq('payment_gateway', 'guru')
-  .lt('current_period_end', new Date().toISOString());
-
-for (const sub of expiredSubs) {
-  // Atualizar para expirado
-  await supabase
-    .from('subscriptions')
-    .update({ status: 'expired', plan_name: 'Gratuito' })
-    .eq('id', sub.id);
-  
-  // Opcional: Enviar email de aviso
-  await supabase.functions.invoke('send-expiration-email', {
-    body: { userId: sub.user_id }
-  });
-}
-```
-
----
-
-### Como Executar o Job Diariamente
-
-**Opção A: Invocação Externa (Recomendada)**
-Usar um serviço como:
-- **Cron-job.org** (gratuito)
-- **EasyCron**
-- **GitHub Actions**
-
-Configurar para chamar:
-```
-POST https://wmwuirqdluzjdqtmfzsm.supabase.co/functions/v1/expire-subscriptions
-Authorization: Bearer [ANON_KEY]
-```
-
-**Opção B: Verificação no Login**
-Chamar a função de expiração sempre que o usuário fizer login (já implementado no check-subscription modificado)
-
----
-
-### Configuração do Webhook no GURU/Pagar.me
-
-Verificar no painel do GURU se os seguintes eventos estão configurados para enviar webhook:
-1. `subscription_expired`
-2. `subscription_overdue` 
-3. `payment_failed`
-4. `subscription_canceled`
-
-URL do webhook: `https://wmwuirqdluzjdqtmfzsm.supabase.co/functions/v1/guru-webhook`
-
----
-
-### Resultado Esperado
-
-1. **Imediato**: 13 assinaturas expiradas serão bloqueadas
-2. **Contínuo**: Qualquer assinatura que expirar será automaticamente bloqueada
-3. **Período de graça**: 3 dias configuráveis antes do bloqueio total
-4. **Reativação**: Quando o pagamento for feito, o webhook do GURU reativará automaticamente
-
----
-
-### Ação Recomendada Adicional
-
-No painel da **Pagar.me/GURU**, verificar:
-- Se os webhooks de renovação estão configurados
-- Se há tentativas de cobrança automática
-- Se o endpoint do webhook está correto
+- Exercícios que não podem ser gerados (cloze sem keywords) serão pulados instantaneamente SEM contar como completados
+- O contador de exercícios só incrementa quando o usuario realmente interage
+- A seleção de modo evita escolher cloze/dragdrop para Odus sem conteúdo viável
+- Fim dos "pulos" visíveis de 2-3 exercícios
