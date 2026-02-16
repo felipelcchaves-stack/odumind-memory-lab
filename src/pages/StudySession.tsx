@@ -88,6 +88,23 @@ interface SessionStats {
 
 type StudyMode = "flashcard" | "quiz" | "cloze" | "dragdrop" | "sentence-order";
 
+// Validação de keywords viáveis para exercícios interativos (cloze, dragdrop, sentence-order)
+// Reproduz a lógica de extractKeywords do ClozeExercise para verificação prévia
+function hasViableKeywords(text: string): boolean {
+  if (!text || text.trim().length < 20) return false;
+  
+  const words = text.replace(/[.,;:!?"""''()]/g, '').split(/\s+/).filter(w => w.length > 0);
+  const stopWords = ['que', 'para', 'com', 'uma', 'dos', 'das', 'por', 'como', 'mais', 'seu', 'sua', 'seus', 'suas', 'ele', 'ela', 'eles', 'elas', 'este', 'esta', 'esse', 'essa', 'isso', 'aqui', 'ali', 'onde', 'quando', 'porque', 'assim', 'então', 'também', 'ainda', 'sempre', 'nunca', 'muito', 'pouco', 'não', 'sim', 'ser', 'ter', 'foi', 'são', 'tem', 'está', 'era', 'vai', 'vem'];
+  
+  const keywords = words.filter(word => 
+    word.length >= 3 && 
+    !stopWords.includes(word.toLowerCase()) &&
+    !/^\d+$/.test(word)
+  );
+  
+  return keywords.length >= 1;
+}
+
 const FREE_LIMIT = 5; // Limite para usuários gratuitos (agora progressivo)
 
 interface PhaseInfo {
@@ -438,17 +455,17 @@ export default function StudySession() {
         setIsShowingPresentation(true);
       }
       
-      // Determinar exercícios viáveis baseado no conteúdo
+      // Determinar exercícios viáveis baseado no conteúdo (com validação de keywords)
       const versoContent = odu.verso_resumido?.trim() || '';
       const significadoContent = odu.significado?.trim() || '';
-      const hasTextContent = versoContent.length >= 20 || significadoContent.length >= 20;
+      const hasInteractiveContent = hasViableKeywords(versoContent) || hasViableKeywords(significadoContent);
       
       const exercises: StudyMode[] = ['flashcard'];
-      if (hasTextContent) {
+      if (hasInteractiveContent) {
         exercises.push('cloze', 'dragdrop', 'sentence-order');
       }
       
-      console.log('🎯 Exercícios viáveis para loop:', exercises);
+      console.log('🎯 Exercícios viáveis para loop:', exercises, { hasInteractiveContent, versoLen: versoContent.length });
       setViableExercises(exercises);
       
       // Iniciar com flashcard
@@ -510,15 +527,16 @@ export default function StudySession() {
     setCardStartTime(Date.now());
   }
 
-  // Handler para pular exercício - funciona para todos os exercícios
+  // Handler para pular exercício - NÃO conta como exercício completado
+  // NÃO incrementa cardsStudied, NÃO dá XP, apenas avança
   function handleSkipExercise() {
-    toast.info('Exercício pulado', { duration: 1500 });
+    console.log('⏭️ Exercício pulado (sem contar como completado)');
     
     if (isSingleOduMode) {
       // Modo individual: avançar para próximo exercício do loop
       advanceToNextExercise();
     } else {
-      // Modo normal: selecionar outro Odu
+      // Modo normal: selecionar outro Odu/modo
       selectRandomOdu();
     }
   }
@@ -793,7 +811,8 @@ export default function StudySession() {
     // Select study mode: flashcard, quiz, cloze, dragdrop, or sentence-order
     // Cloze/dragdrop/sentence-order only works if verso_resumido exists with sufficient content
     const versoContent = selectedOdu.verso_resumido?.trim() || '';
-    const hasClozeContent = versoContent.length >= 20;
+    // Validação forte: verificar se realmente tem keywords viáveis (não apenas comprimento)
+    const hasClozeContent = hasViableKeywords(versoContent);
     const canDoQuiz = pool.length >= 4 && !lowOduMode;
     
     // Log de diagnóstico para rastrear seleção de modo
@@ -1327,12 +1346,8 @@ export default function StudySession() {
   const generateQuizQuestion = useMemo((): QuizQuestion | null => {
     if (!currentOdu) return null;
     
-    // ✅ FALLBACK: Se não há Odus suficientes para quiz, forçar flashcard
+    // Se não há Odus suficientes para quiz, retornar null (o fallback na renderização cuidará disso)
     if (!availableOdus || availableOdus.length < 4) {
-      if (mode === "quiz") {
-        console.log("⚠️ Quiz indisponível (< 4 Odus), forçando flashcard");
-        setMode("flashcard");
-      }
       return null;
     }
     
@@ -2118,6 +2133,7 @@ export default function StudySession() {
         ) : (
           // ✅ FALLBACK: Se modo não disponível, mostrar flashcard
           <Flashcard
+            key={`fallback-flashcard-${currentOdu.id}-${loopCount}-${singleOduExerciseIndex}`}
             numero={currentOdu.numero}
             nome={currentOdu.nome}
             texto={currentOdu.texto_principal}
