@@ -121,15 +121,15 @@ const ClozeExercise = memo(function ClozeExercise({
   // Inicializa o exercício
   useEffect(() => {
     if (!versoResumido || versoResumido.trim().length === 0) {
-      // Verso vazio - notificar e pular (usuário precisa ver feedback)
-      console.log('⚠️ [ClozeExercise] verso_resumido vazio, usando fallback');
+      // Verso vazio - pular imediatamente via onSkip (SEM contar como exercício completado)
+      console.log('⚠️ [ClozeExercise] verso_resumido vazio, pulando via onSkip');
       stableLogClozeSkip('cloze_empty_verso', oduInfo, { versoLength: 0 });
-      setDisplayText('');
-      setGaps([]);
-      setIsSubmitted(true);
-      setShowResult(true);
-      // Aumentado para 2s para dar tempo de ler o feedback
-      setTimeout(() => onAnswer(true, 50), 2000);
+      // Chamar onSkip imediatamente para evitar cadeia de auto-skips
+      if (onSkip) {
+        onSkip();
+      } else {
+        onAnswer(false, 0);
+      }
       return;
     }
     
@@ -138,19 +138,19 @@ const ClozeExercise = memo(function ClozeExercise({
     
     const { displayText: text, gaps: newGaps } = createClozeText(versoResumido, keywords);
     
-    // Se não conseguiu criar lacunas, mostrar fallback com feedback visual
+    // Se não conseguiu criar lacunas, pular imediatamente via onSkip
     if (newGaps.length === 0) {
-      console.log('⚠️ [ClozeExercise] Não conseguiu criar lacunas, usando fallback');
+      console.log('⚠️ [ClozeExercise] Não conseguiu criar lacunas, pulando via onSkip');
       stableLogClozeSkip('cloze_no_keywords', oduInfo, { 
         versoLength: versoResumido.length,
         keywordsFound: keywords.length 
       });
-      setDisplayText(versoResumido);
-      setGaps([]);
-      setIsSubmitted(true);
-      setShowResult(true);
-      // Aumentado para 2.5s para dar tempo de ler o feedback
-      setTimeout(() => onAnswer(true, 50), 2500);
+      // Pular sem contar como exercício completado
+      if (onSkip) {
+        onSkip();
+      } else {
+        onAnswer(false, 0);
+      }
       return;
     }
     
@@ -161,7 +161,7 @@ const ClozeExercise = memo(function ClozeExercise({
     setShowResult(false);
     setAttempts(0);
     setWasRevealed(false);
-  }, [versoResumido, onAnswer, oduInfo, stableLogClozeSkip]);
+  }, [versoResumido, onAnswer, onSkip, oduInfo, stableLogClozeSkip]);
   
   // Atualiza input de uma lacuna
   const handleInputChange = (index: number, value: string) => {
