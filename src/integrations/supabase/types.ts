@@ -2496,6 +2496,7 @@ export type Database = {
       check_and_award_badges: { Args: { _user_id: string }; Returns: undefined }
       cleanup_abandoned_sessions: { Args: never; Returns: undefined }
       cleanup_expired_sessions: { Args: never; Returns: undefined }
+      expire_overdue_subscriptions: { Args: never; Returns: number }
       get_latest_subscriptions: {
         Args: { user_ids: string[] }
         Returns: {
