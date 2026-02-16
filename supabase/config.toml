@@ -74,3 +74,6 @@ verify_jwt = false
 
 [functions.sync-pagarme-revenue]
 verify_jwt = true
+
+[functions.expire-subscriptions]
+verify_jwt = false

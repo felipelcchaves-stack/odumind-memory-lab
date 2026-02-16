@@ -160,10 +160,50 @@ serve(async (req) => {
         const now = new Date();
         
         if (periodEnd < now && localSub.status === 'active') {
-          logStep("Período GURU expirado, mantendo status atual até próximo webhook", {
-            periodEnd: localSub.current_period_end,
-            now: now.toISOString()
-          });
+          // Buscar período de graça configurado
+          const { data: graceSetting } = await supabaseAdmin
+            .from('app_settings')
+            .select('value')
+            .eq('key', 'subscription_grace_period_days')
+            .maybeSingle();
+          
+          const graceDays = graceSetting?.value ? parseInt(graceSetting.value) : 0;
+          const graceEnd = new Date(periodEnd.getTime() + graceDays * 24 * 60 * 60 * 1000);
+          
+          if (now > graceEnd) {
+            logStep("Período GURU expirado + graça ultrapassada, expirando assinatura", {
+              periodEnd: localSub.current_period_end,
+              graceDays,
+              graceEnd: graceEnd.toISOString(),
+              now: now.toISOString()
+            });
+
+            await supabaseAdmin
+              .from('subscriptions')
+              .update({
+                status: 'expired',
+                plan_name: 'Gratuito',
+                updated_at: now.toISOString()
+              })
+              .eq('user_id', user.id);
+
+            return new Response(JSON.stringify({
+              subscribed: false,
+              status: 'expired',
+              plan_name: 'Gratuito',
+              message: 'Período de assinatura expirado',
+              payment_gateway: 'guru',
+            }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 200,
+            });
+          } else {
+            logStep("Período GURU expirado mas dentro do período de graça", {
+              periodEnd: localSub.current_period_end,
+              graceDays,
+              graceEnd: graceEnd.toISOString()
+            });
+          }
         }
       }
 
