@@ -137,9 +137,6 @@ export const UTMTrackingScript = () => {
             
             // 4. EVENTO INITIATE CHECKOUT ao clicar
             link.addEventListener('click', () => {
-              const fbp = getCookie('_fbp');
-              const fbc = getCookie('_fbc');
-              
               // Disparar evento fbq
               if (typeof window !== 'undefined' && (window as any).fbq) {
                 (window as any).fbq('track', 'InitiateCheckout', {
@@ -148,26 +145,6 @@ export const UTMTrackingScript = () => {
                   utm_campaign: utmParams['utm_campaign']
                 });
                 console.log('[UTMTracking] fbq InitiateCheckout disparado');
-              }
-              
-              // Enviar beacon para tracking
-              const payload = {
-                event_name: 'InitiateCheckout',
-                page_url: window.location.href,
-                fbp,
-                fbc,
-                utm_source: utmParams['utm_source'] || null,
-                utm_medium: utmParams['utm_medium'] || null,
-                utm_campaign: utmParams['utm_campaign'] || null,
-                utm_content: utmParams['utm_content'] || null
-              };
-              
-              if (navigator.sendBeacon) {
-                navigator.sendBeacon(
-                  'https://kmvcrnrpdcnjegrkaeci.supabase.co/functions/v1/track-pixel-events',
-                  JSON.stringify(payload)
-                );
-                console.log('[UTMTracking] Beacon enviado:', payload);
               }
             });
           } catch (e) {
