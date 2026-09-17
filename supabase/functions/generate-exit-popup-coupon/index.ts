@@ -158,7 +158,7 @@ serve(async (req) => {
                   ⏰ <strong>Válido até:</strong> ${formattedDate}
                 </p>
                 
-                <a href="https://isesemind.lovable.app/auth?tab=signup" 
+                <a href="https://isesemind.ifatokun.com.br/auth?tab=signup"
                    style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; text-decoration: none; padding: 16px 32px; border-radius: 8px; font-weight: bold; font-size: 16px;">
                   Criar Minha Conta Agora
                 </a>

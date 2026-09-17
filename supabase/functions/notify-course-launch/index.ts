@@ -114,7 +114,7 @@ const handler = async (req: Request): Promise<Response> => {
       .eq("key", "site_url")
       .single();
 
-    const siteUrl = siteUrlSetting?.value || "https://isesemind.com";
+    const siteUrl = siteUrlSetting?.value || "https://isesemind.ifatokun.com.br";
 
     const emailHtml = (name: string) => `
       <!DOCTYPE html>

@@ -38,7 +38,7 @@ serve(async (req) => {
       );
     }
 
-    const siteUrl = 'https://isesemind.ileaseifatokun.com.br';
+    const siteUrl = 'https://isesemind.ifatokun.com.br';
     const loginUrl = `${siteUrl}/auth`;
     
     logStep("URL de login configurada", { loginUrl });

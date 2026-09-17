@@ -18,6 +18,9 @@ dev-dist
 
 # Local tooling state
 .claude-flow
+.swarm
+ruvector.db
+supabase/.temp
 
 # graphify knowledge graph (generated, machine-local)
 /graphify-out/

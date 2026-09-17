@@ -1,5 +1,5 @@
 # Robots.txt para IseseMind Ifatokun
-# https://isesemind.ileaseifatokun.com.br
+# https://isesemind.ifatokun.com.br
 
 # Permitir todos os crawlers nas páginas públicas
 User-agent: Googlebot
@@ -56,7 +56,7 @@ Disallow: /*.json$
 Disallow: /sw.js
 
 # Sitemap
-Sitemap: https://isesemind.ileaseifatokun.com.br/sitemap.xml
+Sitemap: https://isesemind.ifatokun.com.br/sitemap.xml
 
 # Host preferencial
-Host: https://isesemind.ileaseifatokun.com.br
+Host: https://isesemind.ifatokun.com.br

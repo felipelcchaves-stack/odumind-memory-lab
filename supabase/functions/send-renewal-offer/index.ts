@@ -183,7 +183,7 @@ serve(async (req) => {
               <table role="presentation" style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
                 <tr>
                   <td style="text-align: center;">
-                    <a href="https://isesemind.com.br/assinatura" 
+                    <a href="https://isesemind.ifatokun.com.br/subscription"
                        style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; text-decoration: none; padding: 15px 40px; border-radius: 8px; font-size: 16px; font-weight: bold;">
                       Renovar Agora →
                     </a>

@@ -98,7 +98,7 @@ serve(async (req) => {
             Não perca seu progresso de memorização dos Odu Ifá! Renove agora para continuar sua jornada sem interrupções.
           </p>
           <table role="presentation" style="width:100%;margin:30px 0;"><tr><td style="text-align:center;">
-            <a href="https://isesemind.com.br/assinatura" style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;text-decoration:none;padding:15px 40px;border-radius:8px;font-size:16px;font-weight:bold;">
+            <a href="https://isesemind.ifatokun.com.br/subscription" style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;text-decoration:none;padding:15px 40px;border-radius:8px;font-size:16px;font-weight:bold;">
               Renovar Agora →
             </a>
           </td></tr></table>

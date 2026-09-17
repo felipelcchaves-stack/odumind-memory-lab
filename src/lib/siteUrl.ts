@@ -4,7 +4,7 @@
  * independente do domínio atual (preview lovable.app ou localhost).
  */
 
-export const PRODUCTION_URL = 'https://isesemind.ileaseifatokun.com.br';
+export const PRODUCTION_URL = 'https://isesemind.ifatokun.com.br';
 
 /**
  * Retorna a URL base do site.
