@@ -10,7 +10,14 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+dev-dist
 *.local
+
+# Environment variables (see .env.example for required keys)
+.env
+
+# Local tooling state
+.claude-flow
 
 # Editor directories and files
 .vscode/*
