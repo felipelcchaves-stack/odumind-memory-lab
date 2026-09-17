@@ -1,42 +1,50 @@
-import { useEffect, useState, useContext, createContext } from 'react';
+import { useEffect, useState, useContext, createContext, useRef } from 'react';
+import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
 export function useAdmin() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isColaborador, setIsColaborador] = useState(false);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
+  const currentUserIdRef = useRef<string | null>(null);
 
   // Use direct auth state to be safe when used outside AuthProvider
   useEffect(() => {
     let mounted = true;
-    
+
+    // Only replaces the `user` object reference when the underlying user
+    // actually changed - Supabase re-fires SIGNED_IN with an unchanged
+    // session every time the tab regains visibility, and without this guard
+    // that re-triggers checkRoles()'s admin/colaborador RPC calls below on
+    // every alt-tab-back.
+    const applyUser = (newUser: User | null) => {
+      if (!mounted) return;
+      const newUserId = newUser?.id ?? null;
+      if (newUserId !== currentUserIdRef.current) {
+        currentUserIdRef.current = newUserId;
+        setUser(newUser);
+      }
+      setInitialized(true);
+    };
+
     const initAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (mounted) {
-          setUser(session?.user ?? null);
-          setInitialized(true);
-        }
+        applyUser(session?.user ?? null);
       } catch (error) {
         console.error('[useAdmin] Error getting session:', error);
-        if (mounted) {
-          setUser(null);
-          setInitialized(true);
-        }
+        applyUser(null);
       }
     };
-    
+
     initAuth();
-    
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (mounted) {
-        setUser(session?.user ?? null);
-        setInitialized(true);
-      }
+      applyUser(session?.user ?? null);
     });
-    
+
     return () => {
       mounted = false;
       subscription.unsubscribe();

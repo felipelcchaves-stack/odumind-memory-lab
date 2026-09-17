@@ -23,14 +23,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const isLoggingOutRef = useRef(false);
 
+  const currentUserIdRef = useRef<string | null>(null);
+
   useEffect(() => {
+    // Applies a session, but only replaces the `user` object reference when
+    // the underlying user actually changed. Supabase re-fires SIGNED_IN with
+    // an unchanged session every time the tab regains visibility (its own
+    // GoTrueClient visibilitychange handler), so without this guard every
+    // alt-tab-back installs a brand-new `user` reference and cascades into a
+    // full remount of anything keyed on [user] (e.g. useProfileCompletion).
+    const applySession = (newSession: typeof session) => {
+      setSession(newSession);
+      const newUserId = newSession?.user?.id ?? null;
+      if (newUserId !== currentUserIdRef.current) {
+        currentUserIdRef.current = newUserId;
+        setUser(newSession?.user ?? null);
+      }
+      setLoading(false);
+    };
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-        
+        applySession(session);
+
         // Subscription check is now handled by useSubscription hook
         // No need to call check-subscription here
       }
@@ -38,9 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
+      applySession(session);
     });
 
     return () => subscription.unsubscribe();
