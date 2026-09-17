@@ -12,7 +12,14 @@ export default defineConfig(() => ({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt' (not 'autoUpdate'): with skipWaiting/clientsClaim removed
+      // below, a new service worker sits "waiting" instead of force-taking
+      // over the page. autoUpdate + skipWaiting + clientsClaim used to fire
+      // an unconditional window.location.reload() on activation, which
+      // browsers tend to deliver right as a backgrounded tab regains focus -
+      // that was the app's "refreshes when I switch back to the tab" bug.
+      // Do not revert this to autoUpdate without re-reading that history.
+      registerType: 'prompt',
       includeAssets: ['favicon.ico', 'robots.txt'],
       manifest: {
         name: 'Isesemind - Domine os Odu Ifá',
@@ -93,14 +100,18 @@ export default defineConfig(() => ({
         ]
       },
       devOptions: {
-        enabled: true,
+        // Disabled: an active SW in dev was masking the app's own HMR/reload
+        // behavior. Flip back to true temporarily only when testing
+        // install/offline behavior locally.
+        enabled: false,
         type: 'module',
       },
       workbox: {
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MB
         cleanupOutdatedCaches: true,
-        skipWaiting: true,
-        clientsClaim: true,
+        // sw.js is the Lovable-era notification service worker (public/push-notifications-sw.js);
+        // inject it into the generated worker instead of letting two files fight over the sw.js name.
+        importScripts: ['push-notifications-sw.js'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
