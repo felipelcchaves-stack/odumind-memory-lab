@@ -19,6 +19,9 @@ dev-dist
 # Local tooling state
 .claude-flow
 
+# graphify knowledge graph (generated, machine-local)
+/graphify-out/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
