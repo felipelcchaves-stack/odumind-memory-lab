@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useRef, useCallback, useMemo } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -60,10 +60,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, nome: string) => {
+  const signUp = useCallback(async (email: string, password: string, nome: string) => {
     // Usar domínio de produção para garantir redirect correto em emails
     const redirectUrl = `${getSiteUrl()}/dashboard`;
-    
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -74,11 +74,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     });
-    
-    return { error };
-  };
 
-  const signIn = async (email: string, password: string) => {
+    return { error };
+  }, []);
+
+  const signIn = useCallback(async (email: string, password: string) => {
     try {
       // Set login in progress flag to pause session validation
       localStorage.setItem('login_in_progress', Date.now().toString());
@@ -157,33 +157,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem('login_in_progress');
       return { error };
     }
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     isLoggingOutRef.current = true;
-    
+
     // Limpar todos os flags de sessão
     localStorage.removeItem('session_id');
     localStorage.removeItem('profile_modal_completed_session');
     localStorage.removeItem('onboarding_modal_completed_session');
     localStorage.removeItem('login_in_progress');
-    
+
     await supabase.auth.signOut();
     setTimeout(() => {
       isLoggingOutRef.current = false;
     }, 1000);
-  };
+  }, []);
 
-  const resetPassword = async (email: string) => {
+  const resetPassword = useCallback(async (email: string) => {
     // Usar domínio de produção para garantir redirect correto em emails
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${getSiteUrl()}/auth?mode=reset`,
     });
-    
-    return { error };
-  };
 
-  const updatePassword = async (newPassword: string) => {
+    return { error };
+  }, []);
+
+  const updatePassword = useCallback(async (newPassword: string) => {
     // Marcar que atualização de senha está em progresso
     localStorage.setItem('password_update_in_progress', Date.now().toString());
     
@@ -224,10 +224,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem('password_update_in_progress');
       return { error: err };
     }
-  };
+  }, []);
+
+  // Memoized so redundant SIGNED_IN refires (session updates every tab
+  // focus regain, see the useEffect above) don't hand consumers a new
+  // context value each time - useSessionValidation.tsx keys an effect on
+  // `signOut`, and an unstable reference there was re-triggering its
+  // validate-session cycle on every alt-tab.
+  const value = useMemo(
+    () => ({ user, session, loading, signUp, signIn, signOut, resetPassword, updatePassword }),
+    [user, session, loading, signUp, signIn, signOut, resetPassword, updatePassword]
+  );
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signOut, resetPassword, updatePassword }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
