@@ -1,73 +1,36 @@
-# Welcome to your Lovable project
+# Isesemind Mastery
 
-## Project info
+Quero criar um sistema educacional focado na memorização dos Odu Ifá, utilizando as melhores técnicas de memorização baseadas em repetição espaçada, associação mental, storytelling, flashcards interativos e gamificação. Estruture o conteúdo em etapas simples, incluindo:
+Mapas mentais: Como associar os Odu Ifá a imagens e ideias para facilitar a memorização.
+Histórias e narrativas: Utilize as narrativas associadas ao Odu Ifá para criar storytelling envolvente, que reforça a retenção.
+Prática ativa: Inclua testes, simulados e perguntas práticas no final de cada módulo, baseados nos Odu.
+Flashcards interativos: Crie um sistema de flashcards (fisicamente replicáveis ou digitais), que podem exibir um trecho, verso ou sinal do Odu de um lado e sua explicação no outro. Os flashcards devem ser compatíveis com repetição espaçada para otimização da memorização.
+Feedback personalizado: Como os alunos podem receber correções detalhadas e personalizadas com base em seus erros e acertos.
+Adicionalmente, formate o sistema para incluir estratégias adaptadas tanto para aprendizes iniciantes, quanto para estudiosos avançados. Por fim, estruture o plano para que eu possa monetizá-lo como um serviço de assinatura SaaS, com funções como:
+Recursos gratuitos básicos.
+Versões premium, incluindo flashcards avançados, acesso a comunidades de estudo, e personalização de aprendizado.
 
-**URL**: https://lovable.dev/projects/8bd21ee8-5a58-4389-84e3-88155ecbe212
+O nome será Odùmind
 
-## How can I edit this code?
+This project was built with [Lovable](https://lovable.dev).
 
-There are several ways of editing your application.
+**Live app**: https://odumind-memory-lab.lovable.app
 
-**Use Lovable**
+## Build with Lovable
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/8bd21ee8-5a58-4389-84e3-88155ecbe212) and start prompting.
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/8bd21ee8-5a58-4389-84e3-88155ecbe212).
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Ship faster**: describe what you want to build and Lovable handles the code.
+- **Stay in sync**: every change made in Lovable is committed straight to this repository.
+- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
-**Use your preferred IDE**
+## Development
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
+git clone <this-repository-url>
+cd <repository-name>
 npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/8bd21ee8-5a58-4389-84e3-88155ecbe212) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
