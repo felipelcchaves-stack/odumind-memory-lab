@@ -41,8 +41,8 @@ Disallow: /settings
 Disallow: /familia
 Disallow: /familia-aceitar
 Disallow: /success
-Disallow: /odu-study/
-Disallow: /ritual-study/
+Disallow: /odu/
+Disallow: /ritual/
 Disallow: /study-session
 Disallow: /analytics
 Disallow: /caminho-ifa
