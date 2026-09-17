@@ -188,7 +188,7 @@ serve(async (req) => {
             Authorization: `Bearer ${RESEND_API_KEY}`,
           },
           body: JSON.stringify({
-            from: "Isesemind <contato@ileaseifatokun.com.br>",
+            from: "Isesemind <contato@isesemind.ifatokun.com.br>",
             to: [email],
             subject: "🏠 Você foi convidado para o Plano Família Isesemind!",
             html: emailHtml,

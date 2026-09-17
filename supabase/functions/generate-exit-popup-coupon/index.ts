@@ -195,7 +195,7 @@ serve(async (req) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: "Isesemind <noreply@isesemind.com.br>",
+            from: "Isesemind <noreply@isesemind.ifatokun.com.br>",
             to: [email],
             subject: `🎁 Seu cupom de ${discountPercent}% de desconto está aqui!`,
             html: emailHtml,

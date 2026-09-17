@@ -237,7 +237,7 @@ serve(async (req) => {
         Authorization: `Bearer ${resendApiKey}`,
       },
       body: JSON.stringify({
-        from: "Isesemind <noreply@isesemind.com.br>",
+        from: "Isesemind <noreply@isesemind.ifatokun.com.br>",
         to: [userEmail],
         subject: `🎁 ${discountPercent}% OFF na sua renovação, ${userName}!`,
         html: emailHtml
