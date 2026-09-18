@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -16,7 +16,6 @@ import BadgesDisplay from '@/components/BadgesDisplay';
 import WeeklyRanking from '@/components/WeeklyRanking';
 import AchievementsHistory from '@/components/AchievementsHistory';
 import NotificationPrompt from '@/components/NotificationPrompt';
-import { useNotifications } from '@/hooks/useNotifications';
 import DashboardHeader from '@/components/DashboardHeader';
 import UpgradeBanner from '@/components/UpgradeBanner';
 import ForgettingRiskAlert from '@/components/ForgettingRiskAlert';
@@ -84,16 +83,10 @@ export default function Dashboard() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [stats, setStats] = useState<MemorizationStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const { 
-    permission, 
-    scheduleStreakReminder, 
-    scheduleReviewReminder 
-  } = useNotifications();
   const { subscription, loading: subLoading } = useSubscription();
   const { isFreePlanEnabled, loading: freePlanLoading } = useFreePlanSettings();
   const { isProfileComplete, loading: profileLoading, refetch: refetchProfile } = useProfileCompletion();
   const [achievementsHistory, setAchievementsHistory] = useState<any[]>([]);
-  const hasScheduledNotifications = useRef(false);
   // Changelog removido - gerenciado globalmente no App.tsx
   const [hasCompletedFirstStudy, setHasCompletedFirstStudy] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -160,21 +153,6 @@ export default function Dashboard() {
       setShowProfileModal(true);
     }
   }, [isProfileComplete, profileLoading]);
-
-  // Schedule notifications when data is loaded
-  useEffect(() => {
-    if (profile && stats && permission.granted) {
-      // Schedule streak reminder if user has a streak
-      if (profile.streak > 0) {
-        scheduleStreakReminder(profile.streak);
-      }
-
-      // Schedule review reminder if there are pending reviews
-      if (stats.reviewTodayCount > 0) {
-        scheduleReviewReminder(stats.reviewTodayCount);
-      }
-    }
-  }, [profile, stats, permission.granted]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();

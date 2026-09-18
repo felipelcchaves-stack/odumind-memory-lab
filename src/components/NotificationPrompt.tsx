@@ -3,11 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Bell, X } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function NotificationPrompt() {
   const [show, setShow] = useState(false);
-  const { supported, permission, requestPermission } = useNotifications();
+  const { user } = useAuth();
+  const { supported, permission, requestPermission, subscribeToPush } = useNotifications();
 
   useEffect(() => {
     // Check if user has already been prompted
@@ -27,6 +29,7 @@ export default function NotificationPrompt() {
   const handleEnable = async () => {
     const granted = await requestPermission();
     if (granted) {
+      if (user) await subscribeToPush(user.id);
       localStorage.setItem('notificationPrompted', 'true');
       setShow(false);
     }

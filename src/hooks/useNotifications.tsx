@@ -1,5 +1,15 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined;
+
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+}
 
 interface NotificationPermission {
   granted: boolean;
@@ -152,33 +162,58 @@ export function useNotifications() {
     localStorage.setItem('lastScheduledReminder', scheduledTime.toISOString());
   };
 
-  const scheduleStreakReminder = (streakDays: number) => {
-    // Schedule a reminder 2 hours before midnight if no study today
-    const now = new Date();
-    const reminderTime = new Date();
-    reminderTime.setHours(22, 0, 0, 0); // 10 PM
+  // Inscreve o aparelho pra Web Push de verdade, que o servidor consegue
+  // disparar mesmo com o app fechado/em segundo plano - diferente do
+  // scheduleNotification acima, que é só um timer local no navegador.
+  const subscribeToPush = async (userId: string): Promise<boolean> => {
+    if (!supported || !permission.granted) return false;
+    if (!VAPID_PUBLIC_KEY) {
+      console.error('VITE_VAPID_PUBLIC_KEY não configurada');
+      return false;
+    }
 
-    if (reminderTime > now) {
-      const delayInMs = reminderTime.getTime() - now.getTime();
-      scheduleNotification(
-        `🔥 Seu Streak de ${streakDays} dias!`,
-        'Estude hoje para não perder seu progresso!',
-        'streak-reminder',
-        delayInMs
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        });
+      }
+
+      const json = subscription.toJSON();
+      if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) return false;
+
+      const { error } = await supabase.from('push_subscriptions').upsert(
+        {
+          user_id: userId,
+          endpoint: json.endpoint,
+          p256dh: json.keys.p256dh,
+          auth: json.keys.auth,
+        },
+        { onConflict: 'endpoint' }
       );
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error subscribing to push:', error);
+      return false;
     }
   };
 
-  const scheduleReviewReminder = (reviewCount: number) => {
-    if (reviewCount > 0) {
-      // Schedule review reminder for 1 hour from now
-      const delayInMs = 60 * 60 * 1000; // 1 hour
-      scheduleNotification(
-        '📚 Revisões Pendentes',
-        `Você tem ${reviewCount} Odu${reviewCount > 1 ? 's' : ''} para revisar hoje!`,
-        'review-reminder',
-        delayInMs
-      );
+  const unsubscribeFromPush = async () => {
+    if (!supported) return;
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      if (subscription) {
+        await supabase.from('push_subscriptions').delete().eq('endpoint', subscription.endpoint);
+        await subscription.unsubscribe();
+      }
+    } catch (error) {
+      console.error('Error unsubscribing from push:', error);
     }
   };
 
@@ -197,8 +232,8 @@ export function useNotifications() {
     scheduleNotification,
     sendImmediateNotification,
     scheduleDailyReminder,
-    scheduleStreakReminder,
-    scheduleReviewReminder,
+    subscribeToPush,
+    unsubscribeFromPush,
     cancelAllNotifications,
   };
 }

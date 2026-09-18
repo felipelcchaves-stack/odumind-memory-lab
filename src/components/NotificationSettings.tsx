@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Bell, Clock, Flame, BookOpen, Save } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 interface NotificationSettingsData {
@@ -16,7 +17,8 @@ interface NotificationSettingsData {
 }
 
 export default function NotificationSettings() {
-  const { supported, permission, requestPermission, scheduleDailyReminder } = useNotifications();
+  const { user } = useAuth();
+  const { supported, permission, requestPermission, scheduleDailyReminder, subscribeToPush, unsubscribeFromPush } = useNotifications();
   const [settings, setSettings] = useState<NotificationSettingsData>({
     enabled: false,
     dailyReminderTime: '20:00',
@@ -45,11 +47,16 @@ export default function NotificationSettings() {
 
     if (!permission.granted) {
       const granted = await requestPermission();
-      if (granted) {
+      if (granted && user) {
+        const subscribed = await subscribeToPush(user.id);
+        if (!subscribed) {
+          toast.error('Não foi possível ativar o lembrete diário neste aparelho.');
+        }
         setSettings((prev) => ({ ...prev, enabled: true }));
         saveSettings({ ...settings, enabled: true });
       }
     } else {
+      await unsubscribeFromPush();
       setSettings((prev) => ({ ...prev, enabled: false }));
       saveSettings({ ...settings, enabled: false });
       toast.info('Notificações desativadas');
