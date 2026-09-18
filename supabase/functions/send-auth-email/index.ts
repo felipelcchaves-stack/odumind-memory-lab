@@ -1,18 +1,21 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { Webhook } from "https://esm.sh/standardwebhooks@1.0.0";
 
+// Supabase Auth "Send Email" hook contract - NOT a regular HTTP endpoint our
+// own frontend calls. Supabase's Auth server POSTs a signed payload here for
+// every auth email (signup confirmation, password recovery, etc); the
+// signature must be verified with the hook secret configured in
+// Supabase Auth > Hooks (dashboard-generated, format "v1,whsec_...").
+// See: https://supabase.com/docs/guides/auth/auth-hooks/send-email-hook
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const hookSecret = (Deno.env.get("SEND_EMAIL_HOOK_SECRET") ?? "").replace("v1,whsec_", "");
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-interface AuthEmailRequest {
-  email: string;
-  type: 'password_reset' | 'email_confirmation' | 'magic_link';
-  token?: string;
-  redirectUrl?: string;
-  userName?: string;
+interface EmailData {
+  token: string;
+  token_hash: string;
+  redirect_to: string;
+  email_action_type: string;
+  site_url: string;
 }
 
 const logStep = (step: string, details?: any) => {
@@ -151,69 +154,105 @@ const getEmailConfirmationHtml = (userName: string, confirmUrl: string) => `
 </html>
 `;
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+const getGenericAuthEmailHtml = (userName: string, actionUrl: string) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ação necessária - Isesemind</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; margin-top: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+    <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 40px 30px; text-align: center;">
+      <h1 style="color: #ffd700; margin: 0; font-size: 28px; font-weight: bold;">Isesemind</h1>
+    </div>
+    <div style="padding: 40px 30px;">
+      <p style="font-size: 18px; color: #333333; margin-bottom: 25px;">Olá <strong>${userName}</strong>,</p>
+      <p style="font-size: 16px; color: #555555; line-height: 1.6; margin-bottom: 25px;">
+        Clique no botão abaixo para continuar:
+      </p>
+      <div style="text-align: center; margin: 35px 0;">
+        <a href="${actionUrl}" style="display: inline-block; background: linear-gradient(135deg, #ffd700 0%, #ffb700 100%); color: #1a1a2e; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 18px; font-weight: bold;">
+          Continuar
+        </a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+`;
+
+// Maps a Supabase auth email_data.token_hash + email_action_type into a link
+// through Supabase's own verify endpoint - it validates the token server-side
+// and redirects the browser to redirect_to with a working session attached.
+// Sending users straight to our own /auth page with a raw token (the old
+// behavior here) skips that verification step and never establishes a session.
+const buildActionUrl = (emailData: EmailData) => {
+  const params = new URLSearchParams({
+    token: emailData.token_hash,
+    type: emailData.email_action_type,
+    redirect_to: emailData.redirect_to,
+  });
+  return `${SUPABASE_URL}/auth/v1/verify?${params.toString()}`;
+};
+
+Deno.serve(async (req) => {
+  if (req.method !== "POST") {
+    return new Response("not allowed", { status: 400 });
   }
 
-  try {
-    const { email, type, token, redirectUrl, userName }: AuthEmailRequest = await req.json();
-    
-    logStep("Recebida solicitação de email", { email, type, hasToken: !!token });
+  if (!hookSecret) {
+    logStep("ERRO: SEND_EMAIL_HOOK_SECRET não configurado");
+    return new Response(
+      JSON.stringify({ error: { http_code: 500, message: "Hook secret não configurado" } }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
 
-    if (!email) {
-      return new Response(
-        JSON.stringify({ error: "Email é obrigatório" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+  const payload = await req.text();
+  const headers = Object.fromEntries(req.headers);
+  const wh = new Webhook(hookSecret);
+
+  try {
+    const { user, email_data } = wh.verify(payload, headers) as {
+      user: { email: string; user_metadata?: { nome?: string } };
+      email_data: EmailData;
+    };
 
     if (!RESEND_API_KEY) {
-      logStep("ERRO: RESEND_API_KEY não configurada");
-      return new Response(
-        JSON.stringify({ error: "Serviço de email não configurado" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      throw { code: 500, message: "RESEND_API_KEY não configurada" };
     }
 
-    const siteUrl = 'https://isesemind.ifatokun.com.br';
-    const displayName = userName || email.split('@')[0];
-    
+    const displayName = user.user_metadata?.nome || user.email.split('@')[0];
+    const actionUrl = buildActionUrl(email_data);
+
     let subject: string;
     let html: string;
-    let actionUrl: string;
 
-    switch (type) {
-      case 'password_reset':
-        actionUrl = token 
-          ? `${siteUrl}/auth?mode=reset&token=${token}` 
-          : (redirectUrl || `${siteUrl}/auth?mode=reset`);
+    switch (email_data.email_action_type) {
+      case 'recovery':
         subject = "🔐 Redefinir sua senha - Isesemind";
         html = getPasswordResetEmailHtml(displayName, actionUrl);
         break;
-        
-      case 'email_confirmation':
-        actionUrl = token 
-          ? `${siteUrl}/auth?mode=confirm&token=${token}` 
-          : (redirectUrl || `${siteUrl}/auth`);
+
+      case 'signup':
         subject = "✉️ Confirme seu email - Isesemind";
         html = getEmailConfirmationHtml(displayName, actionUrl);
         break;
-        
-      case 'magic_link':
-        actionUrl = redirectUrl || `${siteUrl}/auth`;
-        subject = "🔗 Seu link de acesso - Isesemind";
-        html = getPasswordResetEmailHtml(displayName, actionUrl); // Reusing reset template for now
-        break;
-        
+
       default:
-        return new Response(
-          JSON.stringify({ error: "Tipo de email inválido" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        // magiclink/invite/email_change/reauthentication/notifications -
+        // none of these are triggered by this app's current auth flows
+        // (only signUp + resetPasswordForEmail are used), but a safe
+        // generic template covers anything Supabase sends unexpectedly
+        // instead of silently failing to deliver the email.
+        subject = "Isesemind - Ação necessária";
+        html = getGenericAuthEmailHtml(displayName, actionUrl);
+        break;
     }
 
-    logStep("Enviando email via Resend", { to: email, subject, type });
+    logStep("Enviando email via Resend", { to: user.email, subject, type: email_data.email_action_type });
 
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -223,41 +262,34 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: "Isesemind <noreply@isesemind.ifatokun.com.br>",
-        to: [email],
+        to: [user.email],
         subject,
         html,
       }),
     });
 
     const emailResult = await emailResponse.json();
-    
+
     if (!emailResponse.ok) {
-      logStep("Erro ao enviar email", { status: emailResponse.status, result: emailResult });
-      return new Response(
-        JSON.stringify({ 
-          error: "Falha ao enviar email", 
-          details: emailResult 
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      throw { code: emailResponse.status, message: `Resend error: ${JSON.stringify(emailResult)}` };
     }
 
     logStep("Email enviado com sucesso", { id: emailResult.id });
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: "Email enviado com sucesso",
-        emailId: emailResult.id 
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-
   } catch (error: any) {
-    logStep("Erro inesperado", { error: error.message });
+    logStep("Erro ao processar hook", { error: error.message ?? error });
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({
+        error: {
+          http_code: error.code ?? 500,
+          message: error.message ?? "Erro desconhecido",
+        },
+      }),
+      { status: 401, headers: { "Content-Type": "application/json" } }
     );
   }
+
+  return new Response(JSON.stringify({}), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
 });
