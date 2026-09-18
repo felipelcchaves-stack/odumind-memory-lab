@@ -11,11 +11,13 @@ interface MemorizacaoData {
   forca_memoria: number;
   ultima_revisao: string | null;
   revisoes: number;
-  odu: Array<{
+  // memorizacao.odu_id é uma FK muitos-para-um -> o Supabase embute como
+  // objeto único, não array.
+  odu: {
     id: string;
     numero: number;
     nome: string;
-  }>;
+  } | null;
 }
 
 function predictForgetProbability(
@@ -85,9 +87,9 @@ Deno.serve(async (req) => {
 
     // Analisar cada Odu
     for (const mem of memData as MemorizacaoData[]) {
-      if (!mem.odu || mem.odu.length === 0) continue;
-      
-      const odu = mem.odu[0];
+      if (!mem.odu) continue;
+
+      const odu = mem.odu;
       const forgetProb = predictForgetProbability(
         mem.forca_memoria,
         mem.ultima_revisao,
