@@ -22,7 +22,6 @@ interface FamilyGroup {
   owner_user_id: string;
   max_members: number;
   created_at: string;
-  stripe_subscription_id: string | null;
   owner_profile?: {
     nome: string | null;
     user_id: string;
@@ -251,11 +250,6 @@ export default function FamilyGroupDetail({
                    group.subscription?.status || 'Sem assinatura'}
                 </Badge>
                 <span className="text-sm">{group.subscription?.plan_name || '-'}</span>
-                {group.stripe_subscription_id && (
-                  <span className="text-xs text-muted-foreground">
-                    Stripe: {group.stripe_subscription_id.slice(0, 15)}...
-                  </span>
-                )}
               </div>
             </CardContent>
           </Card>

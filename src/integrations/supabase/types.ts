@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       active_sessions: {
@@ -425,7 +450,6 @@ export type Database = {
           is_active: boolean
           max_uses: number | null
           source: string
-          stripe_coupon_id: string | null
           updated_at: string
           valid_from: string
           valid_until: string | null
@@ -440,7 +464,6 @@ export type Database = {
           is_active?: boolean
           max_uses?: number | null
           source?: string
-          stripe_coupon_id?: string | null
           updated_at?: string
           valid_from?: string
           valid_until?: string | null
@@ -455,7 +478,6 @@ export type Database = {
           is_active?: boolean
           max_uses?: number | null
           source?: string
-          stripe_coupon_id?: string | null
           updated_at?: string
           valid_from?: string
           valid_until?: string | null
@@ -507,7 +529,6 @@ export type Database = {
           id: string
           max_members: number
           owner_user_id: string
-          stripe_subscription_id: string | null
           updated_at: string
         }
         Insert: {
@@ -516,7 +537,6 @@ export type Database = {
           id?: string
           max_members?: number
           owner_user_id: string
-          stripe_subscription_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -525,7 +545,6 @@ export type Database = {
           id?: string
           max_members?: number
           owner_user_id?: string
-          stripe_subscription_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1455,6 +1474,44 @@ export type Database = {
         }
         Relationships: []
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       referral_program: {
         Row: {
           created_at: string
@@ -1830,11 +1887,8 @@ export type Database = {
           created_at: string
           id: string
           new_plan: string
-          new_stripe_subscription_id: string | null
           old_plan: string
-          old_stripe_subscription_id: string | null
           reason: string | null
-          stripe_response: Json | null
           user_id: string
         }
         Insert: {
@@ -1843,11 +1897,8 @@ export type Database = {
           created_at?: string
           id?: string
           new_plan: string
-          new_stripe_subscription_id?: string | null
           old_plan: string
-          old_stripe_subscription_id?: string | null
           reason?: string | null
-          stripe_response?: Json | null
           user_id: string
         }
         Update: {
@@ -1856,11 +1907,8 @@ export type Database = {
           created_at?: string
           id?: string
           new_plan?: string
-          new_stripe_subscription_id?: string | null
           old_plan?: string
-          old_stripe_subscription_id?: string | null
           reason?: string | null
-          stripe_response?: Json | null
           user_id?: string
         }
         Relationships: []
@@ -1964,9 +2012,6 @@ export type Database = {
           payment_gateway: string | null
           plan_name: string
           status: string
-          stripe_customer_id: string | null
-          stripe_price_id: string | null
-          stripe_subscription_id: string | null
           updated_at: string | null
           user_id: string
         }
@@ -1984,9 +2029,6 @@ export type Database = {
           payment_gateway?: string | null
           plan_name?: string
           status?: string
-          stripe_customer_id?: string | null
-          stripe_price_id?: string | null
-          stripe_subscription_id?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -2004,9 +2046,6 @@ export type Database = {
           payment_gateway?: string | null
           plan_name?: string
           status?: string
-          stripe_customer_id?: string | null
-          stripe_price_id?: string | null
-          stripe_subscription_id?: string | null
           updated_at?: string | null
           user_id?: string
         }
@@ -2497,13 +2536,23 @@ export type Database = {
       cleanup_abandoned_sessions: { Args: never; Returns: undefined }
       cleanup_expired_sessions: { Args: never; Returns: undefined }
       expire_overdue_subscriptions: { Args: never; Returns: number }
+      get_family_invite_by_token: {
+        Args: { p_token: string }
+        Returns: {
+          email: string
+          expires_at: string
+          family_group_id: string
+          group_name: string
+          id: string
+          max_members: number
+          status: string
+        }[]
+      }
       get_latest_subscriptions: {
         Args: { user_ids: string[] }
         Returns: {
           plan_name: string
           status: string
-          stripe_customer_id: string
-          stripe_subscription_id: string
           updated_at: string
           user_id: string
         }[]
@@ -2534,12 +2583,20 @@ export type Database = {
         Args: { _permission_type: string; _user_id: string }
         Returns: boolean
       }
+      increment_user_xp: {
+        Args: { _amount: number; _user_id: string }
+        Returns: undefined
+      }
       is_family_member: {
         Args: { _family_group_id: string; _user_id: string }
         Returns: boolean
       }
       is_family_owner: {
         Args: { _family_group_id: string; _user_id: string }
+        Returns: boolean
+      }
+      shares_family_group: {
+        Args: { _target_user_id: string; _user_id: string }
         Returns: boolean
       }
       update_user_streak: { Args: { _user_id: string }; Returns: undefined }
@@ -2673,6 +2730,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["admin", "user", "colaborador", "aluno"],

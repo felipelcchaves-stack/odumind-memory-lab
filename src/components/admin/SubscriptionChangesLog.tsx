@@ -18,11 +18,8 @@ interface SubscriptionChange {
   changed_by: string;
   old_plan: string;
   new_plan: string;
-  old_stripe_subscription_id: string | null;
-  new_stripe_subscription_id: string | null;
   billing_cycle: 'monthly' | 'annual';
   reason: string | null;
-  stripe_response: any;
   created_at: string;
   user_email?: string;
   admin_email?: string;
@@ -117,7 +114,6 @@ export function SubscriptionChangesLog() {
       'Ciclo': change.billing_cycle === 'monthly' ? 'Mensal' : 'Anual',
       'Alterado por': change.admin_email,
       'Motivo': change.reason || 'N/A',
-      'Stripe Subscription ID': change.new_stripe_subscription_id || 'N/A'
     }));
 
     const csv = Papa.unparse(csvData);

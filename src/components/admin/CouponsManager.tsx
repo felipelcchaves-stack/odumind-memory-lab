@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Plus, Ticket, Users, TrendingUp, Calendar, Copy, ExternalLink, RefreshCw } from 'lucide-react';
+import { Loader2, Plus, Ticket, Users, TrendingUp, Calendar, Copy, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -25,7 +25,6 @@ interface Coupon {
   is_active: boolean;
   email: string | null;
   source: string;
-  stripe_coupon_id: string | null;
   created_at: string;
 }
 
@@ -388,7 +387,6 @@ export function CouponsManager() {
                     <TableHead>Email</TableHead>
                     <TableHead>Validade</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -439,18 +437,6 @@ export function CouponsManager() {
                             checked={coupon.is_active}
                             onCheckedChange={(checked) => toggleCouponStatus(coupon.id, checked)}
                           />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {coupon.stripe_coupon_id && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => window.open(`https://dashboard.stripe.com/coupons/${coupon.stripe_coupon_id}`, '_blank')}
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </Button>
-                          )}
                         </TableCell>
                       </TableRow>
                     ))

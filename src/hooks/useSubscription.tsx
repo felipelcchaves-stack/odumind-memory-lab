@@ -7,12 +7,9 @@ import { useAdmin } from '@/hooks/useAdmin';
 export interface SubscriptionData {
   status: 'free' | 'active' | 'trialing' | 'past_due' | 'canceled';
   plan_name: string;
-  stripe_customer_id?: string;
-  stripe_subscription_id?: string;
-  stripe_price_id?: string;
   guru_subscription_id?: string;
   guru_customer_id?: string;
-  payment_gateway?: 'stripe' | 'guru';
+  payment_gateway?: 'guru';
   current_period_end?: string;
   cancel_at_period_end?: boolean;
 }
@@ -105,14 +102,14 @@ export const useSubscription = () => {
         return;
       }
 
-      const { data: stripeData1, error: error1 } = await safeInvokeCheckSubscription(token1);
+      const { data: checkResult1, error: error1 } = await safeInvokeCheckSubscription(token1);
 
       // 401 / session expired: refresh and retry once (quietly)
       if (error1 && isAuthExpired(error1.message)) {
         const token2 = await getValidAccessToken();
         if (token2 && token2 !== token1) {
-          const { data: stripeData2, error: error2 } = await safeInvokeCheckSubscription(token2);
-          if (!error2 && stripeData2) {
+          const { data: checkResult2, error: error2 } = await safeInvokeCheckSubscription(token2);
+          if (!error2 && checkResult2) {
             const { data: updatedData } = await supabase
               .from('subscriptions')
               .select('*')
@@ -155,7 +152,7 @@ export const useSubscription = () => {
         return;
       }
 
-      if (stripeData1) {
+      if (checkResult1) {
         const { data: updatedData } = await supabase
           .from('subscriptions')
           .select('*')

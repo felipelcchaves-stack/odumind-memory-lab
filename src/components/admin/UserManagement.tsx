@@ -47,8 +47,6 @@ interface UserProfile {
   user_roles?: Array<{ role: string }>;
   plan_name?: string;
   subscription_status?: string;
-  stripe_customer_id?: string;
-  stripe_subscription_id?: string;
 }
 
 export default function UserManagement() {
@@ -148,11 +146,9 @@ export default function UserManagement() {
       
       // Create subscription map
       const subscriptionMap = new Map(
-        subscriptions?.map(s => [s.user_id, { 
-          plan_name: s.plan_name, 
+        subscriptions?.map(s => [s.user_id, {
+          plan_name: s.plan_name,
           status: s.status,
-          stripe_customer_id: s.stripe_customer_id,
-          stripe_subscription_id: s.stripe_subscription_id
         }]) || []
       );
 
@@ -165,8 +161,6 @@ export default function UserManagement() {
           user_roles: roles?.filter(r => r.user_id === profile.user_id).map(r => ({ role: r.role })) || [],
           plan_name: subscription?.plan_name || 'Gratuito',
           subscription_status: subscription?.status || 'free',
-          stripe_customer_id: subscription?.stripe_customer_id,
-          stripe_subscription_id: subscription?.stripe_subscription_id,
         };
       }) || [];
 

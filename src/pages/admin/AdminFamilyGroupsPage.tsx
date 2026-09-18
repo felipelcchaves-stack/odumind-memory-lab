@@ -20,7 +20,6 @@ interface FamilyGroup {
   owner_user_id: string;
   max_members: number;
   created_at: string;
-  stripe_subscription_id: string | null;
   owner_profile?: {
     nome: string | null;
     user_id: string;
@@ -75,8 +74,7 @@ export default function AdminFamilyGroupsPage() {
           group_name,
           owner_user_id,
           max_members,
-          created_at,
-          stripe_subscription_id
+          created_at
         `)
         .order('created_at', { ascending: false });
 

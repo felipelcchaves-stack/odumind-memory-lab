@@ -16,7 +16,6 @@ export interface Plan {
   cta: string;
   variant: 'outline' | 'default' | 'premium';
   popular?: boolean;
-  stripeId?: string;
   guruOfferId?: string;
 }
 
@@ -61,7 +60,6 @@ export const PLANS: Plan[] = [
     cta: "Assinar Awo",
     variant: "default",
     popular: true,
-    stripeId: "price_1RFbYGCMj2rKMKSjOvV3ymMl",
     guruOfferId: "awo-mensal",
   },
   {
@@ -79,7 +77,6 @@ export const PLANS: Plan[] = [
     ],
     cta: "Assinar Egbe",
     variant: "premium",
-    stripeId: "price_1RFbZvCMj2rKMKSjGNJmFxXx",
     guruOfferId: "egbe-mensal",
   },
 ];

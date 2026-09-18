@@ -119,6 +119,7 @@ serve(async (req) => {
           current_period_start: null,
           current_period_end: null,
           cancel_at_period_end: false,
+          payment_gateway: 'guru',
         }, {
           onConflict: 'user_id'
         });
@@ -144,6 +145,7 @@ serve(async (req) => {
           current_period_start: new Date().toISOString(),
           current_period_end: oneYearFromNow.toISOString(),
           cancel_at_period_end: false,
+          payment_gateway: 'guru',
         }, {
           onConflict: 'user_id'
         });
