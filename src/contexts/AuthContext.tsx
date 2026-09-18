@@ -175,12 +175,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
-    // Usar domínio de produção para garantir redirect correto em emails
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${getSiteUrl()}/auth?mode=reset`,
+    // Roteia pela nossa própria function (Resend) em vez do envio nativo do
+    // Supabase, que sai de um domínio genérico (auth.lovable.cloud) sem a
+    // marca Isesemind. O link recebido ainda passa pelo /auth/v1/verify do
+    // próprio Supabase, então o restante do fluxo (Auth.tsx mode=reset,
+    // updatePassword abaixo) continua igual.
+    const { data, error } = await supabase.functions.invoke('custom-password-reset', {
+      body: { email },
     });
 
-    return { error };
+    if (error) {
+      return { error };
+    }
+
+    return { error: data?.error ?? null };
   }, []);
 
   const updatePassword = useCallback(async (newPassword: string) => {
