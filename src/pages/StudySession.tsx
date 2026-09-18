@@ -1045,22 +1045,11 @@ export default function StudySession() {
       // entre si, mas rodavam uma esperando a outra terminar - em conexão
       // móvel isso significava vários segundos de espera visível antes do
       // próximo card aparecer. Rodam em paralelo agora.
-      const updateXp = async () => {
-        const { data: currentProfile } = await supabase
-          .from("profiles")
-          .select("xp")
-          .eq("user_id", user.id)
-          .single();
-
-        const newXp = (currentProfile?.xp || 0) + xp;
-        await supabase
-          .from("profiles")
-          .update({ xp: newXp })
-          .eq("user_id", user.id);
-      };
-
       await Promise.all([
-        updateXp(),
+        // Incremento atômico no banco - ler xp, somar em JS e escrever de
+        // volta permitia perder XP em cliques rápidos/abas concorrentes
+        // (last-write-wins na escrita não-atômica anterior).
+        supabase.rpc("increment_user_xp", { _user_id: user.id, _amount: xp }),
         supabase.rpc("update_user_streak", { _user_id: user.id }),
         supabase.rpc("check_and_award_achievements", { _user_id: user.id }),
         supabase.rpc("check_and_award_badges", { _user_id: user.id }),

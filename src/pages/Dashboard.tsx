@@ -268,15 +268,14 @@ export default function Dashboard() {
         setProfile(profileData);
       }
 
-      // Check and award achievements whenever dashboard loads
-      await supabase.rpc("check_and_award_achievements", { 
-        _user_id: user.id 
-      });
-
       // Load memorization stats
       await loadMemorizationStats();
 
-      // Check and award new achievements
+      // Check and award achievements whenever dashboard loads (a duplicate
+      // call to this same RPC used to run right before loadMemorizationStats
+      // too - the RPC reads live DB state, not React state, so the two calls
+      // were fully redundant and just doubled the chance of a race with
+      // check_and_award_achievements' non-atomic duplicate-check).
       await supabase.rpc("check_and_award_achievements", { _user_id: user.id });
       
       // Check if user has completed any study
