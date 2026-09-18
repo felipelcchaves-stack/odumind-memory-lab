@@ -57,7 +57,7 @@ export default function VersoResumidoGenerator() {
           id: 'generate-versos'
         });
       } else if (error.message?.includes('402')) {
-        toast.error('Créditos insuficientes no Lovable AI. Adicione créditos em Settings → Workspace → Usage.', {
+        toast.error('Créditos insuficientes na API do Gemini. Verifique o faturamento no Google AI Studio.', {
           id: 'generate-versos'
         });
       } else {

@@ -122,7 +122,7 @@ Crie um plano de estudos realista para o aluno memorizar os ${odusRestantes} Odu
 Considere que cada Odu novo precisa ser revisado pelo menos 4 vezes nas primeiras semanas.
 Estime quantos dias levará para completar a memorização de todos os 256 Odus.`;
 
-    // Call Lovable AI
+    // Call Gemini
     const aiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
       method: 'POST',
       headers: {

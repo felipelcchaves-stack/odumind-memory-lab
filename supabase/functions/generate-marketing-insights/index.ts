@@ -109,7 +109,7 @@ Com base EXCLUSIVAMENTE nos dados acima, forneça insights estratégicos acioná
 - Mantenha tom profissional mas acessível
 - Foque em insights ACIONÁVEIS, não genéricos`;
 
-    console.log('Chamando Lovable AI para gerar insights...');
+    console.log('Chamando Gemini para gerar insights...');
 
     const response = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
       method: 'POST',
@@ -132,7 +132,7 @@ Com base EXCLUSIVAMENTE nos dados acima, forneça insights estratégicos acioná
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Erro na API Lovable AI:', response.status, errorText);
+      console.error('Erro na API Gemini:', response.status, errorText);
       
       if (response.status === 429) {
         return new Response(JSON.stringify({ 

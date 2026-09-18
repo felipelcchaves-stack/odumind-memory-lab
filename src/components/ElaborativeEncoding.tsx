@@ -9,7 +9,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { toast } from "sonner";
 import { Lightbulb, Save, Trash2, Loader2, Edit, ClipboardList } from "lucide-react";
 import { MarkdownViewer } from "@/components/MarkdownViewer";
-import { usePasteHandler } from "@/hooks/usePasteHandler";
+import { extractClipboardContent } from "@/lib/markdownUtils";
 
 interface ElaborativeNote {
   id: string;
@@ -69,15 +69,16 @@ export const ElaborativeEncoding = ({ odu }: ElaborativeEncodingProps) => {
   const [saving, setSaving] = useState<{ [key: string]: boolean }>({});
   const [viewMode, setViewMode] = useState<{ [key: string]: boolean }>({});
 
-  // Handlers de colagem com conversão HTML → Markdown para cada pergunta
-  const pasteHandlers = Object.keys(perguntasElaborativas).reduce((acc, tipo) => {
-    acc[tipo] = usePasteHandler({
-      onPaste: (text) => {
-        setEditingNote(prev => ({ ...prev, [tipo]: (prev[tipo] || '') + text }));
-      },
-    });
-    return acc;
-  }, {} as { [key: string]: { handlePaste: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void } });
+  // Colagem com conversão HTML → Markdown pra cada pergunta. Não usa
+  // usePasteHandler aqui de propósito - chamar um hook dentro de um loop/
+  // reduce viola as Rules of Hooks (funcionava só por perguntasElaborativas
+  // ser um objeto estático com chaves fixas); uma função geradora simples
+  // resolve sem precisar de hook nenhum por pergunta.
+  const handlePaste = (tipo: string) => (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    event.preventDefault();
+    const markdownText = extractClipboardContent(event.nativeEvent);
+    setEditingNote(prev => ({ ...prev, [tipo]: (prev[tipo] || '') + markdownText }));
+  };
 
   useEffect(() => {
     if (user && odu.id) {
@@ -268,7 +269,7 @@ export const ElaborativeEncoding = ({ odu }: ElaborativeEncodingProps) => {
                           placeholder="Escreva sua reflexão aqui...&#10;&#10;Suporta: **negrito**, *itálico*, listas, links"
                           value={editingNote[tipo] || ""}
                           onChange={(e) => setEditingNote({ ...editingNote, [tipo]: e.target.value })}
-                          onPaste={pasteHandlers[tipo].handlePaste}
+                          onPaste={handlePaste(tipo)}
                           rows={5}
                           className="resize-none font-mono text-sm"
                         />

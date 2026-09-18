@@ -127,7 +127,8 @@ export default function RitualStudy() {
       // Track event
       trackOduMemorized(ritual.numero || 0, ritual.nome);
 
-      // Award XP
+      // Só checa/concede badges - rituais não concedem XP hoje, diferente
+      // do fluxo de flashcards.
       await supabase.rpc('check_and_award_badges', { _user_id: user.id });
       
       toast.success(`Ritual praticado! (${newVezesPraticado}x)`);

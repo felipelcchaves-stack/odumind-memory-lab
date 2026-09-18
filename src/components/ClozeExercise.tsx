@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useExerciseMonitoring } from "@/hooks/useExerciseMonitoring";
 import { ProtectedContent } from "@/components/ProtectedContent";
 import { useContentProtection } from "@/hooks/useContentProtection";
+import { extractKeywords } from "@/lib/keywordExtraction";
 interface ClozeExerciseProps {
   numero: number;
   nome: string;
@@ -26,41 +27,6 @@ interface Gap {
   userInput: string;
   isCorrect: boolean | null;
   showHint: boolean;
-}
-
-// Função para extrair palavras-chave do texto (palavras importantes para memorização)
-function extractKeywords(text: string): string[] {
-  // Remove pontuação e divide em palavras
-  const words = text.replace(/[.,;:!?"""''()]/g, '').split(/\s+/).filter(w => w.length > 0);
-  
-  // Filtra palavras significativas (>= 3 caracteres, não são artigos/preposições comuns)
-  const stopWords = ['que', 'para', 'com', 'uma', 'dos', 'das', 'por', 'como', 'mais', 'seu', 'sua', 'seus', 'suas', 'ele', 'ela', 'eles', 'elas', 'este', 'esta', 'esse', 'essa', 'isso', 'aqui', 'ali', 'onde', 'quando', 'porque', 'assim', 'então', 'também', 'ainda', 'sempre', 'nunca', 'muito', 'pouco', 'não', 'sim', 'ser', 'ter', 'foi', 'são', 'tem', 'está', 'era', 'vai', 'vem'];
-  
-  // Critério relaxado: >= 3 caracteres
-  let keywords = words.filter(word => 
-    word.length >= 3 && 
-    !stopWords.includes(word.toLowerCase()) &&
-    !/^\d+$/.test(word) // Não é só número
-  );
-  
-  // FALLBACK 1: Se não encontrou keywords, usar as maiores palavras do texto
-  if (keywords.length === 0) {
-    keywords = words
-      .filter(w => w.length >= 2 && !/^\d+$/.test(w))
-      .sort((a, b) => b.length - a.length)
-      .slice(0, 3);
-  }
-  
-  // FALLBACK 2: Se ainda não tiver nada, usar qualquer palavra com mais de 1 caractere
-  if (keywords.length === 0 && words.length > 0) {
-    keywords = words.filter(w => w.length > 1).slice(0, 2);
-  }
-  
-  // Seleciona até 3 palavras-chave aleatórias para criar lacunas
-  const shuffled = keywords.sort(() => Math.random() - 0.5);
-  // Garantir pelo menos 1 lacuna, máximo 3
-  const count = Math.min(3, Math.max(1, keywords.length));
-  return shuffled.slice(0, count);
 }
 
 // Gera texto com lacunas marcadas

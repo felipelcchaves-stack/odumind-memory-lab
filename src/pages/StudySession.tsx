@@ -41,6 +41,7 @@ import {
   type UnlockProgress
 } from "@/lib/learningAnalytics";
 import { useExerciseMonitoring } from "@/hooks/useExerciseMonitoring";
+import { hasViableKeywords } from "@/lib/keywordExtraction";
 
 interface Odu {
   id: string;
@@ -87,23 +88,6 @@ interface SessionStats {
 }
 
 type StudyMode = "flashcard" | "quiz" | "cloze" | "dragdrop" | "sentence-order";
-
-// Validação de keywords viáveis para exercícios interativos (cloze, dragdrop, sentence-order)
-// Reproduz a lógica de extractKeywords do ClozeExercise para verificação prévia
-function hasViableKeywords(text: string): boolean {
-  if (!text || text.trim().length < 20) return false;
-  
-  const words = text.replace(/[.,;:!?"""''()]/g, '').split(/\s+/).filter(w => w.length > 0);
-  const stopWords = ['que', 'para', 'com', 'uma', 'dos', 'das', 'por', 'como', 'mais', 'seu', 'sua', 'seus', 'suas', 'ele', 'ela', 'eles', 'elas', 'este', 'esta', 'esse', 'essa', 'isso', 'aqui', 'ali', 'onde', 'quando', 'porque', 'assim', 'então', 'também', 'ainda', 'sempre', 'nunca', 'muito', 'pouco', 'não', 'sim', 'ser', 'ter', 'foi', 'são', 'tem', 'está', 'era', 'vai', 'vem'];
-  
-  const keywords = words.filter(word => 
-    word.length >= 3 && 
-    !stopWords.includes(word.toLowerCase()) &&
-    !/^\d+$/.test(word)
-  );
-  
-  return keywords.length >= 1;
-}
 
 const FREE_LIMIT = 5; // Limite para usuários gratuitos (agora progressivo)
 
