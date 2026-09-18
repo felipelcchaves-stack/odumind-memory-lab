@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-const SUPABASE_URL = 'https://wmwuirqdluzjdqtmfzsm.supabase.co';
+const SUPABASE_URL = 'https://xcxxdzipwfmakypegqxb.supabase.co';
 
 /**
  * Hook that loads all tracking scripts (custom scripts + pixels)

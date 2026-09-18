@@ -593,7 +593,7 @@ const AdminGuruPage = () => {
             <li>Para promoções de live, configure o "Plano Promocional" com URL específica e ative-o</li>
             <li className="break-words">Configure o webhook na GURU apontando para:
               <code className="block mt-1 px-2 py-1 bg-background rounded text-xs break-all overflow-wrap-anywhere">
-                https://wmwuirqdluzjdqtmfzsm.supabase.co/functions/v1/guru-webhook
+                https://xcxxdzipwfmakypegqxb.supabase.co/functions/v1/guru-webhook
               </code>
             </li>
             <li>Certifique-se de que o api_token está configurado no payload do webhook</li>
