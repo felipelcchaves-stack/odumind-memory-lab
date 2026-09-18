@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
@@ -160,25 +159,6 @@ serve(async (req) => {
       }
     }
 
-    // If downgrading to Gratuito, cancel Stripe subscription
-    if (newPlanNormalized === 'Gratuito' && currentSub?.stripe_subscription_id) {
-      const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-        apiVersion: "2025-08-27.basil",
-      });
-
-      try {
-        logStep("Canceling Stripe subscription", { 
-          subscriptionId: currentSub.stripe_subscription_id 
-        });
-
-        await stripe.subscriptions.cancel(currentSub.stripe_subscription_id);
-        logStep("Stripe subscription canceled");
-      } catch (stripeError) {
-        logStep("Error canceling Stripe subscription", { error: stripeError });
-        // Continue anyway to update local database
-      }
-    }
-
     // Update subscription in database
     const { error: updateError } = await supabaseClient
       .from("subscriptions")
@@ -204,8 +184,6 @@ serve(async (req) => {
         changed_by: user.id,
         old_plan: currentPlanNormalized,
         new_plan: newPlanNormalized,
-        old_stripe_subscription_id: currentSub?.stripe_subscription_id,
-        new_stripe_subscription_id: newPlanNormalized === 'Gratuito' ? null : currentSub?.stripe_subscription_id,
         billing_cycle: 'monthly',
         reason: 'User requested downgrade',
       });

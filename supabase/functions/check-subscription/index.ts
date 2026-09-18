@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
@@ -10,37 +9,6 @@ const corsHeaders = {
 const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
   console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
-};
-
-// Helper para verificar se usuário é membro de família ativa
-const checkFamilyMembership = async (supabaseAdmin: any, userId: string) => {
-  try {
-    const { data: memberData, error } = await supabaseAdmin
-      .from('family_members')
-      .select(`
-        family_group_id,
-        family_groups (
-          stripe_subscription_id,
-          group_name
-        )
-      `)
-      .eq('user_id', userId)
-      .eq('status', 'active')
-      .single();
-
-    if (error || !memberData) {
-      return null;
-    }
-
-    return {
-      family_group_id: memberData.family_group_id,
-      stripe_subscription_id: memberData.family_groups?.stripe_subscription_id,
-      group_name: memberData.family_groups?.group_name,
-    };
-  } catch (err) {
-    console.error('[CHECK-FAMILY] Erro ao verificar família:', err);
-    return null;
-  }
 };
 
 serve(async (req) => {
@@ -67,13 +35,13 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace("Bearer ", "");
-    
+
     // Validate token is not empty or "undefined" string
     if (!token || token === "undefined" || token === "null" || token.trim() === "") {
       logStep("ERROR: Invalid token", { token: token?.substring(0, 20) });
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         error: "Invalid authentication token",
-        code: 401 
+        code: 401
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 401,
@@ -111,18 +79,18 @@ serve(async (req) => {
     const user = userData.user;
     if (!user?.email) {
       logStep("No user or email found");
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         subscribed: false,
         status: 'free',
         plan_name: 'Gratuito',
         error: 'User not authenticated',
-        code: 401 
+        code: 401
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 401,
       });
     }
-    
+
     logStep("User authenticated", { userId: user.id, email: user.email });
 
     // Cliente admin para operações no banco (usa SERVICE_ROLE_KEY)
@@ -133,18 +101,19 @@ serve(async (req) => {
       }
     });
 
-    // PRIMEIRO: Verificar se existe assinatura local via GURU
     const { data: localSub, error: localError } = await supabaseAdmin
       .from('subscriptions')
       .select('*')
       .eq('user_id', user.id)
       .maybeSingle();
-    
+
     if (localError) {
       logStep("ERROR checking local subscription", { error: localError });
     }
 
-    // Se a assinatura é via GURU, NÃO sincronizar com Stripe - usar dados locais
+    // Se a assinatura é via GURU, usar os dados locais (única fonte de verdade -
+    // não há sincronização com API externa, o webhook do Guru já mantém isso
+    // atualizado).
     if (localSub && localSub.payment_gateway === 'guru') {
       logStep("Assinatura via GURU detectada - usando dados locais", {
         status: localSub.status,
@@ -153,12 +122,12 @@ serve(async (req) => {
       });
 
       const isActive = localSub.status === 'active' || localSub.status === 'trialing';
-      
+
       // Verificar se o período expirou
       if (localSub.current_period_end) {
         const periodEnd = new Date(localSub.current_period_end);
         const now = new Date();
-        
+
         if (periodEnd < now && localSub.status === 'active') {
           // Buscar período de graça configurado
           const { data: graceSetting } = await supabaseAdmin
@@ -166,10 +135,10 @@ serve(async (req) => {
             .select('value')
             .eq('key', 'subscription_grace_period_days')
             .maybeSingle();
-          
+
           const graceDays = graceSetting?.value ? parseInt(graceSetting.value) : 0;
           const graceEnd = new Date(periodEnd.getTime() + graceDays * 24 * 60 * 60 * 1000);
-          
+
           if (now > graceEnd) {
             logStep("Período GURU expirado + graça ultrapassada, expirando assinatura", {
               periodEnd: localSub.current_period_end,
@@ -220,360 +189,70 @@ serve(async (req) => {
       });
     }
 
-    // Se não é GURU, continuar com verificação Stripe
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", { 
-      apiVersion: "2025-08-27.basil" 
-    });
+    // Sem gateway de pagamento (ou pagamento gerenciado fora do fluxo Guru):
+    // só existe uma fonte de verdade agora, o registro local. Isso cobre acesso
+    // complementar concedido pelo admin (sem nenhum gateway de pagamento
+    // vinculado).
+    if (localSub && localSub.status === 'active' && localSub.current_period_end) {
+      const validUntil = new Date(localSub.current_period_end);
+      const now = new Date();
 
-    // Check if customer exists
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-    
-    if (customers.data.length === 0) {
-      logStep("No Stripe customer found, checking family membership");
-      
-      // Verificar se é membro de família antes de retornar 'free'
-      const familyMembership = await checkFamilyMembership(supabaseAdmin, user.id);
-      
-      if (familyMembership && familyMembership.stripe_subscription_id) {
-        logStep("User is family member", { 
-          group: familyMembership.group_name,
-          subscription_id: familyMembership.stripe_subscription_id 
+      if (validUntil > now) {
+        logStep("Assinatura local válida (complementar)", {
+          plan: localSub.plan_name,
+          validUntil: localSub.current_period_end,
         });
-        
-        // Buscar detalhes da subscription do grupo no Stripe
-        try {
-          const familySubscription = await stripe.subscriptions.retrieve(
-            familyMembership.stripe_subscription_id
-          );
-          
-          if (familySubscription.status === 'active' || familySubscription.status === 'trialing') {
-            const planName = 'Premium (Família)';
-            const subscriptionEnd = new Date(familySubscription.current_period_end * 1000).toISOString();
-            
-            // Atualizar/inserir na tabela subscriptions
-            const { data: existingData } = await supabaseAdmin
-              .from('subscriptions')
-              .select('id')
-              .eq('user_id', user.id)
-              .maybeSingle();
 
-            if (existingData) {
-              await supabaseAdmin
-                .from('subscriptions')
-                .update({
-                  status: 'active',
-                  plan_name: planName,
-                  current_period_end: subscriptionEnd,
-                })
-                .eq('user_id', user.id);
-            } else {
-              await supabaseAdmin
-                .from('subscriptions')
-                .insert({
-                  user_id: user.id,
-                  status: 'active',
-                  plan_name: planName,
-                  current_period_end: subscriptionEnd,
-                });
-            }
-
-            return new Response(JSON.stringify({
-              subscribed: true,
-              status: 'active',
-              plan_name: planName,
-              subscription_end: subscriptionEnd,
-              is_family_member: true,
-              family_group_name: familyMembership.group_name,
-            }), {
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-              status: 200,
-            });
-          }
-        } catch (stripeError) {
-          console.error('[CHECK-FAMILY] Erro ao buscar subscription do grupo:', stripeError);
-        }
-      }
-      
-      // Verificar se há subscription complimentary ou GURU ativa no banco local
-      if (localSub && localSub.status === 'active' && localSub.current_period_end) {
-        const validUntil = new Date(localSub.current_period_end);
-        const now = new Date();
-        
-        if (validUntil > now) {
-          logStep("Found valid local subscription (complimentary/other)", {
-            plan: localSub.plan_name,
-            validUntil: localSub.current_period_end,
-            gateway: localSub.payment_gateway
-          });
-          
-          return new Response(JSON.stringify({
-            subscribed: true,
-            status: 'active',
-            plan_name: localSub.plan_name,
-            current_period_end: localSub.current_period_end,
-            is_complimentary: !localSub.stripe_subscription_id && !localSub.guru_subscription_id
-          }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 200,
-          });
-        }
-      }
-      
-      logStep("No customer and not family member, updating to free status");
-      
-      // Update subscription in database to free - use update first, then insert if not found
-      const { data: existingData } = await supabaseAdmin
-        .from('subscriptions')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (existingData) {
-        await supabaseAdmin
-          .from('subscriptions')
-          .update({
-            status: 'free',
-            plan_name: 'Gratuito',
-            stripe_customer_id: null,
-            stripe_subscription_id: null,
-            stripe_price_id: null,
-            current_period_end: null,
-          })
-          .eq('user_id', user.id);
-      } else {
-        await supabaseAdmin
-          .from('subscriptions')
-          .insert({
-            user_id: user.id,
-            status: 'free',
-            plan_name: 'Gratuito',
-            stripe_customer_id: null,
-            stripe_subscription_id: null,
-            stripe_price_id: null,
-            current_period_end: null,
-          });
+        return new Response(JSON.stringify({
+          subscribed: true,
+          status: 'active',
+          plan_name: localSub.plan_name,
+          current_period_end: localSub.current_period_end,
+          is_complimentary: !localSub.guru_subscription_id,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
       }
 
-      return new Response(JSON.stringify({ 
-        subscribed: false,
-        status: 'free',
-        plan_name: 'Gratuito'
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
+      logStep("Assinatura local expirada", {
+        plan: localSub.plan_name,
+        expiredAt: localSub.current_period_end,
       });
     }
 
-    const customerId = customers.data[0].id;
-    logStep("Found Stripe customer", { customerId });
+    logStep("Nenhuma assinatura válida encontrada, atualizando para gratuito");
 
-    // Get active subscriptions using list first
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
-      status: "all",
-      limit: 1,
-    });
-
-    if (subscriptions.data.length === 0) {
-      logStep("No Stripe subscription found, checking local database");
-      
-      // Se encontrou subscription local ativa E sem stripe_subscription_id = é complimentary
-      if (localSub && 
-          localSub.status === 'active' && 
-          !localSub.stripe_subscription_id &&
-          localSub.current_period_end) {
-        
-        const validUntil = new Date(localSub.current_period_end);
-        const now = new Date();
-        
-        // Verificar se ainda está dentro do período válido
-        if (validUntil > now) {
-          const daysRemaining = Math.ceil((validUntil.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-          logStep("Found valid complimentary subscription", {
-            plan: localSub.plan_name,
-            validUntil: localSub.current_period_end,
-            daysRemaining
-          });
-          
-          return new Response(JSON.stringify({
-            subscribed: true,
-            status: 'active',
-            plan_name: localSub.plan_name,
-            current_period_end: localSub.current_period_end,
-            is_complimentary: true
-          }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 200,
-          });
-        } else {
-          logStep("Complimentary subscription expired, updating to free", {
-            plan: localSub.plan_name,
-            expiredAt: localSub.current_period_end,
-            daysAgo: Math.abs(Math.ceil((validUntil.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
-          });
-        }
-      }
-      
-      // Só atualiza para 'free' se realmente não tem nada válido
-      logStep("No valid subscription found, updating to free status");
-      
-      const { data: existingData2 } = await supabaseAdmin
-        .from('subscriptions')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (existingData2) {
-        const { error: updateError } = await supabaseAdmin
-          .from('subscriptions')
-          .update({
-            status: 'free',
-            plan_name: 'Gratuito',
-            stripe_customer_id: customerId,
-            stripe_subscription_id: null,
-            stripe_price_id: null,
-            current_period_end: null,
-          })
-          .eq('user_id', user.id);
-
-        if (updateError) {
-          logStep("ERROR updating free subscription", { error: updateError });
-        } else {
-          logStep("Successfully updated to free subscription");
-        }
-      } else {
-        const { error: insertError } = await supabaseAdmin
-          .from('subscriptions')
-          .insert({
-            user_id: user.id,
-            status: 'free',
-            plan_name: 'Gratuito',
-            stripe_customer_id: customerId,
-            stripe_subscription_id: null,
-            stripe_price_id: null,
-            current_period_end: null,
-          });
-
-        if (insertError) {
-          logStep("ERROR inserting free subscription", { error: insertError });
-        } else {
-          logStep("Successfully inserted free subscription");
-        }
-      }
-
-      return new Response(JSON.stringify({ 
-        subscribed: false,
-        status: 'free',
-        plan_name: 'Gratuito'
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      });
-    }
-
-    // Retrieve full subscription details to ensure we get complete data
-    logStep("Found subscription, retrieving full details", { subscriptionId: subscriptions.data[0].id });
-    const subscription = await stripe.subscriptions.retrieve(subscriptions.data[0].id);
-    
-    const isActive = subscription.status === 'active' || subscription.status === 'trialing';
-    const priceId = subscription.items.data[0].price.id;
-    
-    logStep("Processing subscription", { 
-      subscriptionId: subscription.id,
-      status: subscription.status,
-      periodStart: subscription.current_period_start,
-      periodEnd: subscription.current_period_end,
-      priceId
-    });
-    
-    // Determine plan name based on price ID (nomes unificados: Awo/Egbe)
-    let planName = 'Gratuito';
-    if (priceId === 'price_1SUQd7Do1RHWW8lpaKCqKH8g') {
-      planName = 'Awo'; // Monthly (antigo Premium)
-    } else if (priceId === 'price_1SVYC4Do1RHWW8lprTS45LGC') {
-      planName = 'Awo'; // Annual (antigo Premium)
-    } else if (priceId === 'price_1SUQe8Do1RHWW8lpTManIdtD') {
-      planName = 'Awo'; // Monthly (antigo Profissional)
-    } else if (priceId === 'price_1SVYDGDo1RHWW8lpDluZOrfK') {
-      planName = 'Awo'; // Annual (antigo Profissional)
-    } else if (priceId === 'price_1SVYDfDo1RHWW8lpGhLjNjoV') {
-      planName = 'Egbe'; // Família
-    }
-    
-    logStep("Plan mapped from price_id", { priceId, planName });
-
-    // Convert timestamps to ISO strings
-    let currentPeriodStart = null;
-    let currentPeriodEnd = null;
-    
-    if (subscription.current_period_start) {
-      currentPeriodStart = new Date(subscription.current_period_start * 1000).toISOString();
-      logStep("Converted period_start", { original: subscription.current_period_start, converted: currentPeriodStart });
-    }
-    
-    if (subscription.current_period_end) {
-      currentPeriodEnd = new Date(subscription.current_period_end * 1000).toISOString();
-      logStep("Converted period_end", { original: subscription.current_period_end, converted: currentPeriodEnd });
-    }
-
-    const subscriptionData = {
-      user_id: user.id,
-      status: subscription.status,
-      plan_name: planName,
-      stripe_customer_id: customerId,
-      stripe_subscription_id: subscription.id,
-      stripe_price_id: priceId,
-      current_period_start: currentPeriodStart,
-      current_period_end: currentPeriodEnd,
-      cancel_at_period_end: subscription.cancel_at_period_end || false,
-      payment_gateway: 'stripe', // Marcar como Stripe
-    };
-
-    logStep("Subscription data to upsert", subscriptionData);
-
-    // Check if subscription exists, then update or insert
-    const { data: existingSubscription } = await supabaseAdmin
+    const { data: existingData } = await supabaseAdmin
       .from('subscriptions')
       .select('id')
       .eq('user_id', user.id)
       .maybeSingle();
 
-    if (existingSubscription) {
-      // Update existing subscription
-      const { data: updatedData, error: updateError } = await supabaseAdmin
+    if (existingData) {
+      await supabaseAdmin
         .from('subscriptions')
-        .update(subscriptionData)
-        .eq('user_id', user.id)
-        .select();
-
-      if (updateError) {
-        logStep("ERROR updating subscription", { error: updateError });
-        throw new Error(`Failed to update subscription: ${updateError.message}`);
-      }
-      
-      logStep("Successfully updated subscription", { data: updatedData });
+        .update({
+          status: 'free',
+          plan_name: 'Gratuito',
+          current_period_end: null,
+        })
+        .eq('user_id', user.id);
     } else {
-      // Insert new subscription
-      const { data: insertedData, error: insertError } = await supabaseAdmin
+      await supabaseAdmin
         .from('subscriptions')
-        .insert(subscriptionData)
-        .select();
-
-      if (insertError) {
-        logStep("ERROR inserting subscription", { error: insertError });
-        throw new Error(`Failed to insert subscription: ${insertError.message}`);
-      }
-      
-      logStep("Successfully inserted subscription", { data: insertedData });
+        .insert({
+          user_id: user.id,
+          status: 'free',
+          plan_name: 'Gratuito',
+          current_period_end: null,
+        });
     }
 
     return new Response(JSON.stringify({
-      subscribed: isActive,
-      status: subscription.status,
-      plan_name: planName,
-      current_period_end: subscriptionData.current_period_end,
-      cancel_at_period_end: subscription.cancel_at_period_end,
-      payment_gateway: 'stripe',
+      subscribed: false,
+      status: 'free',
+      plan_name: 'Gratuito'
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

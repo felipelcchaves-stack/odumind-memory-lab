@@ -39,9 +39,6 @@ verify_jwt = true
 [functions.create-retention-offer]
 verify_jwt = true
 
-[functions.create-checkout-with-coupon]
-verify_jwt = true
-
 [functions.generate-marketing-insights]
 verify_jwt = true
 

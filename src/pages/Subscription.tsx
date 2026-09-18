@@ -10,7 +10,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Crown, Check, CreditCard, Calendar, AlertCircle, Shield, Users, AlertTriangle } from 'lucide-react';
 import DashboardHeader from '@/components/DashboardHeader';
-import RetentionOfferDialog from '@/components/RetentionOfferDialog';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -22,31 +21,20 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function Subscription() {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, isColaborador, loading: adminLoading } = useAdmin();
-  const { 
-    subscription, 
-    loading: subLoading, 
-    loadSubscription, 
-    createCheckout, 
-    createFamilyCheckout, 
-    createCheckoutWithCoupon,
-    openCustomerPortal, 
+  const {
+    subscription,
+    loading: subLoading,
+    loadSubscription,
     changeOwnSubscription,
-    createRetentionOffer,
   } = useSubscription();
   const { isGuruEnabled, openGuruCheckout, openMemberArea, loading: guruLoading } = useGuruCheckout();
   const { plans, loading: plansLoading, getSubscriptionPlans, getPlanHierarchy } = useSubscriptionPlans();
   const navigate = useNavigate();
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
-  const [managingSubscription, setManagingSubscription] = useState(false);
   const { trackInitiateCheckout } = usePixelTracking();
-  
+
   const visiblePlans = getSubscriptionPlans();
-  
-  // Retention offer state
-  const [showRetentionOffer, setShowRetentionOffer] = useState(false);
-  const [retentionOfferData, setRetentionOfferData] = useState<any>(null);
-  const [pendingDowngradePlan, setPendingDowngradePlan] = useState<string | null>(null);
-  
+
   // Checkout required state (when free plan is disabled)
   const [isCheckoutRequired, setIsCheckoutRequired] = useState(false);
   
@@ -134,44 +122,18 @@ export default function Subscription() {
       }
     }
     
-    // If downgrading to Gratuito, show retention offer first
-    if (plan.plan_level === 'gratuito') {
-      // Don't show retention offer if already on Gratuito
-      if (currentPlanName === 'Gratuito') {
-        toast.info('Você já está no plano Gratuito');
-        return;
-      }
-
-      setProcessingPlan(plan.slug);
-      setPendingDowngradePlan(plan.nome);
-      
-      try {
-        // Create retention offer
-        const offerData = await createRetentionOffer(currentPlanName);
-        
-        if (offerData) {
-          setRetentionOfferData(offerData);
-          setShowRetentionOffer(true);
-        } else {
-          // If offer creation fails, proceed with downgrade
-          await proceedWithDowngrade(plan.nome);
-        }
-      } catch (error) {
-        console.error('Error creating retention offer:', error);
-        // If error, proceed with downgrade anyway
-        await proceedWithDowngrade(plan.nome);
-      } finally {
-        setProcessingPlan(null);
-      }
-    } else {
-      // For other downgrades, proceed directly
-      await proceedWithDowngrade(plan.nome);
+    // Don't do anything if already on Gratuito
+    if (plan.plan_level === 'gratuito' && currentPlanName === 'Gratuito') {
+      toast.info('Você já está no plano Gratuito');
+      return;
     }
+
+    await proceedWithDowngrade(plan.nome);
   };
 
   const proceedWithDowngrade = async (planName: string) => {
     setProcessingPlan(planName);
-    
+
     try {
       const success = await changeOwnSubscription(planName);
       if (!success) {
@@ -182,55 +144,6 @@ export default function Subscription() {
       toast.error('Erro ao processar downgrade');
     } finally {
       setProcessingPlan(null);
-      setPendingDowngradePlan(null);
-      setShowRetentionOffer(false);
-      setRetentionOfferData(null);
-    }
-  };
-
-  const handleAcceptRetentionOffer = async () => {
-    if (!retentionOfferData || !subscription?.plan_name) {
-      toast.error('Erro ao processar oferta');
-      return;
-    }
-
-    // Get the current plan from DB
-    const currentPlan = plans.find(p => 
-      p.nome === subscription.plan_name || 
-      p.plan_level === subscription.plan_name.toLowerCase()
-    );
-    
-    if (!currentPlan?.checkout_url) {
-      toast.error('Plano não configurado corretamente');
-      return;
-    }
-
-    try {
-      // Open checkout with coupon if available, otherwise just open checkout
-      if (retentionOfferData.couponCode) {
-        const url = await createCheckoutWithCoupon(
-          currentPlan.checkout_url, 
-          retentionOfferData.couponCode
-        );
-        
-        if (url) {
-          window.open(url, '_blank');
-          toast.success('Redirecionando para checkout com desconto...');
-          setShowRetentionOffer(false);
-        }
-      } else if (currentPlan.checkout_url) {
-        window.open(currentPlan.checkout_url, '_blank');
-        setShowRetentionOffer(false);
-      }
-    } catch (error) {
-      console.error('Error accepting retention offer:', error);
-      toast.error('Erro ao processar oferta');
-    }
-  };
-
-  const handleDeclineRetentionOffer = async () => {
-    if (pendingDowngradePlan) {
-      await proceedWithDowngrade(pendingDowngradePlan);
     }
   };
 
@@ -283,32 +196,21 @@ export default function Subscription() {
     }
   };
 
-  const handleManageSubscription = async () => {
-    setManagingSubscription(true);
-    
-    try {
-      // Se GURU está habilitado e a assinatura é via GURU, abre área do membro GURU
-      if (isGuruEnabled && subscription?.payment_gateway === 'guru') {
-        const opened = openMemberArea();
-        if (opened) {
-          toast.success('Área do membro aberta em nova aba');
-          setManagingSubscription(false);
-          return;
-        }
+  const handleManageSubscription = () => {
+    // Se GURU está habilitado e a assinatura é via GURU, abre área do membro GURU
+    if (isGuruEnabled && subscription?.payment_gateway === 'guru') {
+      const opened = openMemberArea();
+      if (opened) {
+        toast.success('Área do membro aberta em nova aba');
+        return;
       }
-
-      // Fallback para portal Stripe
-      const url = await openCustomerPortal();
-      if (url) {
-        window.open(url, '_blank');
-        toast.success('Portal aberto em nova aba');
-      }
-    } catch (error) {
-      console.error('Error managing subscription:', error);
-      toast.error('Erro ao abrir gerenciamento de assinatura');
-    } finally {
-      setManagingSubscription(false);
     }
+
+    // Assinatura concedida manualmente (sem gateway) ou área do membro
+    // indisponível: não existe portal de autoatendimento pra esse caso,
+    // então direciona pro suporte.
+    window.location.href = 'mailto:contato@isesemind.com?subject=Gerenciar%20minha%20assinatura';
+    toast.info('Entre em contato com o suporte para gerenciar sua assinatura');
   };
 
   // Format price
@@ -476,13 +378,12 @@ export default function Subscription() {
                     Recarregar Status
                   </Button>
                   {isActive && (
-                    <Button 
+                    <Button
                       variant="outline"
                       onClick={handleManageSubscription}
-                      disabled={managingSubscription}
                     >
                       <CreditCard className="mr-2 h-4 w-4" />
-                      {managingSubscription ? 'Abrindo portal...' : 'Gerenciar Assinatura'}
+                      Gerenciar Assinatura
                     </Button>
                   )}
                 </div>
@@ -627,17 +528,6 @@ export default function Subscription() {
           <p>Todos os planos incluem 7 dias de garantia de satisfação.</p>
           <p className="mt-1">Dúvidas? Entre em contato pelo suporte.</p>
         </div>
-
-        {/* Retention Offer Dialog */}
-        <RetentionOfferDialog
-          open={showRetentionOffer}
-          onOpenChange={setShowRetentionOffer}
-          currentPlan={subscription?.plan_name || 'Awo'}
-          discountPercent={retentionOfferData?.discountPercent || 30}
-          durationMonths={retentionOfferData?.durationMonths || 3}
-          onAcceptOffer={handleAcceptRetentionOffer}
-          onDeclineOffer={handleDeclineRetentionOffer}
-        />
       </div>
     </div>
   );
