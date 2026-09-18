@@ -343,11 +343,15 @@ export default function StudySession() {
     };
   }, [sessionId, isSessionActive, sessionStats.cardsStudied, sessionMetrics]);
 
-  // Auto-save session before page unload
+  // Auto-save session on exit. beforeunload sozinho não é suficiente no
+  // celular: minimizar o app ou trocar de app (o jeito mais comum de sair,
+  // no uso real em PWA mobile) não dispara esse evento - dispara
+  // visibilitychange/pagehide. Mantemos beforeunload também como reforço
+  // pro caso de fechar aba/navegador no desktop.
   useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+    const saveViaBeacon = () => {
       if (sessionId && user && isSessionActive && sessionStats.cardsStudied > 0) {
-        console.log('🔄 Auto-salvando sessão antes de fechar página...');
+        console.log('🔄 Auto-salvando sessão ao sair/minimizar...');
         // Usar sendBeacon para garantir que a requisição seja enviada
         const endpoint = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/study_sessions?id=eq.${sessionId}`;
         const payload = JSON.stringify({
@@ -357,14 +361,30 @@ export default function StudySession() {
           wrong_answers: sessionMetrics.wrongAnswers || 0,
           average_response_time: sessionMetrics.averageResponseTime || 0,
         });
-        
+
         navigator.sendBeacon(endpoint, new Blob([payload], { type: 'application/json' }));
-        toast.success('✅ Progresso salvo automaticamente', { duration: 1500 });
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      saveViaBeacon();
+      toast.success('✅ Progresso salvo automaticamente', { duration: 1500 });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        saveViaBeacon();
       }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', saveViaBeacon);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', saveViaBeacon);
+    };
   }, [sessionId, isSessionActive, sessionStats, sessionMetrics, user]);
 
 
@@ -1021,33 +1041,36 @@ export default function StudySession() {
         totalXP: prev.totalXP + xp
       }));
 
-      // Update profile
-      const { data: currentProfile } = await supabase
-        .from("profiles")
-        .select("xp")
-        .eq("user_id", user.id)
-        .single();
+      // Atualizações de XP/streak/conquistas/badges/log são independentes
+      // entre si, mas rodavam uma esperando a outra terminar - em conexão
+      // móvel isso significava vários segundos de espera visível antes do
+      // próximo card aparecer. Rodam em paralelo agora.
+      const updateXp = async () => {
+        const { data: currentProfile } = await supabase
+          .from("profiles")
+          .select("xp")
+          .eq("user_id", user.id)
+          .single();
 
-      const newXp = (currentProfile?.xp || 0) + xp;
-      await supabase
-        .from("profiles")
-        .update({ xp: newXp })
-        .eq("user_id", user.id);
+        const newXp = (currentProfile?.xp || 0) + xp;
+        await supabase
+          .from("profiles")
+          .update({ xp: newXp })
+          .eq("user_id", user.id);
+      };
 
-      // Update streak
-      await supabase.rpc("update_user_streak", { _user_id: user.id });
-
-      // Check achievements and badges
-      await supabase.rpc("check_and_award_achievements", { _user_id: user.id });
-      await supabase.rpc("check_and_award_badges", { _user_id: user.id });
-
-      // Log event
-      await supabase.from("gamification_logs").insert({
-        user_id: user.id,
-        tipo_evento: "xp_ganho",
-        valor: xp,
-        detalhes: { odu_id: currentOdu.id, qualidade, odu_nome: currentOdu.nome },
-      });
+      await Promise.all([
+        updateXp(),
+        supabase.rpc("update_user_streak", { _user_id: user.id }),
+        supabase.rpc("check_and_award_achievements", { _user_id: user.id }),
+        supabase.rpc("check_and_award_badges", { _user_id: user.id }),
+        supabase.from("gamification_logs").insert({
+          user_id: user.id,
+          tipo_evento: "xp_ganho",
+          valor: xp,
+          detalhes: { odu_id: currentOdu.id, qualidade, odu_nome: currentOdu.nome },
+        }),
+      ]);
 
       // Check for new badges
       const { data: recentBadges } = await supabase

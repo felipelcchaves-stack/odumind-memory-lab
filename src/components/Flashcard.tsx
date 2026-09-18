@@ -99,7 +99,7 @@ const Flashcard = memo(function Flashcard({
       )}
 
       <Card 
-        className={`min-h-[400px] max-h-[calc(100vh-220px)] overflow-hidden cursor-pointer transition-all hover:shadow-lg ${
+        className={`min-h-[400px] h-flashcard-card overflow-hidden cursor-pointer transition-all hover:shadow-lg ${
           currentMilestone ? 'animate-scale-in' : ''
         }`}
         onClick={() => setIsFlipped(!isFlipped)}
@@ -144,7 +144,7 @@ const Flashcard = memo(function Flashcard({
         </CardHeader>
 
         <CardContent className="pt-2 flex-1 overflow-hidden">
-          <ScrollArea className="h-[calc(100vh-400px)] md:h-[calc(100vh-380px)]">
+          <ScrollArea className="h-flashcard-scroll">
             <div className="pr-3 space-y-4">
               {/* Significado - agora dentro do scroll */}
               {significado && (

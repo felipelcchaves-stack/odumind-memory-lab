@@ -13,6 +13,28 @@
   word-break: break-word;
 }
 
+/* 100vh no mobile inclui a barra de endereço do navegador, que
+   aparece/some durante o scroll - causa corte de conteúdo ou espaço
+   morto. 100dvh acompanha a viewport visível de verdade; browsers que
+   não suportam a unidade simplesmente ignoram a segunda declaração e
+   ficam com o fallback em vh. */
+.h-flashcard-card {
+  max-height: calc(100vh - 220px);
+  max-height: calc(100dvh - 220px);
+}
+
+.h-flashcard-scroll {
+  height: calc(100vh - 400px);
+  height: calc(100dvh - 400px);
+}
+
+@media (min-width: 768px) {
+  .h-flashcard-scroll {
+    height: calc(100vh - 380px);
+    height: calc(100dvh - 380px);
+  }
+}
+
 /* Garantir que tabelas dentro de prose não quebrem o layout */
 .prose table {
   display: block;

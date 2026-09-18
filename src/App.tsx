@@ -1,3 +1,5 @@
+import { Suspense, lazy } from "react";
+import { Loader2 } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -39,29 +41,42 @@ import CaminhoIfa from "./pages/CaminhoIfa";
 import Caminhos from "./pages/Caminhos";
 import Instalar from "./pages/Instalar";
 import Demonstracao from "./pages/Demonstracao";
-import { AdminLayout } from "./components/admin/AdminLayout";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminOduPage from "./pages/admin/AdminOduPage";
-import AdminRituaisPage from "./pages/admin/AdminRituaisPage";
-import AdminUsersPage from "./pages/admin/AdminUsersPage";
-import AdminAnalyticsPage from "./pages/admin/AdminAnalyticsPage";
-import AdminAdvancedAnalytics from "./pages/admin/AdminAdvancedAnalytics";
-import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
-import AdminToolsPage from "./pages/admin/AdminToolsPage";
-import AdminChangelogPage from "./pages/admin/AdminChangelogPage";
-import AdminRestorePage from "./pages/admin/AdminRestorePage";
-import UserDetail from "./pages/UserDetail";
-import AdminGuruPage from "./pages/admin/AdminGuruPage";
-import AdminFeaturesPage from "./pages/admin/AdminFeaturesPage";
-import AdminAnnouncementsPage from "./pages/admin/AdminAnnouncementsPage";
-import AdminCouponsPage from "./pages/admin/AdminCouponsPage";
-import AdminCaminhosPage from "./pages/admin/AdminCaminhosPage";
-import AdminPlansPage from "./pages/admin/AdminPlansPage";
-import AdminReviewsPage from "./pages/admin/AdminReviewsPage";
-import AdminFamilyGroupsPage from "./pages/admin/AdminFamilyGroupsPage";
-import AdminHeatmapPage from "./pages/admin/AdminHeatmapPage";
-import AdminSubscriptionsPage from "./pages/admin/AdminSubscriptionsPage";
+
+// Rotas de admin carregadas sob demanda - o aluno comum nunca visita essas
+// páginas, então não precisa baixar esse código no carregamento inicial
+// (eram ~20 páginas estáticas no mesmo bundle de 2.1MB que todo mundo baixa).
+const AdminLayout = lazy(() => import("./components/admin/AdminLayout").then(m => ({ default: m.AdminLayout })));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminOduPage = lazy(() => import("./pages/admin/AdminOduPage"));
+const AdminRituaisPage = lazy(() => import("./pages/admin/AdminRituaisPage"));
+const AdminUsersPage = lazy(() => import("./pages/admin/AdminUsersPage"));
+const AdminAnalyticsPage = lazy(() => import("./pages/admin/AdminAnalyticsPage"));
+const AdminAdvancedAnalytics = lazy(() => import("./pages/admin/AdminAdvancedAnalytics"));
+const AdminSettingsPage = lazy(() => import("./pages/admin/AdminSettingsPage"));
+const AdminToolsPage = lazy(() => import("./pages/admin/AdminToolsPage"));
+const AdminChangelogPage = lazy(() => import("./pages/admin/AdminChangelogPage"));
+const AdminRestorePage = lazy(() => import("./pages/admin/AdminRestorePage"));
+const UserDetail = lazy(() => import("./pages/UserDetail"));
+const AdminGuruPage = lazy(() => import("./pages/admin/AdminGuruPage"));
+const AdminFeaturesPage = lazy(() => import("./pages/admin/AdminFeaturesPage"));
+const AdminAnnouncementsPage = lazy(() => import("./pages/admin/AdminAnnouncementsPage"));
+const AdminCouponsPage = lazy(() => import("./pages/admin/AdminCouponsPage"));
+const AdminCaminhosPage = lazy(() => import("./pages/admin/AdminCaminhosPage"));
+const AdminPlansPage = lazy(() => import("./pages/admin/AdminPlansPage"));
+const AdminReviewsPage = lazy(() => import("./pages/admin/AdminReviewsPage"));
+const AdminFamilyGroupsPage = lazy(() => import("./pages/admin/AdminFamilyGroupsPage"));
+const AdminHeatmapPage = lazy(() => import("./pages/admin/AdminHeatmapPage"));
+const AdminSubscriptionsPage = lazy(() => import("./pages/admin/AdminSubscriptionsPage"));
+
 const queryClient = new QueryClient();
+
+function RouteLoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+}
 
 function SessionValidator() {
   useSessionValidation();
@@ -100,6 +115,7 @@ function AppContent() {
         <ReferralWelcomeModal />
         <ModalProviders />
         <SessionValidator />
+        <Suspense fallback={<RouteLoadingFallback />}>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
@@ -153,6 +169,7 @@ function AppContent() {
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </Suspense>
       </BrowserRouter>
     </>
   );

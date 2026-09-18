@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, Target, Zap, BookOpen, Brain, Calendar, TrendingUp, Award, Home, Clock, Flame, Heart, Sparkles, FileText, Lightbulb } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Trophy, Target, Zap, BookOpen, Brain, Calendar, TrendingUp, Award, Home, Clock, Flame, Heart, Sparkles, FileText, Lightbulb, WifiOff } from 'lucide-react';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import BadgesDisplay from '@/components/BadgesDisplay';
@@ -78,6 +80,7 @@ interface MemorizationStats {
 export default function Dashboard() {
   const { user, signOut, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const isOnline = useOnlineStatus();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [stats, setStats] = useState<MemorizationStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -503,6 +506,20 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <main className="container px-4 py-8">
+        {/* Aviso de offline - sem isso, o Dashboard mostrava silenciosamente
+            "0 memorizados / 0%" quando as consultas falhavam por falta de
+            conexão, idêntico visualmente a uma conta nova zerada */}
+        {!isOnline && (
+          <Alert variant="destructive" className="mb-6">
+            <WifiOff className="h-4 w-4" />
+            <AlertTitle>Você está offline</AlertTitle>
+            <AlertDescription>
+              Sem conexão com a internet. Os dados abaixo podem estar
+              desatualizados até a conexão voltar.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Upgrade Banner for Free Users */}
         {!subLoading && subscription && subscription.status === 'free' && (
           <UpgradeBanner />
