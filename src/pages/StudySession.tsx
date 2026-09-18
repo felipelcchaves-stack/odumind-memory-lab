@@ -960,8 +960,16 @@ export default function StudySession() {
         revisoes
       );
       
-      const newMemoryStrength = Math.min(100, (currentRecord?.forca_memoria || 0) + qualidade * 8);
-      const newStatus = revisoes >= 3 && newMemoryStrength >= 60 ? "memorizado" : "estudando";
+      // Respostas corretas aumentam a força de memória (mesma escala de antes);
+      // respostas erradas agora REDUZEM, em vez de sempre somar independente do
+      // resultado - sem isso, o indicador de domínio só subia mesmo quando o
+      // aluno errava repetidamente.
+      const strengthDelta = isCorrect ? qualidade * 8 : -15;
+      const newMemoryStrength = Math.max(0, Math.min(100, (currentRecord?.forca_memoria || 0) + strengthDelta));
+      // Um erro nunca promove (ou mantém) o Odu como "memorizado" - só reflete
+      // domínio de verdade quando a resposta mais recente também foi correta,
+      // não só o acumulado histórico de força.
+      const newStatus = isCorrect && revisoes >= 3 && newMemoryStrength >= 60 ? "memorizado" : "estudando";
       
       // Calculate next review date
       const proximaData = new Date();

@@ -275,7 +275,10 @@ export async function createInterleavedMix(
 
     const maintenance = allOdus.filter(odu => {
       const mem = memData?.find(m => m.odu_id === odu.id);
-      return mem && mem.status === 'memorizado' && mem.forca_memoria >= 70;
+      // Usa o mesmo limiar (60) que promove um Odu para 'memorizado' em
+      // StudySession.tsx - com 70 aqui, um Odu memorizado com força entre
+      // 60-69 não caía em nenhum dos três grupos e sumia da fila de estudo.
+      return mem && mem.status === 'memorizado' && mem.forca_memoria >= 60;
     });
 
     // Calcular quantidades (até 100 cards total)
