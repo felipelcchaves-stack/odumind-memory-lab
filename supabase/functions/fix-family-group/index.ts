@@ -25,6 +25,19 @@ serve(async (req) => {
   try {
     logStep("Starting family group fix process");
 
+    // Only an admin can trigger a system-wide backfill across every active
+    // Família/Egbe subscription.
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) throw new Error("No authorization header");
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user: adminUser }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    if (authError || !adminUser) throw new Error("Authentication failed");
+
+    const { data: isAdmin } = await supabaseAdmin.rpc('has_admin_role', { _user_id: adminUser.id });
+    if (!isAdmin) throw new Error("User is not an admin");
+    logStep("Admin authenticated", { adminId: adminUser.id });
+
     // Buscar todos os usuários com plano Família/Egbe ativo mas sem grupo
     const { data: subs, error: subsError } = await supabaseAdmin
       .from('subscriptions')

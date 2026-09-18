@@ -16,7 +16,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.fix-family-group]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-study-plan]
 verify_jwt = true
@@ -49,7 +49,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.generate-odu-audio]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-exit-popup-coupon]
 verify_jwt = false

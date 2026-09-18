@@ -26,6 +26,27 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
+    // Only convert a referral if the referred user is actually an active
+    // paying (Guru) subscriber -- without this check, anyone who could call
+    // this function could force a "conversion" reward for any user_id with
+    // no proof of a real purchase.
+    const { data: referredSub } = await supabaseClient
+      .from('subscriptions')
+      .select('payment_gateway, status')
+      .eq('user_id', user_id)
+      .maybeSingle();
+
+    const reallyConverted = referredSub?.payment_gateway === 'guru' &&
+      (referredSub.status === 'active' || referredSub.status === 'trialing');
+
+    if (!reallyConverted) {
+      console.log('User has no active paid subscription, refusing to convert referral:', user_id);
+      return new Response(
+        JSON.stringify({ message: 'Usuário indicado ainda não possui assinatura paga ativa' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Find pending referral usage for this user
     const { data: referralUsage, error: findError } = await supabaseClient
       .from('referral_usage')

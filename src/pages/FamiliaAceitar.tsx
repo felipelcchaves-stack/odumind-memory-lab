@@ -31,17 +31,12 @@ export default function FamiliaAceitar() {
     }
 
     try {
-      const { data, error: inviteError } = await supabase
-        .from('family_invites')
-        .select(`
-          *,
-          family_groups (
-            group_name,
-            max_members
-          )
-        `)
-        .eq('token', token)
-        .single();
+      const { data: rows, error: inviteError } = await supabase
+        .rpc('get_family_invite_by_token', { p_token: token });
+
+      const data = rows?.[0]
+        ? { ...rows[0], family_groups: { group_name: rows[0].group_name, max_members: rows[0].max_members } }
+        : null;
 
       if (inviteError || !data) {
         setError('Convite não encontrado');

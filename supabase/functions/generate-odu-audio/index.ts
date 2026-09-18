@@ -12,8 +12,31 @@ serve(async (req) => {
   }
 
   try {
+    // Verificar autenticação - sem isso, qualquer chamador anônimo poderia
+    // disparar gerações pagas na ElevenLabs repetidamente.
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Não autorizado. Faça login para continuar.' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+    const { data: { user }, error: authUserError } = await authClient.auth.getUser();
+    if (authUserError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Token inválido ou expirado. Faça login novamente.' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { odu_id, audio_type = 'nome' } = await req.json();
-    
+
     if (!odu_id) {
       throw new Error('odu_id is required');
     }
@@ -23,7 +46,6 @@ serve(async (req) => {
       throw new Error('ELEVENLABS_API_KEY is not configured');
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
