@@ -766,13 +766,37 @@ serve(async (req) => {
         });
       }
 
-      logStep("Assinatura atualizada com sucesso", { 
-        userId, 
-        status: subscriptionStatus, 
+      logStep("Assinatura atualizada com sucesso", {
+        userId,
+        status: subscriptionStatus,
         planName,
         durationDays,
         isNewUser
       });
+
+      // Se esse usuário foi indicado por alguém e agora tem assinatura paga
+      // ativa de verdade, converter a indicação (30 dias + badge pro
+      // indicador). check-referral-conversion já valida a assinatura ativa
+      // de novo do lado dela antes de conceder qualquer coisa - é só ruído
+      // se não houver indicação pendente, então não bloqueia o webhook.
+      if (subscriptionStatus === 'active') {
+        try {
+          const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+          const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+          await fetch(`${supabaseUrl}/functions/v1/check-referral-conversion`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${serviceRoleKey}`,
+            },
+            body: JSON.stringify({ user_id: userId }),
+          });
+        } catch (referralError) {
+          logStep("Erro ao verificar conversão de indicação (não bloqueia o webhook)", {
+            error: referralError instanceof Error ? referralError.message : String(referralError),
+          });
+        }
+      }
 
       // Se for plano Egbe/Família, criar grupo automaticamente
       if (subscriptionStatus === 'active' && (planName === 'Egbe' || planName === 'Família' || planName.toLowerCase().includes('família') || planName.toLowerCase().includes('egbe'))) {
