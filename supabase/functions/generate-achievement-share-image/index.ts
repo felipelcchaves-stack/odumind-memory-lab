@@ -16,9 +16,9 @@ serve(async (req) => {
 
     console.log('Generating share image for achievement:', { titulo, tipo });
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+    if (!GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY not configured');
     }
 
     // Create a detailed prompt for image generation
@@ -47,42 +47,50 @@ DESIGN REQUIREMENTS:
 - Include "IseseMind" branding in small text at bottom
 - High contrast, readable text`;
 
-    console.log('Sending request to Lovable AI...');
+    console.log('Sending request to Gemini...');
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Gemini's image-generation models use the Interactions API, not the
+    // OpenAI-compatible chat/completions endpoint used by the text-only
+    // functions - it returns base64 image data directly rather than a URL.
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image-preview",
-        messages: [
-          {
-            role: "user",
-            content: prompt
-          }
+        model: "gemini-3.1-flash-image",
+        input: [
+          { type: "text", text: prompt }
         ],
-        modalities: ["image", "text"]
+        response_format: {
+          type: "image",
+          mime_type: "image/jpeg",
+          aspect_ratio: "16:9"
+        }
       })
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Lovable AI error:', errorText);
-      throw new Error(`Lovable AI request failed: ${response.status} - ${errorText}`);
+      console.error('Gemini error:', errorText);
+      throw new Error(`Gemini request failed: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('Lovable AI response received');
+    console.log('Gemini response received');
 
-    // Extract the generated image
-    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    // Extract the generated image (base64) and turn it into a data URL so
+    // callers can keep using imageUrl exactly as before.
+    const imageData = data.output_image?.data;
+    const imageMimeType = data.output_image?.mime_type || 'image/jpeg';
 
-    if (!imageUrl) {
+    if (!imageData) {
       console.error('No image in response:', JSON.stringify(data));
       throw new Error('No image generated in response');
     }
+
+    const imageUrl = `data:${imageMimeType};base64,${imageData}`;
 
     console.log('Image generated successfully');
 

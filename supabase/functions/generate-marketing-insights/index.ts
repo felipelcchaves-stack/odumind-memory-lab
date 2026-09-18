@@ -14,9 +14,9 @@ serve(async (req) => {
   try {
     const { metrics, demographics, monthlyData, period } = await req.json();
     
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY não configurado');
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+    if (!GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY não configurado');
     }
 
     // Prepare top states
@@ -111,14 +111,14 @@ Com base EXCLUSIVAMENTE nos dados acima, forneça insights estratégicos acioná
 
     console.log('Chamando Lovable AI para gerar insights...');
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${GEMINI_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'gemini-3.8-flash',
         messages: [
           { 
             role: 'system', 
