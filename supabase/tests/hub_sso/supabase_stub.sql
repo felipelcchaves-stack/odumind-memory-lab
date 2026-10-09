@@ -29,3 +29,5 @@ $$;
 GRANT EXECUTE ON FUNCTION auth.jwt(), auth.uid() TO anon, authenticated, service_role;
 -- Supabase grants table privileges to these roles by default; RLS is what protects the rows.
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
+-- The role Supabase Auth uses to call Postgres hooks (Custom Access Token Hook).
+CREATE ROLE supabase_auth_admin NOLOGIN NOINHERIT;

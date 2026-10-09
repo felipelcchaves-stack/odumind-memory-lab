@@ -10,6 +10,9 @@ CREATE FUNCTION tests.as_session(_uid UUID, _sid UUID) RETURNS void LANGUAGE sql
   SELECT set_config('request.jwt.claims',
     json_build_object('sub', _uid, 'role', 'authenticated', 'session_id', _sid)::text, false)
 $$;
+CREATE FUNCTION tests.as_claims(_claims JSONB) RETURNS void LANGUAGE sql AS $$
+  SELECT set_config('request.jwt.claims', _claims::text, false)
+$$;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA tests TO anon, authenticated, service_role;
 
 -- People
