@@ -15,4 +15,5 @@ PSQL=(psql -h "$TMP" -U postgres -d postgres -v ON_ERROR_STOP=1 -q -X -o /dev/nu
 "${PSQL[@]}" -f "$HERE/project_base.sql"
 for m in "$ROOT"/supabase/migrations/*_hub_sso*.sql; do "${PSQL[@]}" -f "$m"; done
 "${PSQL[@]}" -f "$HERE/test.sql"
+if [ -f "$HERE/project_test.sql" ]; then "${PSQL[@]}" -f "$HERE/project_test.sql"; fi
 echo "hub_sso SQL tests: OK"

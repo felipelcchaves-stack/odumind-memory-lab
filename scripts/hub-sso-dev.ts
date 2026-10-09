@@ -32,12 +32,25 @@ const accessToken = (s: Session) =>
     sub: s.userId,
     session_id: s.id,
     role: "authenticated",
+    aal: "aal1",
+    amr: [{ method: "otp", timestamp: Math.floor(Date.now() / 1000) }],
     aud: "authenticated",
     email: adminEmail,
     exp: Math.floor(Date.now() / 1000) + 3600,
     iat: Math.floor(Date.now() / 1000),
   })}.${b64("dev-signature-not-verified")}`;
-const user = () => ({ id: adminId, aud: "authenticated", role: "authenticated", email: adminEmail, app_metadata: {}, user_metadata: {}, created_at: new Date().toISOString() });
+// DEV_USER_MFA=true: the admin has a verified Supabase TOTP factor (Academy asks for it on aal1).
+const mfa = Deno.env.get("DEV_USER_MFA") === "true";
+const user = () => ({
+  id: adminId,
+  aud: "authenticated",
+  role: "authenticated",
+  email: adminEmail,
+  app_metadata: {},
+  user_metadata: {},
+  created_at: new Date().toISOString(),
+  ...(mfa ? { factors: [{ id: "f1", factor_type: "totp", status: "verified", friendly_name: "app", created_at: new Date().toISOString(), updated_at: new Date().toISOString() }] } : {}),
+});
 const sessionBody = (s: Session) => ({ access_token: accessToken(s), refresh_token: s.refresh, expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, token_type: "bearer", user: user() });
 const claims = (req: Request): Record<string, string> | null => {
   const token = (req.headers.get("authorization") ?? "").replace(/^Bearer /, "");
