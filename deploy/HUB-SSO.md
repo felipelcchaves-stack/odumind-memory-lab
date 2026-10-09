@@ -71,7 +71,7 @@ de login do admin no uso normal). Aluno ou colaborador (papel fora de `HUB_SSO_A
 | Guarda do /admin | `src/components/hub-sso/HubAdminGuard.tsx` (em volta do `AdminLayout` em `src/App.tsx`) |
 | "Sair" | `src/lib/hubSsoSession.ts` → `signOutWithHub()` (usado em `src/components/DashboardHeader.tsx`; só vai ao Hub se a sessão veio do Hub) |
 | Sessão única | `src/lib/hubSsoProject.ts` chama `enforce-single-session` depois do login pelo Hub e grava `session_id` (o `useSessionValidation` confere a cada minuto) |
-| Banco | `supabase/migrations/20261008230000_hub_sso.sql` (tabela `hub_sso_sessions` + funções), `20261009090000_hub_sso_end_local_sessions.sql` (encerra as sessões sem Hub de quem entrou pelo Hub) e `20261008230100_hub_sso_role_guard.sql` (`has_admin_role` e `has_colaborador_role` recusam sessão revogada) |
+| Banco | `supabase/migrations/20261008230000_hub_sso.sql` (tabela `hub_sso_sessions` + funções), `20261009090000_hub_sso_end_local_sessions.sql` (encerra as sessões sem Hub de quem entrou pelo Hub) e `20261008230100_hub_sso_role_guard.sql` (`has_admin_role` e `has_colaborador_role` recusam sessão revogada); segurança: `20261009120000_security_subscriptions_no_self_service.sql` (aluno não se dá plano pago); hook: `20261009130000_hub_sso_access_token_hook.sql` (só cria as funções, ver §9) |
 
 ## 4. Configuração (nada fixo no código)
 
@@ -130,6 +130,25 @@ Variáveis de build da SPA (no `.env` da VPS em `~/apps/odumind-memory-lab`, lid
    supabase db push            # aplica 20261008230000_hub_sso.sql, 20261008230100_hub_sso_role_guard.sql e 20261009090000_hub_sso_end_local_sessions.sql
    supabase functions deploy hub-sso --project-ref xcxxdzipwfmakypegqxb
    ```
+   A ordem completa das migrações deste branch está em §9.1. A `20261009130000` só cria as funções
+   do hook: nada muda até você ligá-lo (§9.3).
+   Para aplicar **só a correção de segurança agora**, sem o SSO: (1) `supabase functions deploy
+   claim-referral-rewards --project-ref xcxxdzipwfmakypegqxb`; (2) SQL Editor › colar o conteúdo
+   de `supabase/migrations/20261009120000_security_subscriptions_no_self_service.sql` › Run. Antes,
+   para conferir o que existe hoje: `SELECT policyname, cmd FROM pg_policies WHERE tablename IN
+   ('subscriptions', 'referral_rewards');`. Quando o `db push` rodar depois, ela roda de novo sem
+   efeito (é idempotente).
+   Publicar as funções alteradas. A `claim-referral-rewards` vai **antes** do `supabase db push`
+   acima (a migração de segurança tira as policies de que a versão antiga dependia); as outras podem
+   ir depois. O guarda vale mesmo com o hook desligado: também barra o token de uma sessão encerrada
+   no Hub.
+   ```bash
+   for f in claim-referral-rewards admin-change-subscription admin-create-user admin-delete-user \
+     fix-escaped-html fix-family-group generate-verso-resumido notify-course-launch \
+     send-renewal-offer sync-pagarme-revenue; do
+     supabase functions deploy "$f" --project-ref xcxxdzipwfmakypegqxb
+   done
+   ```
 5. **SPA.** No `.env` da VPS (`~/apps/odumind-memory-lab/.env`) acrescentar
    `VITE_HUB_SSO_ENABLED=true` e `VITE_HUB_ISSUER=https://hub.ifatokun.com.br/oidc`; o próximo push
    em `main` (ou `npm run build` lá) já gera o build com o login pelo Hub.
@@ -139,20 +158,23 @@ Variáveis de build da SPA (no `.env` da VPS em `~/apps/odumind-memory-lab`, lid
    `has_admin_role` já recusa o token revogado na hora; isto encurta o resto (ex.: telas que só leem a
    própria linha).
 
-**Emergência (Hub fora do ar):** `supabase secrets set HUB_SSO_ENABLED=false` → o `/admin` volta
+**Emergência (Hub fora do ar):** se o hook de §9.3 estiver ligado, **desligue-o primeiro** (senão "Esqueci a senha" é recusado para admin). Depois: `supabase secrets set HUB_SSO_ENABLED=false` → o `/admin` volta
 ao fluxo antigo sem rebuild (com a senha aleatória, use "Esqueci a senha"). Ou rebuild com
 `VITE_HUB_SSO_LOCAL_LOGIN=true`.
 
 ## 6. Testes
 
-- `npm test` (novo: `vitest run`) — `src/test/hub-sso/*.test.ts` (84 testes): validação de `iss`/`target_link_uri`,
+- `npm test` (novo: `vitest run`) — `src/test/hub-sso/*.test.ts` (101 testes no `npm test`, incluindo `guard.test.ts`: o guarda das Edge Functions, §9.4): validação de `iss`/`target_link_uri`,
   PKCE (vetor do RFC 7636), estado de uso único e expiração, ID token e logout token **assinados
   de verdade** (RS256, chave de teste) e validados pelo `jose` num JWKS servido por HTTP local
   (nonce, aud, azp, iss, exp, iat, jti, evento, assinatura forjada, outro algoritmo), código usado
   duas vezes, PKCE errado, mapeamento e recusas (sem usuário, sem papel, bloqueado, e-mail não
   confirmado), troca de senha, o cliente `supabase-js` real com `fetch` falso (confere que só
   chama `rpc/hub_sso_find_user`, `admin/generate_link` e `verify`, nunca cria usuário).
-- `bash supabase/tests/hub_sso/run.sh` — aplica as migrações num PostgreSQL local descartável
+- `bash supabase/tests/hub_sso/run.sh` — além do abaixo, roda `hook_test.sql` (o hook como
+  `supabase_auth_admin`: permissões, cada método de login, claims obrigatórias mantidas, a regra
+  com e sem a claim) e os testes de segurança (`security_base/before/after.sql`): o aluno se dando plano pago (update e insert) e reescrevendo recompensa antes da correção e barrado depois (aplicada duas vezes), com a leitura, a tela de admin e o service role ainda funcionando.
+  O mesmo script aplica as migrações num PostgreSQL local descartável
   (socket, sem porta) com um esqueleto do `auth` e confere permissões, status, revogação e o
   `has_role` recusando o token revogado.
 - `scripts/hub-sso-dev.ts` — a função real em Deno + um Supabase falso em memória, para testar no
@@ -160,12 +182,19 @@ ao fluxo antigo sem rebuild (com a senha aleatória, use "Esqueci a senha"). Ou 
 
 ## 7. Achados durante o trabalho
 
-- **ALTO, já existia (não é do SSO):** pelas migrações do repositório, as policies "Users can
-  insert/update their own subscription" (20251117112422) deixam qualquer aluno se dar um plano pago
-  pela API pública (`subscriptions.status/plan_name/current_period_end`). O app só grava
-  `subscriptions` pela tela de admin e por Edge Functions com service role. Correção proposta,
-  **não aplicada**: `supabase/proposed/drop_user_write_on_subscriptions.sql` (confirme antes no
-  projeto com `SELECT policyname, cmd FROM pg_policies WHERE tablename = 'subscriptions';`).
+- **ALTO, já existia (não é do SSO) — CORRIGIDO em 09/10/2026:** as policies "Users can
+  insert/update their own subscription" (20251117112422) deixavam qualquer aluno se dar um plano
+  pago pela API pública. Ao conferir quem grava, apareceu que a `claim-referral-rewards` dependia
+  delas (usava o JWT do aluno) e uma segunda porta: "Users can update their own rewards" deixava o
+  aluno reescrever a recompensa (`reward_description = '3650 dias'`, `claimed = false`) e resgatar.
+  Agora é a migração `20261009120000_security_subscriptions_no_self_service.sql` + a função
+  corrigida (ver §9).
+- **Bugs que já existiam (não corrigidos, fora do escopo):** `check-referral-conversion`,
+  `guru-webhook` (linha ~820) e `fix-family-group` ainda gravam `stripe_*` em `subscriptions`, e
+  essas colunas foram removidas em 20260918210000: esses trechos falham. A
+  `claim-referral-rewards` já foi limpa. O `apply-referral-code` grava `referral_rewards` e
+  `referral_program` de outra pessoa com o JWT do aluno, o que a RLS recusa: os "7 dias" do código
+  de indicação não são criados. Corrigir isso libera Premium grátis, então é decisão de negócio.
 - Papel de admin: `user_roles` só aceita insert/delete de admin; não achei caminho de autopromoção.
 - `package.json` ganhou `vitest` e `jose` (só desenvolvimento) e o script `test`; o `bun.lock`
   não foi atualizado (o deploy usa `npm ci`).
@@ -186,10 +215,104 @@ Corrigido nesta revisão:
 - O retorno do Hub com `iss` de outro emissor é recusado (RFC 9207); o código sai da barra de
   endereço antes da troca; a tela de erro não repete texto livre vindo do link (`?error=`).
 
-Fica para o Felipe decidir (não corrigido): o Supabase Auth continua aceitando **"Esqueci a
-senha" / link mágico** pela anon key pública. Quem controlar a caixa de e-mail de um admin abre
-uma sessão de admin sem o TOTP do Hub (ela dura até o próximo login dele pelo Hub, que a encerra).
-O fechamento completo é um *Custom Access Token Hook* do Supabase (Authentication › Hooks) que
-recuse emitir token para papéis do Hub quando a sessão não estiver em `hub_sso_sessions`, ou
-desligar o login por e-mail para esses usuários. Mexe no login de todo o projeto, por isso não foi
-ligado sem você.
+Era a decisão pendente: o Supabase Auth aceitava **"Esqueci a senha" / link mágico** pela anon key
+pública, e quem controlasse a caixa de e-mail de um admin abria uma sessão de admin sem o TOTP do
+Hub. **Preparado em 09/10/2026, não ligado:** o *Custom Access Token Hook*
+`hub_sso_access_token_hook` e o guarda das Edge Functions. Para ligar e desligar, ver §9.3.
+
+## 9. Correções de segurança e fechamento do "Esqueci a senha" (09/10/2026)
+
+### 9.1 Ordem das migrações deste branch
+
+O `supabase db push` aplica nesta ordem (todas idempotentes, nenhuma migração antiga foi editada):
+
+1. `20261008230000_hub_sso.sql` — SSO
+2. `20261008230100_hub_sso_role_guard.sql` — SSO
+3. `20261009090000_hub_sso_end_local_sessions.sql` — SSO
+4. `20261009120000_security_subscriptions_no_self_service.sql` — **correção de segurança, independe do SSO** (antes dela, publicar a função `claim-referral-rewards` deste branch)
+5. `20261009130000_hub_sso_access_token_hook.sql` — **só cria** as funções do hook (precisa das do SSO). Sem
+   o hook ligado, nada muda.
+
+### 9.2 O que pode ir para produção já, sem o SSO
+
+- **`20261009120000_security_subscriptions_no_self_service.sql` — pode aplicar já, sozinha, DEPOIS
+  de publicar a função `claim-referral-rewards` deste branch.** Remove as policies que deixavam o
+  aluno inserir/alterar a própria linha de `subscriptions` (plano pago de graça) e alterar as
+  próprias `referral_rewards` (segunda porta: a função de resgate transforma o texto da
+  recompensa em dias de Premium). A `claim-referral-rewards` antiga fazia as consultas com o JWT
+  do aluno e dependia dessas policies; a nova usa o service role (e marca a recompensa como
+  resgatada antes de aplicar, então duas chamadas ao mesmo tempo não somam os dias duas vezes).
+  Continua funcionando: leitura da própria assinatura e das recompensas, o "Reativar" da tela de
+  admin, `guru-webhook`, `check-subscription`, `change-own-subscription`,
+  `admin-change-subscription`, `check-referral-conversion`, `expire-subscriptions`, o cadastro
+  (`initialize_free_subscription`).
+
+Todas foram testadas no PostgreSQL local: o ataque funciona antes e é barrado depois, os caminhos
+legítimos continuam gravando, e aplicar duas vezes não quebra nada.
+
+### 9.3 Hook que fecha o "Esqueci a senha" para admins (preparado, NÃO ligado)
+
+**O que faz.** O Supabase Auth chama `public.hub_sso_access_token_hook` antes de emitir qualquer
+token (login e renovação). Para quem tem papel gerenciado pelo Hub (`admin` (`user_roles`); a função
+`hub_sso_hook_roles()` precisa bater com o segredo `HUB_SSO_ALLOWED_ROLES`):
+
+- sessão aberta pelo Hub: o token sai normal;
+- sessão que **não** veio do Hub, aberta por senha, link de "Esqueci a senha", cadastro, convite,
+  troca de e-mail, ou a **renovação** dela: **recusada** ("Quem administra entra pelo Hub");
+- sessão encerrada no Hub: recusada;
+- link mágico: sai o token, marcado `hub_sso: "unlinked"`. O link do próprio Hub é igual a um link
+  mandado por e-mail, então não dá para recusar na hora. Esse token **não tem poder de admin**
+  (todas as checagens de papel no banco e o guarda das funções recusam) e não se renova. O Hub
+  vincula a sessão dele antes de entregar ao navegador, então o login pelo Hub funciona.
+
+Alunos, membros e quem não tem papel do Hub: nada muda. Com o hook desligado, nada muda para
+ninguém. Se o hook tiver um erro interno, o login passa como "unlinked" (sem poder de admin), em
+vez de travar todo mundo.
+
+**Pré-requisitos:** SSO em produção e testado (§5), as migrações de §9.1 aplicadas e as funções
+publicadas.
+
+**Ligar:**
+1. Dashboard do projeto `xcxxdzipwfmakypegqxb` › Authentication › Hooks (ou "Auth Hooks") ›
+   **Customize Access Token (JWT) Claims hook** › Add/Enable.
+2. Tipo **Postgres**, schema `public`, função `hub_sso_access_token_hook` › Save.
+   (Não precisa mexer em permissões: a migração já deu `EXECUTE` só ao `supabase_auth_admin`.)
+3. Teste logo em seguida, numa janela anônima:
+   - Hub › lançador › Isesemind → cai no `/admin` logado. Deixe a aba aberta mais que o tempo do
+     JWT (ou recarregue depois de alguns minutos): continua logado.
+   - Em `/auth`, "Esqueci a senha" com o e-mail de um admin → o link do e-mail **não** abre sessão
+     (mensagem do Hub).
+   - Um aluno/membro entra com e-mail e senha normalmente.
+
+**Desligar (rollback imediato):** mesma tela › desligar (ou remover) o hook. Vale na hora para os
+próximos tokens; não precisa mexer no banco. Para remover as funções de vez (opcional, com o hook
+desligado): `DROP FUNCTION public.hub_sso_access_token_hook(jsonb); DROP FUNCTION
+public.hub_sso_hook_roles();`. A regra "unlinked" em `hub_sso_current_session_revoked()` pode
+ficar: sem o hook, nenhum token tem essa marca.
+
+**Emergência com o hook ligado:** desligue o hook **antes** de `HUB_SSO_ENABLED=false`; senão o
+"Esqueci a senha" do admin continua recusado.
+
+**Não pôr no `supabase/config.toml`** (`[auth.hook.custom_access_token]`): um `config push`
+ligaria o hook sem o teste acima.
+
+### 9.4 Edge Functions que conferem papel com o service role
+
+O hook protege o que o banco confere com o JWT de quem chama. Funções que leem `user_roles` /
+`is_admin` com a **service role** não veem esse JWT. Por isso o guarda
+`supabase/functions/_shared/hub-sso/guard.ts` (igual nos três projetos) faz a mesma pergunta ao
+banco **como quem chamou** (`rpc/hub_sso_current_session_revoked` com o JWT dela) e devolve 403
+quando a sessão foi encerrada no Hub ou é uma sessão de admin sem o Hub. Se der erro, ele bloqueia
+(por isso as funções vão para produção depois das migrações, como o workflow já faz).
+
+Funções que ganharam o guarda (todas conferem papel com o service role): `admin-change-subscription`,
+`admin-create-user`, `admin-delete-user`, `fix-escaped-html`, `fix-family-group`,
+`generate-verso-resumido`, `notify-course-launch`, `send-renewal-offer`, `sync-pagarme-revenue`.
+`resend-user-password` e `fix-significado-formatting` já conferiam com o JWT de quem chamou (a regra
+do banco vale para elas).
+
+### 9.5 O que continua de fora
+
+- Um link mágico pedido por e-mail para o endereço de um admin ainda abre uma sessão **comum**
+  (sem admin) até o JWT expirar, sem renovar. O próximo login dele pelo Hub encerra essa sessão.
+- O hook só cobre os papéis de `hub_sso_hook_roles()`.
