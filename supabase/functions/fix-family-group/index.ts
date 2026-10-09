@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { HUB_SESSION_BLOCKED_MESSAGE, hubSessionBlockedFromEnv } from "../_shared/hub-sso/guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,6 +34,15 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: { user: adminUser }, error: authError } = await supabaseAdmin.auth.getUser(token);
     if (authError || !adminUser) throw new Error("Authentication failed");
+
+    // Hub single sign-on: the role check below runs with the service role, which skips the hub
+    // checks inside the role functions; ask them as the caller (_shared/hub-sso/guard.ts).
+    if (await hubSessionBlockedFromEnv((name) => Deno.env.get(name), authHeader)) {
+      return new Response(JSON.stringify({ error: HUB_SESSION_BLOCKED_MESSAGE }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const { data: isAdmin } = await supabaseAdmin.rpc('has_admin_role', { _user_id: adminUser.id });
     if (!isAdmin) throw new Error("User is not an admin");

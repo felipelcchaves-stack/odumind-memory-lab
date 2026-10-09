@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { HUB_SESSION_BLOCKED_MESSAGE, hubSessionBlockedFromEnv } from "../_shared/hub-sso/guard.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
@@ -78,6 +79,15 @@ const handler = async (req: Request): Promise<Response> => {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // Hub single sign-on: the role check below runs with the service role, which skips the hub
+    // checks inside the role functions; ask them as the caller (_shared/hub-sso/guard.ts).
+    if (await hubSessionBlockedFromEnv((name) => Deno.env.get(name), authHeader)) {
+      return new Response(JSON.stringify({ error: HUB_SESSION_BLOCKED_MESSAGE }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
