@@ -13,12 +13,14 @@ export default function HubSsoCallback() {
   useEffect(() => {
     if (done.current) return;
     done.current = true;
+    // Take the one-time code out of the address bar and history before anything else runs
+    // (analytics, extensions, a reload): it only lives in this variable from now on.
+    const search = window.location.search;
+    window.history.replaceState(null, "", window.location.pathname);
     (async () => {
       try {
         if (!hubSso.enabled) throw new HubSsoClientError("O login pelo Hub está desligado neste sistema.");
-        const result = await finishHubLogin(hubSso, window.location.search);
-        // Drop the code from the address bar and history right away.
-        window.history.replaceState(null, "", window.location.pathname);
+        const result = await finishHubLogin(hubSso, search);
 
         // Another session in this browser (e.g. a student account) is closed before the switch.
         const {

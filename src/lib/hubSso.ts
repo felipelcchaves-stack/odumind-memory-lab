@@ -223,6 +223,15 @@ const HUB_ERRORS: Record<string, string> = {
   interaction_required: "Entre no Hub e abra o sistema de novo.",
 };
 
+/**
+ * Message for an `error` the hub sent back. Anyone can craft a callback link, so only a short
+ * OAuth-style code (letters and "_") is ever shown, never free text from the address bar.
+ */
+export function hubErrorMessage(code: string): string {
+  if (Object.prototype.hasOwnProperty.call(HUB_ERRORS, code)) return HUB_ERRORS[code];
+  return /^[a-z_]{1,40}$/.test(code) ? `O Hub recusou o login (${code}).` : "O Hub recusou o login.";
+}
+
 /** Handles /auth/hub/callback: one-time pending state, state check, code exchange. */
 export async function finishHubLogin(
   cfg: HubSsoClientConfig,
@@ -239,10 +248,13 @@ export async function finishHubLogin(
   }
 
   const params = new URLSearchParams(search);
-  const hubError = params.get("error");
-  if (hubError) {
-    throw new HubSsoClientError(HUB_ERRORS[hubError] ?? `O Hub recusou o login (${hubError}).`);
+  // RFC 9207: when the hub names itself in the response, it must be the configured issuer.
+  const iss = params.get("iss");
+  if (iss !== null && (!cfg.issuer || trimSlash(iss) !== cfg.issuer)) {
+    throw new HubSsoClientError("A resposta não veio do Hub configurado. Tente de novo.");
   }
+  const hubError = params.get("error");
+  if (hubError !== null) throw new HubSsoClientError(hubErrorMessage(hubError));
   if (!pending) throw new HubSsoClientError("Este login expirou ou foi aberto em outra aba. Tente de novo.");
   if ((deps.now ?? Date.now)() - pending.createdAt > PENDING_TTL_MS) {
     throw new HubSsoClientError("Este login expirou. Tente de novo.");

@@ -52,6 +52,17 @@ describe("target_link_uri", () => {
     ["//evil.example/admin", "/admin"],
     ["javascript:alert(1)", "/admin"],
     ["http://app.example.test/admin", "/admin"],
+    // Open-redirect variants (security review 2026-10-09)
+    ["/\\evil.example/admin", "/admin"],
+    ["\\\\evil.example/admin", "/admin"],
+    ["/\t/evil.example/admin", "/admin"],
+    ["/%2F%2Fevil.example/admin", "/admin"],
+    ["/admin/../perfil", "/admin"],
+    ["/admin/%2e%2e/perfil", "/admin"],
+    ["JaVaScRiPt:alert(1)//admin", "/admin"],
+    ["data:text/html,<script>alert(1)</script>", "/admin"],
+    [`${ORIGIN}@evil.example/admin`, "/admin"],
+    ["/admin/%2F%2Fevil.example", "/admin/%2F%2Fevil.example"],
   ])("%s -> %s", (target, expected) => {
     expect(resolveAdminTarget(target, ORIGIN, cfg)).toBe(expected);
   });
@@ -150,6 +161,31 @@ describe("login round trip", () => {
     await beginHubLogin(cfg, "/admin", { fetch: fn.fetchFn, storage, origin: ORIGIN });
     await expect(finishHubLogin(cfg, "?error=access_denied", { fetch: fn.fetchFn, storage })).rejects.toThrow(/não liberou/);
     expect(fn.requests.filter((r) => r.url.endsWith("/exchange"))).toHaveLength(0);
+  });
+
+  it("refuses a response that names another issuer (RFC 9207) and never echoes free text", async () => {
+    const fn = fakeFunction();
+    let storage = memoryStorage();
+    let url = await beginHubLogin(cfg, "/admin", { fetch: fn.fetchFn, storage, origin: ORIGIN });
+    let state = new URL(url).searchParams.get("state");
+    await expect(
+      finishHubLogin(cfg, `?code=abc123xyz&state=${state}&iss=${encodeURIComponent("https://evil.example/oidc")}`, { fetch: fn.fetchFn, storage }),
+    ).rejects.toThrow(/não veio do Hub/);
+    expect(fn.requests.filter((r) => r.url.endsWith("/exchange"))).toHaveLength(0);
+
+    storage = memoryStorage();
+    url = await beginHubLogin(cfg, "/admin", { fetch: fn.fetchFn, storage, origin: ORIGIN });
+    state = new URL(url).searchParams.get("state");
+    await expect(
+      finishHubLogin(cfg, `?code=abc123xyz&state=${state}&iss=${encodeURIComponent(`${ISSUER}/`)}`, { fetch: fn.fetchFn, storage }),
+    ).resolves.toMatchObject({ userId: "u1" });
+
+    const spoof = "?error=" + encodeURIComponent("Sua conta foi bloqueada. Ligue para 0800 000 0000");
+    await expect(finishHubLogin(cfg, spoof, { fetch: fn.fetchFn, storage })).rejects.toThrow(/^O Hub recusou o login\.$/);
+    await expect(finishHubLogin(cfg, "?error=temporarily_unavailable", { fetch: fn.fetchFn, storage })).rejects.toThrow(
+      "O Hub recusou o login (temporarily_unavailable).",
+    );
+    await expect(finishHubLogin(cfg, "?error=", { fetch: fn.fetchFn, storage })).rejects.toThrow(/^O Hub recusou o login\.$/);
   });
 
   it("shows the function's pt-BR refusal", async () => {
