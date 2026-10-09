@@ -15,6 +15,7 @@ import { ProfileCompletionChecker } from "@/components/ProfileCompletionChecker"
 import { useSessionValidation } from "@/hooks/useSessionValidation";
 import { useChangelog } from "@/hooks/useChangelog";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
+import HubAdminGuard from "@/components/hub-sso/HubAdminGuard";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -45,6 +46,8 @@ import Demonstracao from "./pages/Demonstracao";
 // Rotas de admin carregadas sob demanda - o aluno comum nunca visita essas
 // páginas, então não precisa baixar esse código no carregamento inicial
 // (eram ~20 páginas estáticas no mesmo bundle de 2.1MB que todo mundo baixa).
+const HubSsoStart = lazy(() => import("./pages/HubSsoStart"));
+const HubSsoCallback = lazy(() => import("./pages/HubSsoCallback"));
 const AdminLayout = lazy(() => import("./components/admin/AdminLayout").then(m => ({ default: m.AdminLayout })));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminOduPage = lazy(() => import("./pages/admin/AdminOduPage"));
@@ -119,6 +122,9 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
+          {/* Hub single sign-on for the admin area (deploy/HUB-SSO.md) */}
+          <Route path="/auth/hub/iniciar" element={<HubSsoStart />} />
+          <Route path="/auth/hub/callback" element={<HubSsoCallback />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/odu" element={<OduLibrary />} />
           <Route path="/odu/:id" element={<OduStudy />} />
@@ -135,7 +141,7 @@ function AppContent() {
           <Route path="/settings" element={<Settings />} />
           
           {/* Admin routes with sidebar */}
-          <Route path="/admin" element={<AdminLayout />}>
+          <Route path="/admin" element={<HubAdminGuard><AdminLayout /></HubAdminGuard>}>
             <Route index element={<AdminDashboard />} />
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="odu" element={<AdminOduPage />} />
