@@ -98,6 +98,17 @@ describe("lockPassword", () => {
   });
 });
 
+describe("endLocalSessions", () => {
+  it("calls the service-role function and fails closed", async () => {
+    const m = mockClients({ rpc: () => ({ data: 3, error: null }) });
+    const store = createSupabaseStore({ admin: m.admin, newClient: () => m.fresh });
+    expect(await store.endLocalSessions(ADMIN_ID)).toBe(3);
+    expect(m.rpc).toHaveBeenCalledWith("hub_sso_end_local_sessions", { _user_id: ADMIN_ID });
+    const failing = mockClients({ rpc: () => ({ data: null, error: { message: "x" } }) });
+    await expect(createSupabaseStore({ admin: failing.admin, newClient: () => failing.fresh }).endLocalSessions(ADMIN_ID)).rejects.toBeInstanceOf(HubSsoError);
+  });
+});
+
 describe("recordSession / revoke", () => {
   it("call the service-role functions with the right arguments", async () => {
     const m = mockClients({ rpc: (fn) => ({ data: fn === "hub_sso_revoke" ? 2 : null, error: null }) });

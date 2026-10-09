@@ -31,7 +31,13 @@ function memoryStore() {
     ["bloqueado@ifatokun.com.br", { id: "33333333-3333-4333-8333-333333333333", roles: ["admin"], banned: true }],
     ["novo@ifatokun.com.br", { id: "44444444-4444-4444-8444-444444444444", roles: ["admin"], unconfirmed: true }],
   ]);
-  const state = { locked: [] as string[], minted: [] as string[], recorded: [] as Recorded[], revoked: [] as { sid: string | null; sub: string | null }[] };
+  const state = {
+    locked: [] as string[],
+    endedLocal: [] as string[],
+    minted: [] as string[],
+    recorded: [] as Recorded[],
+    revoked: [] as { sid: string | null; sub: string | null }[],
+  };
   const store: HubSsoStore = {
     async findUser(email, roles) {
       const user = users.get(email);
@@ -54,6 +60,12 @@ function memoryStore() {
     },
     async lockPassword(userId) {
       state.locked.push(userId);
+    },
+    async endLocalSessions(userId) {
+      // Always after the hub session was recorded, so the new session is never the one ended.
+      expect(state.recorded.at(-1)?.userId).toBe(userId);
+      state.endedLocal.push(userId);
+      return 1;
     },
     async revoke(target) {
       state.revoked.push(target);
@@ -172,6 +184,8 @@ describe("exchange (callback)", () => {
     expect(h.state.minted).toEqual(["joana@ifatokun.com.br"]);
     // The Supabase password is replaced, so the hub cannot be skipped with the anon key.
     expect(h.state.locked).toEqual([ADMIN_ID]);
+    // ...and sessions opened with the old password or a reset e-mail end here (review 2026-10-09).
+    expect(h.state.endedLocal).toEqual([ADMIN_ID]);
     expect(h.state.recorded).toEqual([
       {
         authSessionId: "aaaaaaaa-0000-4000-8000-000000000001",
@@ -191,6 +205,7 @@ describe("exchange (callback)", () => {
     const h = makeHandler({ HUB_SSO_LOCK_PASSWORD: "false" });
     expect((await exchange(h, hub.issueCode({ challenge: challengeOf(VERIFIER), nonce: NONCE }))).status).toBe(200);
     expect(h.state.locked).toEqual([]);
+    expect(h.state.endedLocal).toEqual([]);
   });
 
   it("supports client_secret_post", async () => {

@@ -65,6 +65,12 @@ export function createSupabaseStore(opts: {
       if (error) throw new HubSsoError("lock_error", 500, "Não foi possível concluir o login. Tente de novo.");
     },
 
+    async endLocalSessions(userId) {
+      const { data, error } = await admin.rpc("hub_sso_end_local_sessions", { _user_id: userId });
+      if (error) throw new HubSsoError("lock_error", 500, "Não foi possível concluir o login. Tente de novo.");
+      return typeof data === "number" ? data : 0;
+    },
+
     async revoke(target) {
       const { data, error } = await admin.rpc("hub_sso_revoke", { _sid: target.sid, _sub: target.sub });
       if (error) throw new HubSsoError("revoke_error", 500, "revoke failed");

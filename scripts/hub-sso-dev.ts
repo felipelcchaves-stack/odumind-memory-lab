@@ -137,6 +137,18 @@ async function fakeSupabase(req: Request, url: URL): Promise<Response> {
       state.log.push(`revoke sid=${body._sid} sub=${body._sub} -> ${n}`);
       return json(200, n);
     }
+    if (name === "hub_sso_end_local_sessions") {
+      let n = 0;
+      for (const s of [...state.sessions.values()]) {
+        const hubLink = state.links.some((l) => l.authSessionId === s.id && !l.revoked);
+        if (s.userId === body._user_id && !hubLink) {
+          state.sessions.delete(s.id);
+          n++;
+        }
+      }
+      state.log.push(`end local sessions of ${body._user_id} -> ${n}`);
+      return json(200, n);
+    }
     if (name === "hub_sso_session_status") {
       const link = state.links.find((l) => l.authSessionId === me?.session_id);
       const status = !link ? "none" : link.revoked || !state.sessions.has(link.authSessionId) ? "revoked" : "active";

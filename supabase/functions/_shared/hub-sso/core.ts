@@ -359,6 +359,12 @@ export type HubSsoStore = {
   recordSession(row: { authSessionId: string; userId: string; hubSid: string; hubSub: string; hubEmail: string }): Promise<void>;
   /** Replaces the user's Supabase password with a long random one (see HubSsoConfig.lockPassword). */
   lockPassword(userId: string): Promise<void>;
+  /**
+   * Ends the user's Supabase sessions that were NOT opened through the hub (password, reset or
+   * magic link), keeping the hub ones. Runs with lockPassword: the password is gone, so a session
+   * someone opened with it (or with a reset e-mail) must not outlive the switch to the hub.
+   */
+  endLocalSessions(userId: string): Promise<number>;
   /** Revokes every Supabase session linked to the hub sid (or to the hub sub when sid is null). */
   revoke(target: { sid: string | null; sub: string | null }): Promise<number>;
 };
@@ -422,7 +428,10 @@ export async function completeLogin(
     hubSub: identity.sub,
     hubEmail: identity.email,
   });
-  if (deps.config.lockPassword) await deps.store.lockPassword(found.userId);
+  if (deps.config.lockPassword) {
+    await deps.store.lockPassword(found.userId);
+    await deps.store.endLocalSessions(found.userId);
+  }
   return {
     session,
     endSessionUrl: buildEndSessionUrl(meta, deps.config),

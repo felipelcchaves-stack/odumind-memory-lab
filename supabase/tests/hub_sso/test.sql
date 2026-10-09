@@ -112,3 +112,27 @@ SELECT public.hub_sso_record_session('10000000-0000-0000-0000-000000000005', '00
 RESET ROLE;
 SELECT tests.assert(NOT EXISTS (SELECT 1 FROM public.hub_sso_sessions WHERE hub_sid = 'sid-1'), 'old revoked link cleaned');
 SELECT tests.assert(EXISTS (SELECT 1 FROM public.hub_sso_sessions WHERE hub_sid = 'sid-3'), 'recent revoked link kept');
+
+-- 6. A hub login ends the person's non-hub sessions (password / reset link) and keeps hub ones.
+INSERT INTO auth.sessions (id, user_id) VALUES
+  ('20000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000000a'),
+  ('20000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-00000000000a'),
+  ('20000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-00000000000b');
+INSERT INTO auth.refresh_tokens (session_id) VALUES ('20000000-0000-0000-0000-000000000001');
+SET ROLE service_role;
+SELECT public.hub_sso_record_session('20000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-00000000000a', 'sid-20', '7', 'joana@ifatokun.com.br');
+RESET ROLE;
+SET ROLE authenticated;
+SELECT tests.as_session('00000000-0000-0000-0000-00000000000a', '20000000-0000-0000-0000-000000000001');
+DO $$ BEGIN PERFORM public.hub_sso_end_local_sessions(auth.uid()); RAISE EXCEPTION 'FAILED: end_local_sessions open to authenticated'; EXCEPTION WHEN insufficient_privilege THEN NULL; END $$;
+RESET ROLE;
+SET ROLE service_role;
+SELECT tests.assert(public.hub_sso_end_local_sessions(NULL) = 0, 'null user ends nothing');
+SELECT tests.assert(public.hub_sso_end_local_sessions('00000000-0000-0000-0000-00000000000a') >= 1, 'local sessions ended');
+RESET ROLE;
+SELECT tests.assert(NOT EXISTS (SELECT 1 FROM auth.sessions WHERE id = '20000000-0000-0000-0000-000000000001'), 'password session of the admin deleted');
+SELECT tests.assert(NOT EXISTS (SELECT 1 FROM auth.refresh_tokens WHERE session_id = '20000000-0000-0000-0000-000000000001'), 'its refresh tokens gone');
+SELECT tests.assert(EXISTS (SELECT 1 FROM auth.sessions WHERE id = '20000000-0000-0000-0000-000000000002'), 'hub session kept');
+SELECT tests.assert(EXISTS (SELECT 1 FROM auth.sessions WHERE id = '20000000-0000-0000-0000-000000000003'), 'other people untouched');
+SELECT tests.assert(NOT EXISTS (SELECT 1 FROM auth.sessions s WHERE s.user_id = '00000000-0000-0000-0000-00000000000a'
+  AND NOT EXISTS (SELECT 1 FROM public.hub_sso_sessions l WHERE l.auth_session_id = s.id AND l.revoked_at IS NULL)), 'only hub sessions left');
