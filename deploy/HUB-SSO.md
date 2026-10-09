@@ -189,10 +189,9 @@ ao fluxo antigo sem rebuild (com a senha aleatória, use "Esqueci a senha"). Ou 
   aluno reescrever a recompensa (`reward_description = '3650 dias'`, `claimed = false`) e resgatar.
   Agora é a migração `20261009120000_security_subscriptions_no_self_service.sql` + a função
   corrigida (ver §9).
-- **Bugs que já existiam (não corrigidos, fora do escopo):** `check-referral-conversion`,
-  `guru-webhook` (linha ~820) e `fix-family-group` ainda gravam `stripe_*` em `subscriptions`, e
-  essas colunas foram removidas em 20260918210000: esses trechos falham. A
-  `claim-referral-rewards` já foi limpa. O `apply-referral-code` grava `referral_rewards` e
+- **Bugs que já existiam:** `check-referral-conversion`, `guru-webhook` (linha ~820) e
+  `fix-family-group` gravavam `stripe_*` (colunas removidas em 20260918210000); corrigido, ver §9.6.
+  O `apply-referral-code` grava `referral_rewards` e
   `referral_program` de outra pessoa com o JWT do aluno, o que a RLS recusa: os "7 dias" do código
   de indicação não são criados. Corrigir isso libera Premium grátis, então é decisão de negócio.
 - Papel de admin: `user_roles` só aceita insert/delete de admin; não achei caminho de autopromoção.
@@ -316,3 +315,14 @@ do banco vale para elas).
 - Um link mágico pedido por e-mail para o endereço de um admin ainda abre uma sessão **comum**
   (sem admin) até o JWT expirar, sem renovar. O próximo login dele pelo Hub encerra essa sessão.
 - O hook só cobre os papéis de `hub_sso_hook_roles()`.
+
+### 9.6 Pendências
+
+- **Corrigido:** `check-referral-conversion`, `guru-webhook` e `fix-family-group` não gravam mais as
+  colunas `stripe_subscription_id`, `stripe_customer_id`, `stripe_price_id` (em `subscriptions`) nem
+  `stripe_subscription_id` (em `family_groups`), todas removidas pela migração
+  `20260918210000_drop_stripe_columns.sql`. Quem recebe Premium e por quanto tempo não mudou.
+- **Pendente (decisão de negócio):** o `apply-referral-code` grava `referral_rewards` e
+  `referral_program` de outra pessoa com o JWT do aluno, o que a RLS recusa, então os "7 dias" do
+  código de indicação não são criados. Corrigir isso libera Premium grátis; Felipe precisa decidir
+  antes de mexer. Nada foi alterado nessa função.

@@ -120,7 +120,6 @@ serve(async (req) => {
         .from('family_groups')
         .insert({
           owner_user_id: sub.user_id,
-          stripe_subscription_id: null,
           group_name: 'Minha Família',
           max_members: 5,
         })

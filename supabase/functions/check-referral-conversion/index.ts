@@ -147,9 +147,6 @@ serve(async (req) => {
               status: 'active',
               current_period_start: now.toISOString(),
               current_period_end: newPeriodEnd.toISOString(),
-              stripe_subscription_id: null,
-              stripe_customer_id: referrerSub?.stripe_customer_id || null,
-              stripe_price_id: null,
               updated_at: now.toISOString()
             });
         } else {
