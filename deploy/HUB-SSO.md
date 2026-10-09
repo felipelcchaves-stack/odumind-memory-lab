@@ -46,6 +46,7 @@ Hub (sessão + TOTP já feitos) ──> /auth/hub/callback?code=…&state=…
           email_verified, sid) → hub_sso_find_user(e-mail, papéis) → só usuário EXISTENTE,
           e-mail confirmado, não bloqueado, com papel permitido → generateLink + verifyOtp →
           grava (sessão Supabase ↔ sid do Hub) → troca a senha Supabase por uma aleatória
+          → encerra as sessões Supabase dessa pessoa abertas SEM o Hub (senha, link de redefinição)
   SPA: supabase.auth.setSession(...) → enforce-single-session (mesma regra do login por senha) → /admin
 Sair no Isesemind ──> supabase.auth.signOut() → end_session do Hub ("Sair de todos os sistemas?")
 Hub encerra a sessão ──POST logout_token──> hub-sso/backchannel-logout
@@ -70,7 +71,7 @@ de login do admin no uso normal). Aluno ou colaborador (papel fora de `HUB_SSO_A
 | Guarda do /admin | `src/components/hub-sso/HubAdminGuard.tsx` (em volta do `AdminLayout` em `src/App.tsx`) |
 | "Sair" | `src/lib/hubSsoSession.ts` → `signOutWithHub()` (usado em `src/components/DashboardHeader.tsx`; só vai ao Hub se a sessão veio do Hub) |
 | Sessão única | `src/lib/hubSsoProject.ts` chama `enforce-single-session` depois do login pelo Hub e grava `session_id` (o `useSessionValidation` confere a cada minuto) |
-| Banco | `supabase/migrations/20261008230000_hub_sso.sql` (tabela `hub_sso_sessions` + funções) e `20261008230100_hub_sso_role_guard.sql` (`has_admin_role` e `has_colaborador_role` recusam sessão revogada) |
+| Banco | `supabase/migrations/20261008230000_hub_sso.sql` (tabela `hub_sso_sessions` + funções), `20261009090000_hub_sso_end_local_sessions.sql` (encerra as sessões sem Hub de quem entrou pelo Hub) e `20261008230100_hub_sso_role_guard.sql` (`has_admin_role` e `has_colaborador_role` recusam sessão revogada) |
 
 ## 4. Configuração (nada fixo no código)
 
@@ -84,7 +85,7 @@ Segredos da Edge Function (`supabase secrets set`, nunca no git):
 | `HUB_CLIENT_SECRET` | idem (aparece uma vez) | |
 | `HUB_SSO_APP_URL` | `https://isesemind.ifatokun.com.br` | origem da SPA: monta o redirect_uri e libera o CORS |
 | `HUB_SSO_ALLOWED_ROLES` | `admin` | papéis de `user_roles` (`admin`, `colaborador`, `aluno`, `user`) que entram pelo Hub. Para os colaboradores também usarem o Hub: `admin,colaborador` (cada um precisa de conta `@ifatokun.com.br` no Hub) |
-| `HUB_SSO_LOCK_PASSWORD` | `true` (padrão) | troca a senha Supabase do admin por uma aleatória a cada login pelo Hub: ninguém entra no admin com e-mail+senha direto no Supabase Auth (anon key pública) pulando o Hub |
+| `HUB_SSO_LOCK_PASSWORD` | `true` (padrão) | troca a senha Supabase do admin por uma aleatória a cada login pelo Hub e encerra as sessões dele abertas sem o Hub: ninguém entra no admin com e-mail+senha direto no Supabase Auth (anon key pública) pulando o Hub, nem fica com uma sessão antiga aberta com a senha |
 | `HUB_SSO_TOKEN_AUTH_METHOD` | `client_secret_basic` (padrão) | ou `client_secret_post`, igual ao bloco do Hub |
 | `HUB_SSO_CALLBACK_PATH`, `HUB_SSO_POST_LOGOUT_PATH` | padrão `/auth/hub/callback` e `/` | só se mudar as rotas |
 
@@ -126,7 +127,7 @@ Variáveis de build da SPA (no `.env` da VPS em `~/apps/odumind-memory-lab`, lid
    passo 3:
    ```bash
    supabase link --project-ref xcxxdzipwfmakypegqxb
-   supabase db push            # aplica 20261008230000_hub_sso.sql e 20261008230100_hub_sso_role_guard.sql
+   supabase db push            # aplica 20261008230000_hub_sso.sql, 20261008230100_hub_sso_role_guard.sql e 20261009090000_hub_sso_end_local_sessions.sql
    supabase functions deploy hub-sso --project-ref xcxxdzipwfmakypegqxb
    ```
 5. **SPA.** No `.env` da VPS (`~/apps/odumind-memory-lab/.env`) acrescentar
@@ -168,3 +169,27 @@ ao fluxo antigo sem rebuild (com a senha aleatória, use "Esqueci a senha"). Ou 
 - Papel de admin: `user_roles` só aceita insert/delete de admin; não achei caminho de autopromoção.
 - `package.json` ganhou `vitest` e `jose` (só desenvolvimento) e o script `test`; o `bun.lock`
   não foi atualizado (o deploy usa `npm ci`).
+
+## 8. Revisão de segurança (09/10/2026)
+
+Conferido: ID token (assinatura RS256 fixa, JWKS com rotação, iss, aud, azp, exp, iat, nonce,
+`email_verified`, `sid`), state/PKCE de uso único, destino depois do login (só mesma origem e
+dentro de `/admin`; `//evil`, `/\evil`, codificados, `javascript:` caem em `/admin`), logout token
+(evento, sem nonce, iat ≤ 5 min, sid/sub), CORS só da origem da SPA, funções SQL `SECURITY DEFINER`
+com `search_path` fixo e execução só para `service_role`, interruptores com padrão seguro.
+
+Corrigido nesta revisão:
+- **Sessões abertas sem o Hub continuavam valendo** depois que o admin passava a entrar pelo Hub
+  (ex.: alguém que entrou com a senha antes da troca, ou por um link de "Esqueci a senha"). Agora
+  cada login pelo Hub (com `HUB_SSO_LOCK_PASSWORD` ligado) encerra as sessões Supabase dessa pessoa
+  que não vieram do Hub (`hub_sso_end_local_sessions`).
+- O retorno do Hub com `iss` de outro emissor é recusado (RFC 9207); o código sai da barra de
+  endereço antes da troca; a tela de erro não repete texto livre vindo do link (`?error=`).
+
+Fica para o Felipe decidir (não corrigido): o Supabase Auth continua aceitando **"Esqueci a
+senha" / link mágico** pela anon key pública. Quem controlar a caixa de e-mail de um admin abre
+uma sessão de admin sem o TOTP do Hub (ela dura até o próximo login dele pelo Hub, que a encerra).
+O fechamento completo é um *Custom Access Token Hook* do Supabase (Authentication › Hooks) que
+recuse emitir token para papéis do Hub quando a sessão não estiver em `hub_sso_sessions`, ou
+desligar o login por e-mail para esses usuários. Mexe no login de todo o projeto, por isso não foi
+ligado sem você.
