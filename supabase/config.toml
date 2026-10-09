@@ -80,3 +80,7 @@ verify_jwt = false
 
 [functions.notify-expiring-subscriptions]
 verify_jwt = false
+
+[functions.hub-sso]
+# Called by the SPA before there is a session and by the hub (back-channel), never with a user JWT.
+verify_jwt = false
