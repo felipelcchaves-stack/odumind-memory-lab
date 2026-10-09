@@ -34,3 +34,7 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
+## Login único pelo Hub (área /admin)
+
+Ver `deploy/HUB-SSO.md`.
