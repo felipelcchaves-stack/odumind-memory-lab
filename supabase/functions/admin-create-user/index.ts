@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { HUB_SESSION_BLOCKED_MESSAGE, hubSessionBlockedFromEnv } from "../_shared/hub-sso/guard.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -75,6 +76,15 @@ serve(async (req) => {
         },
       }
     );
+
+    // Hub single sign-on: the role check below runs with the service role, which skips the hub
+    // checks inside the role functions; ask them as the caller (_shared/hub-sso/guard.ts).
+    if (await hubSessionBlockedFromEnv((name) => Deno.env.get(name), authHeader)) {
+      return new Response(JSON.stringify({ error: HUB_SESSION_BLOCKED_MESSAGE }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Check if user has admin or colaborador role using admin client (bypasses RLS)
     const { data: roles, error: rolesError } = await supabaseAdmin

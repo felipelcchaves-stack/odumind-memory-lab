@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
+import { HUB_SESSION_BLOCKED_MESSAGE, hubSessionBlockedFromEnv } from "../_shared/hub-sso/guard.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -46,6 +47,15 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: 'Autenticação inválida' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Hub single sign-on: the role check below runs with the service role, which skips the hub
+    // checks inside the role functions; ask them as the caller (_shared/hub-sso/guard.ts).
+    if (await hubSessionBlockedFromEnv((name) => Deno.env.get(name), authHeader)) {
+      return new Response(JSON.stringify({ error: HUB_SESSION_BLOCKED_MESSAGE }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Verifica se é admin

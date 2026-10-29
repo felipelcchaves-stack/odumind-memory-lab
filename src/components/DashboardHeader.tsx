@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Home, BookOpen, Shield, Settings, LogOut, Sun, Moon, User, Crown, BarChart3, Edit, Lightbulb, Sparkles, Gift, Users, Map } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { signOutWithHub } from '@/lib/hubSsoSession';
 
 export default function DashboardHeader() {
   const navigate = useNavigate();
@@ -45,13 +46,15 @@ export default function DashboardHeader() {
   const isActive = (path: string) => location.pathname === path;
 
   const handleSignOut = async () => {
+    let leavingForHub = false;
     try {
-      await signOut();
+      // A session opened through the hub also ends the hub SSO session (deploy/HUB-SSO.md).
+      leavingForHub = await signOutWithHub(signOut);
     } catch (error) {
       console.error('[LOGOUT] Error during signout:', error);
     } finally {
       // Always navigate to landing page, even if signOut fails
-      navigate('/', { replace: true });
+      if (!leavingForHub) navigate('/', { replace: true });
     }
   };
 

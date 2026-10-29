@@ -2577,6 +2577,7 @@ export type Database = {
       get_user_family_group: { Args: { _user_id: string }; Returns: string }
       has_active_subscription: { Args: { _user_id: string }; Returns: boolean }
       has_admin_role: { Args: { _user_id: string }; Returns: boolean }
+      hub_sso_session_status: { Args: never; Returns: Json }
       has_aluno_role: { Args: { _user_id: string }; Returns: boolean }
       has_colaborador_role: { Args: { _user_id: string }; Returns: boolean }
       has_permission: {
