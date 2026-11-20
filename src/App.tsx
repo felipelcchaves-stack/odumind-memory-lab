@@ -17,6 +17,8 @@ import { useChangelog } from "@/hooks/useChangelog";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import Privacidade from "./pages/Privacidade";
+import ExcluirConta from "./pages/ExcluirConta";
 import Dashboard from "./pages/Dashboard";
 import OduLibrary from "./pages/OduLibrary";
 import OduStudy from "./pages/OduStudy";
@@ -119,6 +121,8 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/privacidade" element={<Privacidade />} />
+          <Route path="/excluir-conta" element={<ExcluirConta />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/odu" element={<OduLibrary />} />
           <Route path="/odu/:id" element={<OduStudy />} />
